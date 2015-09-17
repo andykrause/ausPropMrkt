@@ -23,7 +23,7 @@ This process requires a specific directory structure.
 
  ![Directory1][ds1]
 
-2. Create separate folders for the various transaction types that you wish to analyse. These can also be of any name, but the names will need to be given as an argument in the functions described below. Note that you can combine raw files of any types together that you wish (such as Auction and Sold).
+2. Within each geographic area folder, create separate folders for the various transaction types that you wish to analyse. These can also be of any name, but the names will need to be given as an argument in the functions described below. Note that you can combine raw files of any types together that you wish (such as Auction and Sold).
 
  ![Directory2][ds2]
 
@@ -31,7 +31,23 @@ This process requires a specific directory structure.
 
  ![Directory3][ds3]
 
+#### Converting .zip files
 
+Begin by downloading all code files from this repository at: [https://github.com/andykrause/ausPropMrkt](https://github.com/andykrause/ausPropMrkt "Git")
 
+The following are required R libraries: `RCurl, RODBC, RSQLite, plyr`
 
+Next, set your base directory (**basePath**) to the individual geographic level you are working on, for example ``c:/temp/Adelaide``.  NOTE:  This process needs to be accomplished one geography at a time (for now).  
 
+     basePath <- 'c:/temp/Adelaide'
+ 
+Then, call the **buildAPMData()** function, where `basePath` is the basePath specified above, `newFileName` is the name of the output file (.db format), `transList` is the list of transaction type folder that you have created and `verbose` determines whether or not progress updates will be displayed in the R console.  
+
+     buildAPMData(basePath,
+                  newFileName = 'Adelaide.db',
+                  transList = c('sold','auct','rent'),
+                  verbose = TRUE)   
+
+Again, individual .csv files for each transaction type will be outputted into the basePath directory as well. 
+
+MORE TO COME

@@ -14,17 +14,22 @@ We have created a set of R function to unzip, rename and combine all like transa
 
 This process requires a specific directory structure.  
 
+[ds1]: https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct1.PNG?raw=true
+[ds2]: https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct2.PNG?raw=true
+[ds3]: https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct3.PNG?raw=true
+
+
 1. Begin by create a separate folder for each geographic area for which you wish to create separate file.  These can be at any level and any name you prefer.
 
-![Directory1](https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct1.PNG?aw=true "Directory Structure 1")
+ ![Directory1][ds1]
 
 2. Create separate folders for the various transaction types that you wish to analyse. These can also be of any name, but the names will need to be given as an argument in the functions described below. Note that you can combine raw files of any types together that you wish (such as Auction and Sold).
 
-![Directory2](https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct2.PNG?aw=true "Directory Structure 2")
+ ![Directory2][ds2]
 
 3. Place all corresponding .zip files into their respective folders (sold, rent, auct, etc.)
 
-![Directory3](https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct3.PNG?aw=true "Directory Structure 3")
+ ![Directory3][ds3]
 
 
 

@@ -16,7 +16,7 @@ This process requires a specific directory structure.
 
 1. Begin by create a separate folder for each geographic area for which you wish to create separate file.  These can be at any level and any name you prefer.
 
-![alt text](.../figures/dirStrct1.PNG "Logo Title Text 1")
+![alt text](https://github.com/andykrause/ausPropMrkt/blob/master/figures/dirStrct1.PNG "Logo Title Text 1")
 
 2. Create separate folders for the various transaction types that you wish to analyse. These can also be of any name, but the names will need to be given as an argument in the functions described below. Note that you can combine raw files of any types together that you wish (such as Auction and Sold).
 

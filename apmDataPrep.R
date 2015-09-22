@@ -9,7 +9,7 @@ if(F){
   # Run full conversion
   buildAPMData(basePath,
                newFileName = 'DarwinS.db',
-               transList = c('sold','auct','rent'),
+               transList = list('rentals'='rent','sales'=c('sold', 'auct')),
                verbose = TRUE)
   
   # Instruction for simply converting .zips to .csvs
@@ -22,10 +22,11 @@ if(F){
 
 ### Master function that converts all zips into a single .db -------------------------
 
-buildAPMData <- function(basePath,                            # Path to data
-                         newFileName = 'test.db',             # Name of export file
-                         transList = c('sold','auct', 'rent'),# List of file types
-                         verbose=TRUE                         # Show progress?
+buildAPMData <- function(basePath,                                    # Path to data
+                         newFileName = 'test.db',                     # Name of export file
+                         transList = list('rentals'='rent',
+                                          'sales'=c('sold', 'auct')), # List of file types
+                         verbose=TRUE                                 # Show progress?
                          ){
   
   # Set up libraries
@@ -40,8 +41,9 @@ buildAPMData <- function(basePath,                            # Path to data
   
   # Convert ZIPS to .csvs
   if(verbose) cat('Converting ZIPS to .csvs', '\n')
-  for(tL in transList){
-    convertAPMData(basePath, tL, verbose=verbose)
+  for(tL in 1:length(transList)){
+    convertAPMData(basePath, transType=transList[[tL]], 
+                   folderName=names(transList[tL]), verbose=verbose)
   }
   
   # Combine all .csvs into a SQLite database
@@ -50,7 +52,7 @@ buildAPMData <- function(basePath,                            # Path to data
                      newFileName=newFileName,
                      verbose=verbose,
                      overWrite=TRUE,
-                     tableNames=c('Auction','Rent','Sales'))
+                     tableNames=c('Rentals','Sales'))
   
   # Success output
   if(verbose) cat('\n***CONVERSION SUCCESSFUL.  Data saved in:', 
@@ -61,42 +63,71 @@ buildAPMData <- function(basePath,                            # Path to data
 ### Helper function that unzips, combines and turns .zips in to a .csv -----------------------------
 
 convertAPMData <- function(basePath,                # The main directory where the datalives
-                           transType = 'sold',      # Type of data (subdirectory) to work on   
+                           transType = 'sold',      # Type of data (subdirectory) to work on
+                           folderName = NULL,
                            verbose=TRUE             # Do you want to see the progress?
                            ){
 
   # Require libraries
   require(plyr)
   
-  # Set data path to the .zip files
-  dataPath <- paste0(basePath, '/', transType)
-  
+  # Fix to lower
+  transType <- tolower(transType)
+
   # Get a list of zip files to extract - remove non zip
   if(verbose) cat("Reading in .ZIP files to be extracted\n")
-  zipFiles <- list.files(dataPath)
+  zipFiles <- tolower(list.files(basePath))
   zipFiles <- as.list(zipFiles[grep('.zip', zipFiles)])
+  
+  ### TODO:  Functionalize this!
+  if(length(transType) == 1){
+    zipFiles <- as.list(zipFiles[grep(transType, zipFiles)])
+  } else {
+    zFiles <- list(0)
+    for(zF in 1:length(transType)){
+      zFiles[[zF]] <- as.list(zipFiles[grep(transType[zF], zipFiles)])
+    }
+    zipFiles <- as.list(unlist(zFiles))
+  }
   
   # Convert to .csv
   if(verbose) cat("Converting to .csv\n")
-  lapply(zipFiles, extractAPMData, dataPath=dataPath, verbose=TRUE)
+  lapply(zipFiles, extractAPMData, dataPath=basePath, verbose=TRUE)
  
   # Conversion Message
   if(verbose) cat(length(zipFiles), 'Files extracted\n')
   
   # Read in all data
   if(verbose) cat('Reading in all .csv files \n')
-  csvFiles <- list.files(dataPath)
-  csvFiles <- as.list(paste0(dataPath, '/', csvFiles[grep('.csv', csvFiles)]))
+  csvFiles <- list.files(basePath)
+  csvFiles <- as.list(paste0(basePath, '/', csvFiles[grep('.csv', csvFiles)]))
+  
+  # Select only .csv with correct transaction type
+  if(length(transType) == 1){
+    csvFiles <- as.list(csvFiles[grep(transType, csvFiles)])
+  } else {
+    zFiles <- list(0)
+    for(zF in 1:length(transType)){
+      zFiles[[zF]] <- as.list(csvFiles[grep(transType[zF], csvFiles)])
+    }
+    csvFiles <- as.list(unlist(zFiles))
+  }
+  
+  # Read .csv into memory
   csvData <- lapply(csvFiles, read.csv, stringsAsFactors=FALSE)
+  
+  # Remove temp files
+  lapply(csvFiles, file.remove)
   
   # Merge into a single file
   if(verbose) cat('Merging to a single file \n')
   csvData <- rbind.fill(csvData)
   
   # Write out the file
-  if(verbose) cat('Writing out merged ', transType, 'file to ',
-                  paste0(basePath, '/', transType, '.csv'),'\n')
-  write.csv(csvData, paste0(basePath, '/', transType, '.csv'))
+  if(is.null(folderName)) folderName <- transType[1]
+  if(verbose) cat('Writing out merged ', folderName, 'file to ',
+                  paste0(basePath, '/', folderName, '.csv'),'\n')
+  write.csv(csvData, paste0(basePath, '/', folderName, '.csv'))
 }
 
 ### Helper functions that handles the unzipping and renaming process -------------------------------

@@ -1,5 +1,7 @@
 
-### Example of how to use the code
+####################################################################################################
+###  Example Code Use
+####################################################################################################
 
 if(F){
   
@@ -8,26 +10,29 @@ if(F){
   
   # Run full conversion
   buildAPMData(basePath,
-               newFileName = 'DarwinS.db',
+               newFileName = 'test.db',
                transList = list('rentals'='rent','sales'=c('sold', 'auct')),
                verbose = TRUE)
   
-  # Instruction for simply converting .zips to .csvs
-  transType <- 'sold'
-  convertAPMData(basePath, 'sold', TRUE)
-  convertAPMData(basePath, 'rent', TRUE)
-  convertAPMData(basePath, 'auct', TRUE)
+  # Instruction for simply converting .zips to .csvs (warning this doesn't correct bad file names)
+  convertAPMData(basePath, transType='sold', verbose=TRUE)
+  convertAPMData(basePath, transType='rent', verbose=TRUE)
+  convertAPMData(basePath, transType='auct', verbose=TRUE)
   
 }
+
+####################################################################################################
+###  Functions
+####################################################################################################
 
 ### Master function that converts all zips into a single .db -------------------------
 
 buildAPMData <- function(basePath,                                    # Path to data
-                         newFileName = 'test.db',                     # Name of export file
-                         transList = list('rentals'='rent',
+                         newFileName='test.db',                     # Name of export file
+                         transList=list('rentals'='rent',
                                           'sales'=c('sold', 'auct')), # List of file types
                          verbose=TRUE                                 # Show progress?
-                         ){
+){
   
   # Set up libraries
   require(RSQLite)
@@ -37,24 +42,27 @@ buildAPMData <- function(basePath,                                    # Path to 
   
   # Source necessary files
   sourceHttps(paste0("https://raw.githubusercontent.com/andykrause/dataMgmtTools/",
-                      "master/basicConversionTools.R"))
+                     "master/basicConversionTools.R"))
   
-  # Convert ZIPS to .csvs
-  if(verbose) cat('Converting ZIPS to .csvs', '\n')
+  # Fix any bad file names
+  fixFileNames(basePath, badStr='.csv.zip', newStr='.zip', verbose=verbose)
+  
+  # Convert .zips to .csvs
+  if(verbose) cat('Converting .zips to .csvs', '\n')
   for(tL in 1:length(transList)){
     convertAPMData(basePath, transType=transList[[tL]], 
                    folderName=names(transList[tL]), verbose=verbose)
   }
   
   # Combine all .csvs into a SQLite database
-  if(verbose) cat('Converting ZIPS to .csvs', '\n')
+  if(verbose) cat('Converting .csvs to .db', '\n')
   convertCSVtoSQLite(dataPathCurrent=basePath,
                      newFileName=newFileName,
                      verbose=verbose,
                      overWrite=TRUE,
-                     tableNames=c('Rentals','Sales'))
+                     tableNames=c('rentals','sales'))
   
-  # Success output
+  # Successful output message
   if(verbose) cat('\n***CONVERSION SUCCESSFUL.  Data saved in:', 
                   paste0(basePath, '/', newFileName), '***\n')
   
@@ -63,37 +71,27 @@ buildAPMData <- function(basePath,                                    # Path to 
 ### Helper function that unzips, combines and turns .zips in to a .csv -----------------------------
 
 convertAPMData <- function(basePath,                # The main directory where the datalives
-                           transType = 'sold',      # Type of data (subdirectory) to work on
-                           folderName = NULL,
+                           transType='sold',      # Type of data (subdirectory) to work on
+                           folderName=NULL,       # Name of folder to export to if not transTYpe
                            verbose=TRUE             # Do you want to see the progress?
-                           ){
-
+){
+  
   # Require libraries
   require(plyr)
   
-  # Fix to lower
+  # Fix to lower case
   transType <- tolower(transType)
-
-  # Get a list of zip files to extract - remove non zip
+  
+  # Get a list of zip files to extract & remove non zip
   if(verbose) cat("Reading in .ZIP files to be extracted\n")
   zipFiles <- tolower(list.files(basePath))
   zipFiles <- as.list(zipFiles[grep('.zip', zipFiles)])
-  
-  ### TODO:  Functionalize this!
-  if(length(transType) == 1){
-    zipFiles <- as.list(zipFiles[grep(transType, zipFiles)])
-  } else {
-    zFiles <- list(0)
-    for(zF in 1:length(transType)){
-      zFiles[[zF]] <- as.list(zipFiles[grep(transType[zF], zipFiles)])
-    }
-    zipFiles <- as.list(unlist(zFiles))
-  }
+  zipFiles <- selectFiles(zipFiles, transType)
   
   # Convert to .csv
   if(verbose) cat("Converting to .csv\n")
   lapply(zipFiles, extractAPMData, dataPath=basePath, verbose=TRUE)
- 
+  
   # Conversion Message
   if(verbose) cat(length(zipFiles), 'Files extracted\n')
   
@@ -101,18 +99,8 @@ convertAPMData <- function(basePath,                # The main directory where t
   if(verbose) cat('Reading in all .csv files \n')
   csvFiles <- list.files(basePath)
   csvFiles <- as.list(paste0(basePath, '/', csvFiles[grep('.csv', csvFiles)]))
-  
-  # Select only .csv with correct transaction type
-  if(length(transType) == 1){
-    csvFiles <- as.list(csvFiles[grep(transType, csvFiles)])
-  } else {
-    zFiles <- list(0)
-    for(zF in 1:length(transType)){
-      zFiles[[zF]] <- as.list(csvFiles[grep(transType[zF], csvFiles)])
-    }
-    csvFiles <- as.list(unlist(zFiles))
-  }
-  
+  csvFiles <- selectFiles(csvFiles, transType)
+
   # Read .csv into memory
   csvData <- lapply(csvFiles, read.csv, stringsAsFactors=FALSE)
   
@@ -135,14 +123,14 @@ convertAPMData <- function(basePath,                # The main directory where t
 extractAPMData <- function(fileName,             # File name to be extracted
                            dataPath,             # Path to the data (.zip file)
                            verbose=TRUE          # Do you want to see the progress?
-                           ){
+){
   
   # Create temporary directory  
   tempPath = gsub('.zip', '', paste0(dataPath, '/', fileName))
   dir.create(tempPath, showWarnings = FALSE)
   
   # Extract data
-  if(verbose) cat('Extracting, renaming and moving', gsub('.zip', '.csv', fileName), '\n')
+  if(verbose) cat('  Extracting, renaming and moving', gsub('.zip', '.csv', fileName), '\n')
   unzip(paste0(dataPath, '/', fileName), exdir=tempPath)
   
   # Remove all non .csv files
@@ -163,21 +151,21 @@ extractAPMData <- function(fileName,             # File name to be extracted
   # Delete old file and directory
   file.remove(paste0(tempPath, '/', list.files(tempPath)))
   unlink(tempPath, recursive = TRUE) 
-           
+  
 }
 
 ### Helper function that allow for sources files directly from github ---------------------
 
 sourceHttps <- function(u,                       # URL of file
                         unlink.tmp.certs = FALSE # Security cert handling
-                        ) {
+) {
   # load package
   require(RCurl)
   
   # read script lines from website using a security certificate
   if(!file.exists("cacert.pem")){
     download.file(url="http://curl.haxx.se/ca/cacert.pem",
-                                               destfile = "cacert.pem")
+                  destfile = "cacert.pem")
   }
   script <- getURL(u, followlocation = TRUE, cainfo = "cacert.pem")
   if(unlink.tmp.certs) unlink("cacert.pem")
@@ -186,6 +174,51 @@ sourceHttps <- function(u,                       # URL of file
   eval(parse(text = script), envir= .GlobalEnv)
 }
 
+### Helper function that pulls out certain files from a list --------------------------------
 
+selectFiles <- function(fileList,                 # list/vector of existing files
+                        selector                  # vector of text string to look for in list
+                        ){
+  # Single selector
+  if(length(selector) == 1){
+    fileList <- as.list(fileList[grep(selector, fileList)])
+  } else {
+    
+  # Multiple selectors  
+    xFiles <- list(0)
+    for(xF in 1:length(selector)){
+      xFiles[[xF]] <- as.list(fileList[grep(selector[xF], fileList)])
+    }
+    fileList <- as.list(unlist(xFiles))
+  }
+    
+  # Return Value
+  return(fileList)
+}
 
+### Function that fixes bad file names ---------------------------------------
+
+fixFileNames <- function(dirPath,                 # File directory to work in
+                         badStr,                  # Bad string part of file name
+                         newStr="",               # New string to replace it with
+                         verbose=FALSE            # Show progress?
+){
+  
+  #  Read in list of file names
+  allFiles <- tolower(list.files(dirPath))
+  
+  # Locate those containing bad names
+  toRename <- grep(badStr, allFiles)
+  
+  # Fix the names
+  if(length(toRename) > 0){
+    if(verbose) cat('Replacing', badStr, 'with', newStr, '\n') 
+    for(tR in 1:length(toRename)){
+      currName <- paste0(dirPath, '/', allFiles[toRename[tR]])
+      newName <- gsub(badStr, newStr, currName)
+      file.rename(from=currName, to=newName)
+    }
+   if(verbose) cat(length(toRename), 'file name(s) fixed.\n\n') 
+  }
+}
 

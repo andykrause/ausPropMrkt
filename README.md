@@ -40,10 +40,13 @@ This process requires a specific directory structure.
 2. Place all corresponding .zip files into their respective folders (sold, rent, auct, etc.)
 
  ![Directory2][ds2]
+ 
+ \  
+&nbsp;
 
 #### Converting .zip files
 
-Begin by downloading all code files from this repository at: [https://github.com/andykrause/ausPropMrkt](https://github.com/andykrause/ausPropMrkt "Git")
+Begin by downloading the **apmDataPrep.R** file from this repository at: [https://github.com/andykrause/ausPropMrkt](https://github.com/andykrause/ausPropMrkt "Git")
 
 The following are required R libraries: `RCurl, RODBC, RSQLite, plyr`
 
@@ -51,13 +54,21 @@ Next, set your base directory (**basePath**) to the individual geographic level 
 
      basePath <- 'c:/temp/Adelaide'
  
-Then, call the **buildAPMData()** function, where `basePath` is the basePath specified above, `newFileName` is the name of the output file (.db format), `transList` is the list of transaction type folder that you have created and `verbose` determines whether or not progress updates will be displayed in the R console.  
+Then, call the **buildAPMData()** function, where `basePath` is the basePath specified above, `newFileName` is the name of the output file (.db format), `transList` is the list of transaction type folder that you have created and `verbose` determines whether or not progress updates will be displayed in the R console. For `transList`, the name of each list item will be the name of the combined .csv file that is generated, the object in each list item (`=c('sold', 'auct')`) are the various .zip file types that will combined together. 
 
      buildAPMData(basePath,
                   newFileName = 'Adelaide.db',
-                  transList = c('sold','auct','rent'),
+                  transList = list('rentals'='rent','sales'=c('sold', 'auct')),
                   verbose = TRUE)   
 
-Again, individual .csv files for each transaction type will be outputted into the basePath directory as well. 
+This function will create a SQLite database called *Adelaide.db* containing a table of rentals data and a table of sales data (both 'sold' and 'auctions'). Again, individual .csv files for each transaction type will be outputted into the basePath directory as well. 
+
+\  
+&nbsp;
+
+\  
+&nbsp;
+
+### 2. Price-to-Rent Component
 
 MORE TO COME

@@ -16,9 +16,7 @@ if(F){
   
   # Instruction for simply converting .zips to .csvs (warning this doesn't correct bad file names)
   convertAPMData(basePath, transType='sold', verbose=TRUE)
-  convertAPMData(basePath, transType='rent', verbose=TRUE)
-  convertAPMData(basePath, transType='auct', verbose=TRUE)
-  
+
 }
 
 ####################################################################################################
@@ -41,11 +39,14 @@ buildAPMData <- function(basePath,                                    # Path to 
   require(RCurl)
   
   # Source necessary files
-  sourceHttps(paste0("https://raw.githubusercontent.com/andykrause/dataMgmtTools/",
-                     "master/basicConversionTools.R"))
+  source(paste0("https://raw.githubusercontent.com/andykrause/dataMgmtTools/",
+                "master/basicConversionTools.R"))
   
   # Fix any bad file names
   fixFileNames(basePath, badStr='.csv.zip', newStr='.zip', verbose=verbose)
+  
+  # Build a temporary folder
+  dir.create(paste0(basePath, '/temp'), showWarnings = FALSE)
   
   # Convert .zips to .csvs
   if(verbose) cat('Converting .zips to .csvs', '\n')
@@ -65,6 +66,9 @@ buildAPMData <- function(basePath,                                    # Path to 
   # Successful output message
   if(verbose) cat('\n***CONVERSION SUCCESSFUL.  Data saved in:', 
                   paste0(basePath, '/', newFileName), '***\n')
+  
+  # Remove temporary directory
+  unlink(paste0(basePath, '/temp'), recursive=TRUE, force=TRUE)
   
 }
 
@@ -97,12 +101,12 @@ convertAPMData <- function(basePath,                # The main directory where t
   
   # Read in all data
   if(verbose) cat('Reading in all .csv files \n')
-  csvFiles <- list.files(basePath)
-  csvFiles <- as.list(paste0(basePath, '/', csvFiles[grep('.csv', csvFiles)]))
+  csvFiles <- list.files(paste0(basePath, '/temp'))
+  csvFiles <- as.list(paste0(basePath, '/temp/', csvFiles[grep('.csv', csvFiles)]))
   csvFiles <- selectFiles(csvFiles, transType)
 
   # Read .csv into memory
-  csvData <- lapply(csvFiles, read.csv, stringsAsFactors=FALSE)
+  csvData <- lapply(csvFiles, tryReadCSV, stringsAsFactors=FALSE)
   
   # Remove temp files
   lapply(csvFiles, file.remove)
@@ -126,7 +130,7 @@ extractAPMData <- function(fileName,             # File name to be extracted
 ){
   
   # Create temporary directory  
-  tempPath = gsub('.zip', '', paste0(dataPath, '/', fileName))
+  tempPath = gsub('.zip', '', paste0(dataPath, '/temp/', fileName))
   dir.create(tempPath, showWarnings = FALSE)
   
   # Extract data
@@ -138,19 +142,20 @@ extractAPMData <- function(fileName,             # File name to be extracted
   xCut <- c(grep('.csv', fNames))
   if(length(xCut) != 0) xNames <- as.list(paste0(tempPath, '/', fNames[-xCut]))
   lapply(xNames, file.remove)
-  
+
   # Rename File
-  file.rename(from=paste0(tempPath, '/', list.files(tempPath)),
-              to=paste0(tempPath, '/', gsub('.zip', '', fileName), '.csv'))
+  newName <- paste0(gsub('.zip', '', fileName), '.csv')
+  file.rename(from=paste0(tempPath, '/', list.files(tempPath)[1]),
+              to=paste0(tempPath, '/', newName))
   
   # Move File
-  file.copy(from=paste0(tempPath, '/', list.files(tempPath)),
-            to=paste0(dataPath, '/', list.files(tempPath)),
+  file.copy(from=paste0(tempPath, '/', newName),
+            to=paste0(dataPath, '/temp/', newName),
             overwrite=TRUE)
   
   # Delete old file and directory
   file.remove(paste0(tempPath, '/', list.files(tempPath)))
-  unlink(tempPath, recursive = TRUE) 
+  unlink(tempPath, recursive = TRUE, force=TRUE) 
   
 }
 
@@ -221,4 +226,15 @@ fixFileNames <- function(dirPath,                 # File directory to work in
    if(verbose) cat(length(toRename), 'file name(s) fixed.\n\n') 
   }
 }
+
+### Function that averts errors caused by reading in .csvs with no data --------
+
+tryReadCSV <- function(x,                        # File Name
+                       stringsAsFactors=FALSE    # Option
+                       )
+{
+  xx <- try(read.csv(x, stringsAsFactors=stringsAsFactors), silent=TRUE)
+  if(class(xx) == 'data.frame') return(xx)
+}
+
 

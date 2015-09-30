@@ -72,3 +72,5 @@ This function will create a SQLite database called *Adelaide.db* containing a ta
 ### 2. Price-to-Rent Component
 
 MORE TO COME
+
+This is my first line.

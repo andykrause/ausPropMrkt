@@ -91,3 +91,40 @@ prrDirectCompare <- function(sales,               # Data.frame of sales
               timeIndex = list(saleIndex = saleIndex,
                                rentIndex = rentIndex)))  
 }  
+
+### Function to convert various APM date structures into R date structure --------------------------
+
+fixAPMDates <- function(xDates){
+  
+ ## Set required libraries
+  
+  require(stringr)
+
+ ## Break down dates
+  
+  # Remove Time
+  xDates <- gsub(" 0:00", "", xDates)
+  
+  # Find location of slashes
+  sLoc <- matrix(unlist(str_locate_all(xDates, '/')), ncol=4, byrow=TRUE)[,1:2]
+  
+  # Correct Days
+  days <- as.numeric(substr(xDates, 1, sLoc[ ,1] - 1))
+  days <- ifelse(days < 10, paste0('0', days), as.character(days))
+    
+  # Correct Months
+  months <- as.numeric(substr(xDates, sLoc[ ,1] + 1, sLoc[ ,2] - 1))
+  months <- ifelse(months < 10, paste0('0', months), as.character(months))
+  
+  # Correct years
+  years <- as.numeric(substr(xDates, sLoc[ ,2] + 1, 50))
+  years <- ifelse(years < 2000, paste0('20', years), as.character(years))
+
+ ## Recombine into R date format  
+    
+  newDates <- as.Date(paste0(days, '/' , months, '/', years), "%d/%m/%Y")
+
+ ## Return Values  
+  
+  return(newDates)
+}

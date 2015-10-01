@@ -94,7 +94,9 @@ prrDirectCompare <- function(sales,               # Data.frame of sales
 
 ### Function to convert various APM date structures into R date structure --------------------------
 
-fixAPMDates <- function(xDates){
+fixAPMDates <- function(xDates      # Vector of dates to be fixed
+                        )
+  {
   
  ## Set required libraries
   
@@ -127,4 +129,42 @@ fixAPMDates <- function(xDates){
  ## Return Values  
   
   return(newDates)
+}
+
+### Regression function that creates imputed rent and sales values -------------------------------
+
+prrCrossReg <- function(formula,               # LM regression formula
+                        saleData,              # Data containing sales
+                        rentData,              # Data containing rentals
+                        verbose = FALSE        # Show progress?
+                        ){
+  
+ ## Estimate models and make new predictions
+  
+  # Esimate models
+  if(verbose) cat('Estimating sale and rent models\n')
+  saleModel <- lm(formula, data=saleData)
+  rentModel <- lm(formula, data=rentData)
+  
+  # Make predictions of imputed values
+  if(verbose) cat('Imputing values\n')
+  impPrice <- exp(predict(saleModel, newdata=xRentals))
+  impRent <- exp(predict(rentModel, newdata=xSales))
+  
+  # Apply cross values
+  if(verbose) cat('Stacking observed and imputed values\n')
+  saleData$Price <- xSales$transValue
+  rentData$Price <- impPrice
+  saleData$Rent <- impRent
+  rentData$Rent <- xRentals$transValue
+  
+  # Combine data back together
+  if(verbose) cat('Merging data\n')
+  allData <- rbind(saleData, rentData)
+  
+ ## Return values
+  return(list(allData = allData,
+              saleModel = saleModel,
+              rentModel = rentModel))
+  
 }

@@ -148,15 +148,15 @@ prrCrossReg <- function(formula,               # LM regression formula
   
   # Make predictions of imputed values
   if(verbose) cat('Imputing values\n')
-  impPrice <- exp(predict(saleModel, newdata=xRentals))
-  impRent <- exp(predict(rentModel, newdata=xSales))
+  impPrice <- exp(predict(saleModel, newdata=rentData))
+  impRent <- exp(predict(rentModel, newdata=saleData))
   
   # Apply cross values
   if(verbose) cat('Stacking observed and imputed values\n')
-  saleData$Price <- xSales$transValue
+  saleData$Price <- saleData$transValue
   rentData$Price <- impPrice
   saleData$Rent <- impRent
-  rentData$Rent <- xRentals$transValue
+  rentData$Rent <- rentData$transValue
   
   # Combine data back together
   if(verbose) cat('Merging data\n')

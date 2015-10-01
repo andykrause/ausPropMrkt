@@ -61,7 +61,11 @@ summary(Rent_Unit_Model)
 
 # create new variable for created price
 
-testData = predict.lm(Rent_Unit_Model,Sold_Units)
-  
+testData = predict.lm(Rent_Unit_Model,Sold_Units, se.fit = TRUE)
+
+price.range = c(min(Rent_Units$EventPrice),max(Rent_Units$EventPrice))
+size.range = c(min(Rent_Units$AreaSize),max(Rent_Units$AreaSize))
+
+plot(testData$fit,testData$se.fit )
   
 ## 6. Create Price / Rent ratio

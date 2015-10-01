@@ -29,13 +29,19 @@ cleanData = function(x,npar=TRUE,print=TRUE){
   x = subset(x, x$EventPrice < 5000)
   x = subset(x, x$EventPrice > 0)
   x = subset(x, x$Bedrooms < 8)
+  
+  names(x)[64] <- "PropertyRentRatio"
+  names(x)[65] <- "Rent"
+  names(x)[66] <- "Price"
+  
   return(x)
   }
   
 Rent_All = cleanData(Rent_All)
 Sold_All = cleanData(Sold_All)
   
-  
+Rent_All$Rent = Rent_All$EventPrice
+Sold_All$Price = Sold_All$EventPrice
 
 ## 3. Subdivide Data
 
@@ -61,11 +67,15 @@ summary(Rent_Unit_Model)
 
 # create new variable for created price
 
-testData = predict.lm(Rent_Unit_Model,Sold_Units, se.fit = TRUE)
 
-price.range = c(min(Rent_Units$EventPrice),max(Rent_Units$EventPrice))
-size.range = c(min(Rent_Units$AreaSize),max(Rent_Units$AreaSize))
 
-plot(testData$fit,testData$se.fit )
-  
+testData = predict (Rent_Unit_Model,newdata=Sold_Units)
+Sold_Units$Rent = testData
+
+Sold_Units$PropertyRentRatio = Sold_Units$Price/Sold_Units$Rent
+
+plot(Sold_Units$PropertyRentRatio,Sold_Units$EventMonth, xlim = c(0,10000) , ylim = c(0,12) )
+
+summary(Sold_Units)
+
 ## 6. Create Price / Rent ratio

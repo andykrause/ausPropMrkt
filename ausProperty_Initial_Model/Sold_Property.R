@@ -19,6 +19,7 @@ SoldP = subset(SoldP, SoldP$Postcode == 3051)
 ## Remove 0, NAN, outliers
 ######
 
+
 SoldP = subset(SoldP, SoldP$Property_Latitude < 0)
 SoldP = subset(SoldP, SoldP$AreaSize < 2500)
 SoldP = subset(SoldP, SoldP$AreaSize > 50)

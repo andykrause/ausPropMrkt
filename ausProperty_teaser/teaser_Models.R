@@ -18,33 +18,50 @@ Rent_All =
 Sold_All = SoldP
 
 
+
 ## 2. Clean Data
 
+cleanData = function(x,npar=TRUE,print=TRUE){
+  x = subset(x, x$Property_Latitude < 0)
+  x = subset(x, x$AreaSize < 2500)
+  x = subset(x, x$AreaSize > 50)
+  x = subset(x, x$Parking < 6)
+  x = subset(x, x$EventPrice < 5000)
+  x = subset(x, x$EventPrice > 0)
+  x = subset(x, x$Bedrooms < 8)
+  return(x)
+  }
+  
+Rent_All = cleanData(Rent_All)
+Sold_All = cleanData(Sold_All)
   
   
 
-## 3. Combine Data
+## 3. Subdivide Data
 
+Rent_Units = subset(Rent_All, Rent_All$PropertyType == 'Unit')
+Rent_House = subset(Rent_All, Rent_All$PropertyType == 'House')
+Sold_Units = subset(Sold_All, Sold_All$PropertyType == 'Unit')
+Sold_House = subset(Sold_All, Sold_All$PropertyType == 'House')
 
   
 ## 4. Create global model for Rental and Sold Market
 
-Global_Model_Rent = lm(log(EventPrice)~ +as.factor(EventYear)+AreaSize+Bedrooms+PropertyType+
-                         Parking*HasGarage+HasStudy+HasWalkInWardrobe+HasHeating+HasAirConditioning+HasEnsuite+
-                         HasBalcony,Rent_All)
+findModel = function(x,npar=TRUE,print=TRUE){
+  x = lm( log(EventPrice) ~ EventYear+AreaSize+Bedrooms+Parking,x)
+  summary(x)
+  return(x)
+}
 
-Global_Model_Sold = lm(log(EventPrice)~ +as.factor(EventYear)+AreaSize+Bedrooms+PropertyType+
-                       Parking*HasGarage+HasStudy+HasWalkInWardrobe+HasHeating+HasAirConditioning+HasEnsuite+
-                       HasBalcony,Rent_All)
+Rent_Unit_Model = findModel(Rent_Units)
+summary(Rent_Unit_Model)
+
 
 ## 5. Aplly global model to other market
 
 # create new variable for created price
 
-applyModel = function(pricingModel,dataFrame,npar=TRUE,print=TRUE){
+testData = predict.lm(Rent_Unit_Model,Sold_Units)
   
-  
-  
-}
   
 ## 6. Create Price / Rent ratio

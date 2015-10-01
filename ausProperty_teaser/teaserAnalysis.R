@@ -107,11 +107,16 @@
  ## Limit by geographic density
   
   # Set minimum number of transactions required in each geo area (currently suburbs)
-  geoLimit <- 10
+  geoTempLimit <- 3 # Must have at least three transactions per year
   
   # Determine which suburbs meet criteria for each
-  salesGeo <- names(table(xSales$Suburb)[table(xSales$Suburb) >= geoLimit])
-  rentGeo <- names(table(xRentals$Suburb)[table(xRentals$Suburb) >= geoLimit])
+  saleTable <- table(xSales$Suburb, xSales$transYear)
+  sKeep <- which(apply(saleTable, 1, min) >= geoTempLimit)
+  salesGeo <- rownames(saleTable[sKeep, ])
+  
+  rentTable <- table(xRentals$Suburb, xRentals$transYear)
+  rKeep <- which(apply(rentTable, 1, min) >= geoTempLimit)
+  rentGeo <- rownames(rentTable[rKeep, ])
   
   # Determine which suburbs meet criteria in both sales and rents
   allGeo <- intersect(salesGeo, rentGeo)
@@ -138,6 +143,85 @@
   
   # Calculate the ratio
   allValues$prRatio <- allValues$Price / (allValues$Rent * 52 / 12)
+
+### Clean up memory
   
-  ### Next up:  Analysing the ratios
+  rm(rentals); rm(sales); rm(xSales); rm(xRentals)
+  gc()
   
+    
+### Analyzing the prRatios ------------------------------------------------------------------------
+  
+ ## Global analysis by year, qtr and days(^-1)
+
+  globTrends <- prrMakeTrends(allValues)
+  
+ ## Global Trends by property type
+  
+  houseTrends <- prrMakeTrends(allValues[allValues$PropertyType == 'House',])
+  unitTrends <- prrMakeTrends(allValues[allValues$PropertyType == 'Unit',])
+  
+ ## Trends by Suburb
+  
+  # Calculate trends by suburbs
+  subTrends <- lapply(allGeo, prrWrapper, xData=allValues)
+  names(subTrends) <- allGeo
+   
+  # Strip out yearly data
+  subYears <- lapply(subTrends, function(x) x[1])
+  subYears <- matrix(unlist(subYears), ncol=6, byrow=TRUE)
+  subYears <- as.data.frame(subYears)
+  rownames(subYears) <- allGeo
+
+ ## Trends by use by suburb
+  
+  allMain <- subset(allValues, PropertyType == 'House' | PropertyType == 'Unit')
+  houseSales <- subset(allMain, PropertyType == 'House' & transType == 'sale')
+  unitSales <- subset(allMain, PropertyType == 'Unit' & transType == 'sale')
+  houseRentals <- subset(allMain, PropertyType == 'House' & transType == 'rent')
+  unitRentals <- subset(allMain, PropertyType == 'Unit' & transType == 'rent')
+  
+  # Determine which suburbs meet criteria for each
+  saleHTable <- table(houseSales$Suburb, houseSales$transYear)
+  shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
+  shGeo <- rownames(saleHTable[shKeep, ])
+  saleUTable <- table(unitSales$Suburb, unitSales$transYear)
+  suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
+  suGeo <- rownames(saleUTable[suKeep, ])
+  rentHTable <- table(houseRentals$Suburb, houseRentals$transYear)
+  rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
+  rhGeo <- rownames(rentHTable[rhKeep, ])
+  rentUTable <- table(unitRentals$Suburb, unitRentals$transYear)
+  ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
+  ruGeo <- rownames(rentUTable[ruKeep, ])
+  allUGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
+
+  # Calculate trends by suburbs
+  subHouseTrends <- lapply(allUGeo, prrWrapper, xData=allMain[allMain$PropertyType == 'House', ])
+  names(subHouseTrends) <- allUGeo
+  subUnitTrends <- lapply(allUGeo, prrWrapper, xData=allMain[allMain$PropertyType == 'Unit', ])
+  names(subUnitTrends) <- allUGeo
+
+  # Strip out yearly data
+  subHouseYears <- lapply(subHouseTrends, function(x) x[1])
+  subHouseYears <- matrix(unlist(subHouseYears), ncol=6, byrow=TRUE)
+  subHouseYears <- as.data.frame(subHouseYears)
+  rownames(subHouseYears) <- allUGeo
+  
+  subUnitYears <- lapply(subUnitTrends, function(x) x[1])
+  subUnitYears <- matrix(unlist(subUnitYears), ncol=6, byrow=TRUE)
+  subUnitYears <- as.data.frame(subUnitYears)
+  rownames(subUnitYears) <- allUGeo
+  
+### Make some plots --------------------------------------------------------------------------------  
+
+    
+                            
+  
+
+  
+  
+  
+  
+  
+

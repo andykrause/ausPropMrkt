@@ -172,6 +172,7 @@
   subYears <- matrix(unlist(subYears), ncol=6, byrow=TRUE)
   subYears <- as.data.frame(subYears)
   rownames(subYears) <- allGeo
+  names(subYears) <- 2010:2015
 
  ## Trends by use by suburb
   
@@ -215,13 +216,92 @@
   
 ### Make some plots --------------------------------------------------------------------------------  
 
-    
-                            
+ ## By year (Global)  
   
+  # Build data
+  globGG <- melt(globTrends$year)
+  names(globGG) <- c('Year', "PRR")
+  globGGQ <- melt(globTrends$qtr)
+  names(globGGQ) <- c('Quarter', "PRR")
+  globGGD <- melt(globTrends$days)
+  names(globGGD) <- c('Days_10', "PRR")
 
+  # Plot
+  ggplot(globGG, aes(x=Year, y=PRR)) + 
+    geom_line(size=3) +
+    ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
+  
+  ggplot(globGGQ, aes(x=Quarter, y=PRR)) + 
+    geom_line(size=3) +
+    ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
+  
+  ggplot(globGGD, aes(x=Days_10, y=PRR)) + 
+    geom_line(size=3) +
+    ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
+  
+ ## By Use by Year
+  
+  # Build data
+  typeGG <- melt(c(houseTrends$year, unitTrends$year))
+  names(typeGG) <- c("PRR")
+  typeGG$Year <- rep(2010:2015, 2)
+  typeGG$Type <- c(rep('House', 6), rep('Unit', 6))
+  typeGGQ <- melt(c(houseTrends$qtr, unitTrends$qtr))
+  names(typeGGQ) <- c("PRR")
+  typeGGQ$Qtr <- rep(1:21, 2)
+  typeGGQ$Type <- c(rep('House', 21), rep('Unit', 21))
+  typeGGD <- melt(c(houseTrends$days, unitTrends$days))
+  names(typeGGD) <- c("PRR")
+  typeGGD$Days_10 <- rep(1:184, 2)
+  typeGGD$Type <- c(rep('House', 184), rep('Unit', 184))
+  
+  # Plot
+  ggplot(typeGG, aes(x=Year, y=PRR, colour=Type)) + 
+    geom_line(size=3) +
+    ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
+  
+  ggplot(typeGGQ, aes(x=Qtr, y=PRR, colour=Type)) + 
+    geom_line(size=3) +
+    ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
+  
+  ggplot(typeGGD, aes(x=Days_10, y=PRR, colour=Type)) + 
+    geom_line(size=2) +
+    ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
+  
+ ## By suburb by Year
+  subYears$Suburb <- allGeo
+  subGG <- melt(subYears, id.vars='Suburb')
+  names(subGG) <- c('Suburb', 'Year', 'PRR')
+  
+  ggplot(subGG, aes(x=Year, y=PRR, group=Suburb)) + 
+    geom_line(size=.5) +
+    ggtitle('Price to Rent Ratios in Melbourne by Suburb\n Cross Regression Method') +
+    theme(legend.position='none')
   
   
+ ## By sub by type by year
+  subHouseYears$Suburb <- allUGeo
+  subUnitYears$Suburb <- allUGeo
+  diffYears <- subHouseYears[,1:6] - subUnitYears[,1:6]
+  diffYears$Suburb <- allUGeo
+  subHGG <- melt(subHouseYears, id.vars='Suburb')
+  subUGG <- melt(subUnitYears, id.vars='Suburb')
+  subDGG <- melt(diffYears, id.vars='Suburb')
+  names(subHGG) <- names(subUGG) <-  names(subDGG) <- c('Suburb', 'Year', 'PRR')
   
+  ggplot(subHGG, aes(x=Year, y=PRR, group=Suburb)) + 
+    geom_line(size=.5) +
+    ggtitle('Price to Rent Ratios for Houses in Melbourne by Suburb\n Cross Regression Method') +
+    theme(legend.position='none')
   
+  ggplot(subUGG, aes(x=Year, y=PRR, group=Suburb)) + 
+    geom_line(size=.5) +
+    ggtitle('Price to Rent Ratios for Units in Melbourne by Suburb\n Cross Regression Method') +
+    theme(legend.position='none')
+  
+  ggplot(subDGG, aes(x=Year, y=PRR, group=Suburb)) + 
+    geom_line(size=.5) +
+    ggtitle('Difference between PPRs for Houses and Units in Melbourne by Suburb\n Cross Regression Method') +
+    theme(legend.position='none')
   
 

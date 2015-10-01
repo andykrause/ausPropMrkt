@@ -168,3 +168,41 @@ prrCrossReg <- function(formula,               # LM regression formula
               rentModel = rentModel))
   
 }
+
+### Function to build PRR trends by different temporal breakdowns ----------------------------------
+
+prrMakeTrends <- function(xData            # Dataset including time categories and PRR ratios
+){
+  
+  # Calculate annual trends
+  xYear <- tapply(xData$prRatio, xData$transYear, median)
+  
+  # Calculate quarterly trends
+  xQtr <- tapply(xData$prRatio, xData$transQtr, median)
+  
+  # Calculate trends in 10 day increments
+  xDays10 <- tapply(xData$prRatio, round(xData$transDays, -1), median)
+  
+  # Return values
+  return(list(year=xYear,
+              qtr=xQtr,
+              days=xDays10))
+}
+
+### Wrapper function that allow prrMakeTrends to be applied to a list of geographic places --------
+
+prrWrapper <- function(geoList,      # List of geographic areas (suburbs for now)
+                       xData         # Dataset including time categories
+)
+{
+  
+  # Isolate necessary data
+  yData <- xData[xData$Suburb == geoList, ]
+  
+  # Calculate trends
+  yRes <- prrMakeTrends(yData)
+  
+  # Return values
+  return(yRes)
+}  
+

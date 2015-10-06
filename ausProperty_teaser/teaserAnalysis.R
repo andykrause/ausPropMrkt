@@ -279,7 +279,6 @@
     ggtitle('Price to Rent Ratios in Melbourne by Suburb\n Cross Regression Method') +
     theme(legend.position='none')
   
-  
  ## By sub by type by year
   subHouseYears$Suburb <- allUGeo
   subUnitYears$Suburb <- allUGeo
@@ -305,4 +304,10 @@
     ggtitle('Difference between PPRs for Houses and Units in Melbourne by Suburb\n Cross Regression Method') +
     theme(legend.position='none')
   
-
+  ### Export necessary objects to a .rData workspace for Shiny page --------------
+  
+  save(globGG, globGGD, globGGQ, subDGG, subGG, subHGG, subHouseYears,
+       subUGG, subUnitYears, subYears, typeGG, typeGGD, typeGGQ, 
+       globTrends, houseTrends,unitTrends, subHouseTrends, subUnitTrends,
+       subTrends,
+       file = paste0(dataPath, 'prr.rData'))

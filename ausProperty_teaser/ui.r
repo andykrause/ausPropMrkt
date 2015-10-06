@@ -35,8 +35,10 @@ shinyUI(fluidPage(
                      '10 Day Increments' = 'time10')),
        h4("Geographic Scale Scale"),
        textInput("geoType", "Enter Suburb Names Separated by Commas.  
-                 Enter 'All Metro' for entire region", "All Metro")
+                 Enter 'All Metro' for entire region", "All Metro"),
 
+       actionButton('reRun', "Replot results")
+       
      ),
 
    # Main plotting panel   
@@ -46,4 +48,13 @@ shinyUI(fluidPage(
    )
   )
 ))
+
+
+# TODOs
+
+# Add conditional page to allow user to change visual parameters, colors, lines, etc
+# Add in quarterly analysis
+# Add in 10 day analysis
+# Add in breakdown by suburbs (make a show suburb table conditional pane)
+
 

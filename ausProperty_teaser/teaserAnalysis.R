@@ -18,14 +18,16 @@
  ## Set the path to the raw data
   
   dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  saleFile <- 'sales10_15.csv'
+  rentFile <- 'rents10_15.csv'
 
 ### Read in raw data ----------------------------------------------------------------------------------
   
  ## Read in Data  
   
-  rawSales <- read.csv(paste0(dataPath, 'sales10_15.csv'),
+  rawSales <- read.csv(paste0(dataPath, saleFile),
                        stringsAsFactors = FALSE)
-  rawRents <- read.csv(paste0(dataPath, 'rents10_15.csv'),
+  rawRents <- read.csv(paste0(dataPath, rentFile),
                        stringsAsFactors = FALSE)
 
 ### Clean Data (TEMPORARY PROCESS TO BE REPLACED BY MORE FORMAL ONE LATER) -------------------------
@@ -109,21 +111,30 @@
   # Set minimum number of transactions required in each geo area (currently suburbs)
   geoTempLimit <- 3 # Must have at least three transactions per year
   
+  # Split Sales by use
+  houseSales <- subset(xSales, PropertyType == 'House' & transType == 'sale')
+  unitSales <- subset(xSales, PropertyType == 'Unit' & transType == 'sale')
+  houseRentals <- subset(xRentals, PropertyType == 'House' & transType == 'rent')
+  unitRentals <- subset(xRentals, PropertyType == 'Unit' & transType == 'rent')
+  
   # Determine which suburbs meet criteria for each
-  saleTable <- table(xSales$Suburb, xSales$transYear)
-  sKeep <- which(apply(saleTable, 1, min) >= geoTempLimit)
-  salesGeo <- rownames(saleTable[sKeep, ])
-  
-  rentTable <- table(xRentals$Suburb, xRentals$transYear)
-  rKeep <- which(apply(rentTable, 1, min) >= geoTempLimit)
-  rentGeo <- rownames(rentTable[rKeep, ])
-  
-  # Determine which suburbs meet criteria in both sales and rents
-  allGeo <- intersect(salesGeo, rentGeo)
+  saleHTable <- table(houseSales$Suburb, houseSales$transYear)
+  shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
+  shGeo <- rownames(saleHTable[shKeep, ])
+  saleUTable <- table(unitSales$Suburb, unitSales$transYear)
+  suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
+  suGeo <- rownames(saleUTable[suKeep, ])
+  rentHTable <- table(houseRentals$Suburb, houseRentals$transYear)
+  rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
+  rhGeo <- rownames(rentHTable[rhKeep, ])
+  rentUTable <- table(unitRentals$Suburb, unitRentals$transYear)
+  ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
+  ruGeo <- rownames(rentUTable[ruKeep, ])
+  allUGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
   
   # Limit sales and rents to these suburbs
-  xSales <- xSales[xSales$Suburb %in% allGeo, ]
-  xRentals <- xRentals[xRentals$Suburb %in% allGeo, ]
+  xSales <- xSales[xSales$Suburb %in% allUGeo, ]
+  xRentals <- xRentals[xRentals$Suburb %in% allUGeo, ]
   
 ### Develop the cross regression comparison method -------------------------------------------------
   
@@ -134,12 +145,20 @@
   
  ## Estimate models and make new predictions
   
-  xResults <- prrCrossReg(regSpec, xSales, xRentals, verbose=TRUE)
+  houseResults <- prrCrossReg(regSpec, 
+                              subset(xSales, PropertyType == 'House'),
+                              subset(xRentals, PropertyType == 'House'),
+                              verbose=TRUE)
+  
+  unitResults <- prrCrossReg(regSpec, 
+                             subset(xSales, PropertyType == 'Unit'),
+                             subset(xRentals, PropertyType == 'Unit'),
+                             verbose=TRUE)
   
  ## Calculate the ratio
   
   # Extract vales
-  allValues <- xResults$allData
+  allValues <- rbind(houseResults$allData, unitResults$allData)
   
   # Calculate the ratio
   allValues$prRatio <- allValues$Price / (allValues$Rent * 52 / 12)
@@ -164,43 +183,25 @@
  ## Trends by Suburb
   
   # Calculate trends by suburbs
-  subTrends <- lapply(allGeo, prrWrapper, xData=allValues)
-  names(subTrends) <- allGeo
+  subTrends <- lapply(allUGeo, prrWrapper, xData=allValues)
+  names(subTrends) <- allUGeo
    
   # Strip out yearly data
   subYears <- lapply(subTrends, function(x) x[1])
   subYears <- matrix(unlist(subYears), ncol=6, byrow=TRUE)
   subYears <- as.data.frame(subYears)
-  rownames(subYears) <- allGeo
+  rownames(subYears) <- allUGeo
   names(subYears) <- 2010:2015
 
  ## Trends by use by suburb
   
-  allMain <- subset(allValues, PropertyType == 'House' | PropertyType == 'Unit')
-  houseSales <- subset(allMain, PropertyType == 'House' & transType == 'sale')
-  unitSales <- subset(allMain, PropertyType == 'Unit' & transType == 'sale')
-  houseRentals <- subset(allMain, PropertyType == 'House' & transType == 'rent')
-  unitRentals <- subset(allMain, PropertyType == 'Unit' & transType == 'rent')
-  
-  # Determine which suburbs meet criteria for each
-  saleHTable <- table(houseSales$Suburb, houseSales$transYear)
-  shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
-  shGeo <- rownames(saleHTable[shKeep, ])
-  saleUTable <- table(unitSales$Suburb, unitSales$transYear)
-  suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
-  suGeo <- rownames(saleUTable[suKeep, ])
-  rentHTable <- table(houseRentals$Suburb, houseRentals$transYear)
-  rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
-  rhGeo <- rownames(rentHTable[rhKeep, ])
-  rentUTable <- table(unitRentals$Suburb, unitRentals$transYear)
-  ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
-  ruGeo <- rownames(rentUTable[ruKeep, ])
-  allUGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
-
-  # Calculate trends by suburbs
-  subHouseTrends <- lapply(allUGeo, prrWrapper, xData=allMain[allMain$PropertyType == 'House', ])
+  # Calculate trends by suburbs by use
+  subHouseTrends <- lapply(allUGeo, prrWrapper,
+                           xData=allValues[allValues$PropertyType == 'House', ])
   names(subHouseTrends) <- allUGeo
-  subUnitTrends <- lapply(allUGeo, prrWrapper, xData=allMain[allMain$PropertyType == 'Unit', ])
+  
+  subUnitTrends <- lapply(allUGeo, prrWrapper, 
+                          xData=allValues[allValues$PropertyType == 'Unit', ])
   names(subUnitTrends) <- allUGeo
 
   # Strip out yearly data
@@ -269,7 +270,7 @@
     ggtitle('Price to Rent Ratios in Melbourne\n Cross Regression Method')
   
  ## By suburb by Year
-  subYears$Suburb <- allGeo
+  subYears$Suburb <- allUGeo
   subGG <- melt(subYears, id.vars='Suburb')
   names(subGG) <- c('Suburb', 'Year', 'PRR')
   

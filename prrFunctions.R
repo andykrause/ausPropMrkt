@@ -206,3 +206,47 @@ prrWrapper <- function(geoList,      # List of geographic areas (suburbs for now
   return(yRes)
 }  
 
+
+
+### Function to determine which geo areas meet use and time criteria -----------
+
+prrGeoLimit <- function(transData,               # Dataframe of trans data
+                        locField = 'locName',    # Field containing location
+                        timeField = 'transYear', # Field containing time
+                        geoTempLimit = 3         # Min trans per use/time/loc
+){  
+  
+  # Split transactions by use
+  houseSales <- subset(transData, PropertyType == 'House' &
+                         transType == 'sale')
+  unitSales <- subset(transData, PropertyType == 'Unit' & 
+                        transType == 'sale')
+  houseRentals <- subset(transData, PropertyType == 'House' & 
+                           transType == 'rent')
+  unitRentals <- subset(transData, PropertyType == 'Unit' & 
+                          transType == 'rent')
+  
+  # Determine which suburbs meet criteria for each
+  saleHTable <- table(houseSales[,locField], houseSales[,timeField])
+  shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
+  shGeo <- rownames(saleHTable[shKeep, ])
+  saleUTable <- table(unitSales[,locField], unitSales[,timeField])
+  suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
+  suGeo <- rownames(saleUTable[suKeep, ])
+  rentHTable <- table(houseRentals[,locField], houseRentals[,timeField])
+  rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
+  rhGeo <- rownames(rentHTable[rhKeep, ])
+  rentUTable <- table(unitRentals[,locField], unitRentals[,timeField])
+  ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
+  ruGeo <- rownames(rentUTable[ruKeep, ])
+  bothGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
+  houseGeo <- intersect(shGeo,rhGeo)
+  unitGeo <- intersect(suGeo, ruGeo)
+  eitherGeo <- union(houseGeo, unitGeo)
+  
+  # Create tables
+  return(list(bothGeo = bothGeo,
+              houseGeo = houseGeo,
+              unitGeo = unitGeo,
+              eitherGeo = eitherGeo))  
+}

@@ -250,3 +250,27 @@ prrGeoLimit <- function(transData,               # Dataframe of trans data
               unitGeo = unitGeo,
               eitherGeo = eitherGeo))  
 }
+
+### Apply the threshold designations across all transactions ------------------
+
+applyThres <- function(thresData,       # Threshold data object from prrGeoLimit
+                       transData,       # Set of transaction data
+                       timePrefix='YT', # Which time was used YT or QT
+                       geo="postCode"   # Which geo to use (one at a time)
+                       ){
+  
+  # Pull out single designations
+  both <- ifelse(transData[,geo] %in% thresData[[1]],1,0)
+  house <- ifelse(transData[,geo] %in% thresData[[2]],1,0)
+  unit <- ifelse(transData[,geo] %in% thresData[[3]],1,0)
+  either <- ifelse(transData[,geo] %in% thresData[[4]],1,0)
+  
+  # Combine them
+  all <- as.data.frame(cbind(both, house, unit, either))
+  
+  # Rename
+  names(all) <- paste0(timePrefix, "_", names(all), "_",geo)
+  
+  # Add to existing transactions
+  return(cbind(transData, all))
+}

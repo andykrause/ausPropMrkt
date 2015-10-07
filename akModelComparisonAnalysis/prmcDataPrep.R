@@ -28,7 +28,10 @@
   dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
   saleFile <- 'sales10_15.csv'
   rentFile <- 'rents10_15.csv'
-  geoFile <- 'melLocalities.shp'
+  subGeoFile <- 'Vic_Suburbs.shp'
+  lgaGeoFile <- 'Vic_LGAs.shp'
+  sla1GeoFile <- 'Vic_SLA1.shp'
+  postGeoFile <- 'Vic_PostCodes.shp'
   
 ### Read in raw data -----------------------------------------------------------
 
@@ -36,139 +39,195 @@
 
   rawSales <- read.csv(paste0(dataPath, saleFile), stringsAsFactors = FALSE)
   rawRents <- read.csv(paste0(dataPath, rentFile), stringsAsFactors = FALSE)
-  geoShp <- readShapePoly(paste0(dataPath, geoFile))
+  subShp <- readShapePoly(paste0(dataPath, subGeoFile))
+  lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
+  sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
+  postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
 
-### Clean Data (TEMPORARY PROCESS TO BE REPLACED BY MORE FORMAL ONE LATER) -------------------------
+### DATA MANAGEMENT ------------------------------------------------------------  
 
-## Create conforming fields regarding transaction times and values
+ ## Create conforming fields regarding transaction times and values
 
-# Fix date formats
+  # Fix date formats
+  rawSales$transDate <- fixAPMDates(rawSales$FinalResultEventDate)
+  rawRents$transDate <- fixAPMDates(rawRents$EventDate)
 
-rawSales$transDate <- fixAPMDates(rawSales$FinalResultEventDate)
-rawRents$transDate <- fixAPMDates(rawRents$EventDate)
+  # Build new column for transaction Value
+  rawSales$transValue <- as.numeric(rawSales$FinalResultEventPrice)
+  rawRents$transValue <- as.numeric(rawRents$EventPrice)
 
-# Build new column for transaction Value
-rawSales$transValue <- as.numeric(rawSales$FinalResultEventPrice)
-rawRents$transValue <- as.numeric(rawRents$EventPrice)
+  # Set transaction Type   
+  rawSales$transType <- 'sale'  
+  rawRents$transType <- 'rent'
 
-# Set transaction Type   
-rawSales$transType <- 'sale'  
-rawRents$transType <- 'rent'
+ ## Limit both datasets to a standard field list  
 
+  # Set list
+  columnList <- c('GeographicalID', 'EventID', 'AddressID', 'FlatNumber', 
+                  'transDate', 'transValue', 'transType',
+                  'PropertyType', 'Property_Latitude', 'Property_Longitude',
+                  'AreaSize', 'Bedrooms', 'Baths', 'Parking','HasFireplace',
+                  'HasPool', 'HasGarage', 'HasAirConditioning')
 
-## Limit both datasets to a standard field list  
+  # Combine and clip fields to make cleaning easier
+  allTrans <- rbind(rawSales[ ,columnList], rawRents[ ,columnList])
 
-# Set list
-columnList <- c('GeographicalID', 'EventID', 'AddressID', 'FlatNumber', 'Suburb', 'Postcode',
-                'transDate', 'transValue', 'transType', 'PropertyType', 'Property_Latitude',
-                'Property_Longitude', 'AreaSize', 'Bedrooms', 'Baths', 'Parking','HasFireplace',
-                'HasPool', 'HasGarage', 'HasAirConditioning')
+ ## Add additional time information
 
-# Clip data to set columns
-sales <- rawSales[ ,columnList]
-rentals <- rawRents[ ,columnList]
+  # Add a yearly variable
+  allTrans$transYear <- as.numeric(substr(allTrans$transDate, 1, 4))
 
-# Combine to make cleaning easier
-allTrans <- rbind(sales, rentals)
+  # Add a month
+  allTrans$transMonth <- ((12 * (allTrans$transYear - 2010)) + 
+                            as.numeric(substr(allTrans$transDate, 6, 7))) - 5
+    
+  # Add a days count
+  allTrans$transDays <- (as.numeric(allTrans$transDate - 
+                                      (min(allTrans$transDate) - 1)))
 
-## Add additional time information
+  # Add a quarter count
+  allTrans$transQtr <- (allTrans$transDays %/% 91.25) + 1
+  allTrans$transQtr[allTrans$transQtr == 21] <- 20
 
-# Add a yearly variable
-allTrans$transYear <- as.numeric(substr(allTrans$transDate, 1, 4))
-
-# Add a days count
-allTrans$transDays <- as.numeric(allTrans$transDate - (min(allTrans$transDate) - 1))
-
-# Add a quarter count
-allTrans$transQtr <- (allTrans$transDays %/% 91.25) + 1
-
-## Removing missing values  
-
-# Missing transaction values
-allTrans <- subset(allTrans, !is.na(transValue))
-allTrans <- subset(allTrans, transValue  != 0)
-
-# Missing home characteristics
-allTrans <- subset(allTrans, !is.na(AreaSize))
-allTrans <- subset(allTrans, !is.na(Bedrooms))
-allTrans <- subset(allTrans, !is.na(Baths))
-
-# Missing lat/long
-allTrans <- subset(allTrans, !is.na(Property_Latitude) & !is.na(Property_Longitude))
-
-
-### Insert section on geoAnalysis
-
- ## Build SPDF
+  # Remove Missing lat/long
+  allTrans <- subset(allTrans, !is.na(Property_Latitude) & 
+                       !is.na(Property_Longitude))
   
+ ## Add Spatial Information
+  
+  # Create a spatial points data frame
   allSP <- SpatialPointsDataFrame(coords=cbind(allTrans$Property_Longitude,
-                                              allTrans$Property_Latitude),
+                                               allTrans$Property_Latitude),
                                   data=allTrans)
- 
- ## Determine locality of all 
   
-  # Set up blank value for new name
-  allSP@data$locName <- 'none'
+  # Add PostCodes
+  spJoin <- over(allSP, postCodeShp)
+  allSP@data$postCode <- as.character(spJoin$POA_2006)
+
+  # Add Suburbs
+  spJoin <- over(allSP, subShp)
+  allSP@data$suburb <- as.character(spJoin$NAME_2006)
   
-  # Spatial Join name to list
-  for(ij in 1:nrow(geoShp)){
-    xIDs <- which(gIntersects(geoShp[ij,], xxx, byid=TRUE))
-    if(length(xIDs) > 0) allSP@data$name[xIDs] <- as.character(
-      geoShp@data$name[ij])
-  }
+  # Add SLA1
+  spJoin <- over(allSP, sla1Shp)
+  allSP@data$sla1 <- as.character(spJoin$SLA_NAME11)
+  
+  # Add LGA
+  spJoin <- over(allSP, lgaShp)
+  allSP@data$lga <- as.character(spJoin$LGA_NAME11)
+  
+## Convert back to regular data.frame
+  
+  allTrans <- allSP@data
+  
+### DATA CLEANING --------------------------------------------------------------  
+  
+ ## Removing missing values  
 
-  # Find which localities are represented in the trans data and trim
-  mX <- which(geoShp@data$name %in% names(table(allSP@data$name)))
-  transGeo <- geoShp[mX, ]
+  # Missing transaction values
+  allTrans <- subset(allTrans, !is.na(transValue))
+  allTrans <- subset(allTrans, transValue  != 0)
+
+  # Missing home characteristics
+  allTrans <- subset(allTrans, !is.na(AreaSize))
+  allTrans <- subset(allTrans, !is.na(Bedrooms))
+  allTrans <- subset(allTrans, !is.na(Baths))
+
+ ## Remove suspect values
+  
+  # Set limits
+  areaLimits <- c(40, 25000)
+  bedLimits <- c(1, 8)
+  bathLimits <- c(1, 8)
+  rentLimits <- c(125, 2500)
+  saleLimits <- c(150000, 4000000)
+  
+  # Remove by characteristic
+  allTrans <- subset(allTrans, AreaSize >= areaLimits[1] & 
+                       AreaSize <= areaLimits[2])
+  allTrans <- subset(allTrans, Bedrooms >= bedLimits[1] & 
+                       Bedrooms <= bedLimits[2])
+  allTrans <- subset(allTrans, Baths >= bathLimits[1] & 
+                       Baths <= bathLimits[2])
+  
+  # Split back out
+  xSales <- subset(allTrans, transType == 'sale')
+  xRentals <- subset(allTrans, transType == 'rent')
+  
+  # Remove by suspect trans value
+  xSales <- subset(xSales, transValue >= saleLimits[1] & 
+                     transValue <= saleLimits[2])
+  xRentals <- subset(xRentals, transValue >= rentLimits[1] & 
+                     transValue <= rentLimits[2])
+  
+  # Combine and clean up memory
+  allTrans <- rbind(xSales, xRentals)
+  rm(xSales); rm(xRentals); gc()
+  
+ ## Limit geography shapefiles to transaction extent  
+
+  # Suburbs
+  studySuburbs <- subShp[(which(subShp@data$NAME_2006 %in% 
+                            names(table(allTrans$suburb)))), ]
+  
+  # Post Codes
+  studyPostCodes <- postCodeShp[(which(postCodeShp@data$POA_2006 %in% 
+                                  names(table(allTrans$postCode)))), ]
+  
+  # SLA1
+  studySLA1s <- sla1Shp[(which(sla1Shp@data$SLA_NAME11 %in% 
+                                    names(table(allTrans$sla1)))), ]
+  
+  # LGAs
+  studyLGAs <- lgaShp[(which(lgaShp@data$LGA_NAME11 %in% 
+                                    names(table(allTrans$lga)))), ]
   
   
-## Remove suspect values
+ ## Determine which geographies meet which time thresholds
+  
+  # Yearly threshold
+  yearThres <- mapply(prrGeoLimit, 
+                      locField=c('postCode', 'sla1', 'suburb', 'lga'), 
+                       MoreArgs=list(timeField='transYear',
+                                     transData=allTrans,
+                                     geoTempLimit=3))
+  
+  names(yearThres) <- paste0(rep("YT_"),
+                             rep(c('both', 'house', 'unit', 'either'), 4),
+                             rep("_", 16),
+                             c(rep('postCode',4), rep('sla1',4),
+                               rep('suburb',4), rep('lga', 4)))
+  
+  # Quarterly threshold
+  qtrThres <- mapply(prrGeoLimit, 
+                     locField=c('postCode', 'sla1', 'suburb', 'lga'), 
+                     MoreArgs=list(timeField='transQtr',
+                                   transData=allTrans,
+                                   geoTempLimit=3))
+  
+  names(qtrThres) <- paste0(rep("QT_"),
+                             rep(c('both', 'house', 'unit', 'either'), 4),
+                             rep("_", 16),
+                             c(rep('postCode',4), rep('sla1',4),
+                               rep('suburb',4), rep('lga', 4)))
+  
 
-# Set limits
-areaLimits <- c(40, 25000)
-bedLimits <- c(1, 8)
-bathLimits <- c(1, 8)
-rentLimits <- c(125, 2500)
-saleLimits <- c(150000, 4000000)
+ ## Add designators to transactions
+  
+  # Yearly thresholds
+  allTrans <- applyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
+  allTrans <- applyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
+  allTrans <- applyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
+  allTrans <- applyThres(yearThres[13:16], allTrans, 'YT', 'lga')
+  
+  # Quarterly thresholds
+  allTrans <- applyThres(yearThres[1:4], allTrans, 'QT', 'postCode')
+  allTrans <- applyThres(yearThres[5:8], allTrans, 'QT', 'sla1')
+  allTrans <- applyThres(yearThres[9:12], allTrans, 'QT', 'suburb')
+  allTrans <- applyThres(yearThres[13:16], allTrans, 'QT', 'lga')
+  
+## TODO:  Save for combining neighboring localities potential
 
-# Remove by characteristic
-allTrans <- subset(allTrans, AreaSize >= areaLimits[1] & AreaSize <= areaLimits[2])
-allTrans <- subset(allTrans, Bedrooms >= bedLimits[1] & Bedrooms <= bedLimits[2])
-allTrans <- subset(allTrans, Baths >= bathLimits[1] & Baths <= bathLimits[2])
-
-# Split back out
-xSales <- subset(allTrans, transType == 'sale')
-xRentals <- subset(allTrans, transType == 'rent')
-
-## Limit by geographic density
-
-# Set minimum number of transactions required in each geo area (currently suburbs)
-geoTempLimit <- 3 # Must have at least three transactions per year
-
-# Split Sales by use
-houseSales <- subset(xSales, PropertyType == 'House' & transType == 'sale')
-unitSales <- subset(xSales, PropertyType == 'Unit' & transType == 'sale')
-houseRentals <- subset(xRentals, PropertyType == 'House' & transType == 'rent')
-unitRentals <- subset(xRentals, PropertyType == 'Unit' & transType == 'rent')
-
-# Determine which suburbs meet criteria for each
-saleHTable <- table(houseSales$Suburb, houseSales$transYear)
-shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
-shGeo <- rownames(saleHTable[shKeep, ])
-saleUTable <- table(unitSales$Suburb, unitSales$transYear)
-suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
-suGeo <- rownames(saleUTable[suKeep, ])
-rentHTable <- table(houseRentals$Suburb, houseRentals$transYear)
-rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
-rhGeo <- rownames(rentHTable[rhKeep, ])
-rentUTable <- table(unitRentals$Suburb, unitRentals$transYear)
-ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
-ruGeo <- rownames(rentUTable[ruKeep, ])
-allUGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
-
-# Limit sales and rents to these suburbs
-xSales <- xSales[xSales$Suburb %in% allUGeo, ]
-xRentals <- xRentals[xRentals$Suburb %in% allUGeo, ]
 
 ### Develop the cross regression comparison method -------------------------------------------------
 

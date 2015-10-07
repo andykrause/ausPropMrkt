@@ -122,8 +122,6 @@ Sold_Units$PropertyRentRatio = Sold_Units$Price/Sold_Units$Rent
 Rent_House$PropertyRentRatio = Rent_House$Price/Rent_House$Rent
 Rent_Units$PropertyRentRatio = Rent_Units$Price/Rent_Units$Rent
 
-
-
 summary(Sold_House)
 summary(Sold_Units)
 summary(Rent_House)
@@ -133,6 +131,8 @@ summary(Rent_Units)
 
 allSoldData = rbind(Sold_House,Sold_Units)
 allRentData = rbind(Rent_Units, Rent_House)
+
+## 7. Show Development over time
 
 
 

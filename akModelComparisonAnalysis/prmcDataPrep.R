@@ -96,6 +96,32 @@ allTrans <- subset(allTrans, !is.na(Baths))
 # Missing lat/long
 allTrans <- subset(allTrans, !is.na(Property_Latitude) & !is.na(Property_Longitude))
 
+
+### Insert section on geoAnalysis
+
+ ## Build SPDF
+  
+  allSP <- SpatialPointsDataFrame(coords=cbind(allTrans$Property_Longitude,
+                                              allTrans$Property_Latitude),
+                                  data=allTrans)
+ 
+ ## Determine locality of all 
+  
+  # Set up blank value for new name
+  allSP@data$locName <- 'none'
+  
+  # Spatial Join name to list
+  for(ij in 1:nrow(geoShp)){
+    xIDs <- which(gIntersects(geoShp[ij,], xxx, byid=TRUE))
+    if(length(xIDs) > 0) allSP@data$name[xIDs] <- as.character(
+      geoShp@data$name[ij])
+  }
+
+  # Find which localities are represented in the trans data and trim
+  mX <- which(geoShp@data$name %in% names(table(allSP@data$name)))
+  transGeo <- geoShp[mX, ]
+  
+  
 ## Remove suspect values
 
 # Set limits

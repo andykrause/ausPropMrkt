@@ -65,9 +65,8 @@ summary(Rent_House)
 summary(Sold_Units)
   
 ## 4. Create global model for Rental and Sold Market
-
 findModel = function(x,npar=TRUE,print=TRUE){
-  x = lm( log(EventPrice) ~ EventYear+AreaSize+Bedrooms+Parking,x)
+  x = lm( log(EventPrice) ~ EventYear+AreaSize+Bedrooms+Parking+factor(Postcode),x)
   summary(x)
   return(x)
 }
@@ -92,9 +91,6 @@ predictApply = function(datasetToApply,predictionmodel,rentYes,npar=TRUE,print=T
     print("applying price model")
     
   }
-  
-  
-  
   
 }
 

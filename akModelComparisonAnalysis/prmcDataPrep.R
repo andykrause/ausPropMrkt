@@ -107,14 +107,14 @@
  ##  Check for and remove duplicates
   
   # Create a unique ID
-  allTrans$UID <- paste0(allTrans$AddressID,"..", allTrans$transDate, "..", 
+  allTrans$dUID <- paste0(allTrans$AddressID,"..", allTrans$transDate, "..", 
                          allTrans$transType)
   
   # Keep only those not duplicated
-  allTrans <- subset(allTrans, !duplicated(UID))
+  allTrans <- subset(allTrans, !duplicated(dUID))
   
   # Remove the UID field
-  allTrans$UID <- NULL
+  allTrans$dUID <- NULL
   
  ## Add Spatial Information
   

@@ -46,6 +46,10 @@
 
 ### DATA MANAGEMENT ------------------------------------------------------------  
 
+ ## Create UniqueID
+  rawSales$UID <- paste0('sale', 1:nrow(rawSales))
+  rawRents$UID <- paste0('rental', 1:nrow(rawRentals))
+  
  ## Create conforming fields regarding transaction times and values
 
   # Fix date formats
@@ -63,7 +67,7 @@
  ## Limit both datasets to a standard field list  
 
   # Set list
-  columnList <- c('GeographicalID', 'EventID', 'AddressID', 'FlatNumber', 
+  columnList <- c('UID', 'GeographicalID', 'EventID', 'AddressID', 'FlatNumber', 
                   'transDate', 'transValue', 'transType',
                   'PropertyType', 'Property_Latitude', 'Property_Longitude',
                   'AreaSize', 'Bedrooms', 'Baths', 'Parking','HasFireplace',

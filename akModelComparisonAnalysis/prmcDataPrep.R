@@ -93,6 +93,13 @@
   allTrans <- subset(allTrans, !is.na(Property_Latitude) & 
                        !is.na(Property_Longitude))
   
+ ## Fix NA Fields
+  naFields <- list('HasPool', 'HasGarage', 'HasAirConditioning', 'HasFireplace')
+  for(naF in 1:length(naFields)){
+    naX <- which(is.na(allTrans[ ,naFields[[naF]]]))
+    allTrans[naX, naFields[[naF]]] <- 0
+  }
+  
  ##  Check for and remove duplicates
   
   # Create a unique ID

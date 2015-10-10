@@ -93,6 +93,18 @@
   allTrans <- subset(allTrans, !is.na(Property_Latitude) & 
                        !is.na(Property_Longitude))
   
+ ##  Check for and remove duplicates
+  
+  # Create a unique ID
+  allTrans$UID <- paste0(allTrans$AddressID,"..", allTrans$transDate, "..", 
+                         allTrans$transType)
+  
+  # Keep only those not duplicated
+  allTrans <- subset(allTrans, !duplicated(UID))
+  
+  # Remove the UID field
+  allTrans$UID <- NULL
+  
  ## Add Spatial Information
   
   # Create a spatial points data frame
@@ -116,10 +128,13 @@
   spJoin <- over(allSP, lgaShp)
   allSP@data$lga <- as.character(spJoin$LGA_NAME11)
   
-## Convert back to regular data.frame
+ ## Convert back to regular data.frame
   
   allTrans <- allSP@data
-  
+
+ ## Clean up memory
+  rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); gc()
+
 ### DATA CLEANING --------------------------------------------------------------  
   
  ## Removing missing values  
@@ -188,10 +203,10 @@
   # Yearly threshold
   yearThres <- mapply(prrGeoLimit, 
                       locField=c('postCode', 'sla1', 'suburb', 'lga'), 
-                       MoreArgs=list(timeField='transYear',
+                      MoreArgs=list(timeField='transYear',
                                      transData=allTrans,
                                      geoTempLimit=3))
-  
+
   names(yearThres) <- paste0(rep("YT_"),
                              rep(c('both', 'house', 'unit', 'either'), 4),
                              rep("_", 16),
@@ -221,42 +236,23 @@
   allTrans <- applyThres(yearThres[13:16], allTrans, 'YT', 'lga')
   
   # Quarterly thresholds
-  allTrans <- applyThres(yearThres[1:4], allTrans, 'QT', 'postCode')
-  allTrans <- applyThres(yearThres[5:8], allTrans, 'QT', 'sla1')
-  allTrans <- applyThres(yearThres[9:12], allTrans, 'QT', 'suburb')
-  allTrans <- applyThres(yearThres[13:16], allTrans, 'QT', 'lga')
+  allTrans <- applyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
+  allTrans <- applyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
+  allTrans <- applyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
+  allTrans <- applyThres(qtrThres[13:16], allTrans, 'QT', 'lga')
   
-## TODO:  Save for combining neighboring localities potential
+ ## TODO:  Save for combining neighboring localities potential
 
+### Write out workspace and .csv
+  
+ ## Write workspace
 
-### Develop the cross regression comparison method -------------------------------------------------
+  save.image(paste0(dataPath, 'prrWrkspc.RData'))
+             
+ ## Write .csv
+ 
+  write.csv(allTrans, paste0(dataPath, 'cleanData.csv'), row.names=F)
 
-## Set the specification (formula)
-
-regSpec <- log(transValue) ~ log(AreaSize) + Bedrooms + Baths + as.factor(Suburb) +
-  as.factor(transQtr)
-
-## Estimate models and make new predictions
-
-houseResults <- prrCrossReg(regSpec, 
-                            subset(xSales, PropertyType == 'House'),
-                            subset(xRentals, PropertyType == 'House'),
-                            verbose=TRUE)
-
-unitResults <- prrCrossReg(regSpec, 
-                           subset(xSales, PropertyType == 'Unit'),
-                           subset(xRentals, PropertyType == 'Unit'),
-                           verbose=TRUE)
-
-## Calculate the ratio
-
-# Extract vales
-allValues <- rbind(houseResults$allData, unitResults$allData)
-
-# Calculate the ratio
-allValues$prRatio <- allValues$Price / (allValues$Rent * 52 / 12)
-
-### Clean up memory
-
-rm(rentals); rm(sales); rm(xSales); rm(xRentals)
-gc()
+################################################################################
+################################################################################
+ 

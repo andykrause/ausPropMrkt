@@ -48,7 +48,7 @@
 
  ## Create UniqueID
   rawSales$UID <- paste0('sale', 1:nrow(rawSales))
-  rawRents$UID <- paste0('rental', 1:nrow(rawRentals))
+  rawRents$UID <- paste0('rental', 1:nrow(rawRents))
   
  ## Create conforming fields regarding transaction times and values
 

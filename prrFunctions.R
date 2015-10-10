@@ -161,12 +161,10 @@ prrCrossReg <- function(formula,               # LM regression formula
   # Combine data back together
   if(verbose) cat('Merging data\n')
   allData <- rbind(saleData, rentData)
-  
+
  ## Return values
-  return(list(allData = allData,
-              saleModel = saleModel,
-              rentModel = rentModel))
-  
+  return(allData[ ,c('UID', 'Price', 'Rent')])
+         
 }
 
 ### Function to build PRR trends by different temporal breakdowns ----------------------------------

@@ -187,6 +187,27 @@
     
 ### Break down results by dimensions -------------------------------------------
   
+  ## Global analysis by year, qtr and days(^-1)
   
+  glob <- lapply(list('transYear', 'transQtr', 'transMonth'),
+                 prrMakeTrends, byUse=FALSE, xData=xTrans)
   
+  ## Global Trends by property type
   
+  globUse <- lapply(list('transYear', 'transQtr', 'transMonth'),
+                    prrMakeTrends, byUse=TRUE, xData=xTrans)
+  globUseW <- lapply(list('transYear', 'transQtr', 'transMonth'),
+                    prrMakeTrends, byUse=TRUE, xData=xTrans, weighted=TRUE)
+  
+  ## By Suburb
+  
+   subYear <- mapply(prrMakeTrends, timeField='transYear',  
+             geogName=names(table(xTrans$suburb[xTrans$YT_either_suburb==1])), 
+             MoreArgs=list(xData = xTrans[xTrans$YT_either_suburb==1,],
+                           geog='suburb'))
+  
+   subYearU <- mapply(prrMakeTrends, timeField='transYear',  
+                      geogName=names(table(xTrans$suburb[xTrans$YT_both_suburb==1])), 
+                      MoreArgs=list(xData = xTrans[xTrans$YT_both_suburb==1,],
+                                    geog='suburb', byUse=TRUE))
+   

@@ -169,24 +169,57 @@ prrCrossReg <- function(formula,               # LM regression formula
 
 ### Function to build PRR trends by different temporal breakdowns ----------------------------------
 
-prrMakeTrends <- function(xData            # Dataset including time categories and PRR ratios
+prrMakeTrends <- function(timeField, 
+                          xData,            # Dataset including time categories and PRR ratios
+                          byUse=FALSE,
+                          geog=NULL,
+                          geogName=NULL,
+                          weighted=FALSE
 ){
   
-  # Calculate annual trends
-  xYear <- tapply(xData$prRatio, xData$transYear, median)
+  if(!is.null(geog)){
+    xData <- xData[xData[,geog]==geogName, ]
+  }
   
-  # Calculate quarterly trends
-  xQtr <- tapply(xData$prRatio, xData$transQtr, median)
   
-  # Calculate trends in 10 day increments
-  xDays10 <- tapply(xData$prRatio, round(xData$transDays, -1), median)
-  
-  # Return values
-  return(list(year=xYear,
-              qtr=xQtr,
-              days=xDays10))
+  if(byUse){
+    
+    hTemp <- xData[xData$PropertyType == 'House', timeField]
+    uTemp <- xData[xData$PropertyType == 'Unit', timeField]
+    hCount <- tapply(xData$prRatio[xData$PropertyType == 'House'],
+                     hTemp, length)
+    hRes <- tapply(xData$prRatio[xData$PropertyType == 'House'],
+                   hTemp, median)
+    uCount <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
+                     uTemp, length)
+    uRes <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
+                   uTemp, median)
+    
+    if(weighted){
+      hh <- hCount * hRes
+      uu <- uCount * uRes
+      xx <- (hh+uu) / (hCount + uCount)
+      return(list(allCount = hCount + uCount,
+                  allResults = xx))
+    }
+    else
+    {
+      return(list(houseCount = hCount,
+                  houseResults = hRes,
+                  unitCount = uCount,
+                  unitResults = uRes))
+      
+    }   
+    
+  } else {
+    temporalScale <- xData[,timeField]  
+    xRes <- tapply(xData$prRatio, temporalScale, median)
+    xCount <- tapply(xData$prRatio, temporalScale, length)
+    
+    return(list(allCount = xCount,
+                allResults = xRes))
+  }
 }
-
 ### Wrapper function that allow prrMakeTrends to be applied to a list of geographic places --------
 
 prrWrapper <- function(geoList,      # List of geographic areas (suburbs for now)

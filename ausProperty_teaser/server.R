@@ -8,6 +8,7 @@
 
 library(shiny)
 library(xtable)
+library(ggplot2)
 
 dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
 load(paste0(dataPath, 'prr.RData'))

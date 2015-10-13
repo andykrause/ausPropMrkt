@@ -28,6 +28,8 @@
   dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
   saleFile <- 'sales10_15.csv'
   rentFile <- 'rents10_15.csv'
+  saleSSFile <- 'soldSS.csv'
+  rentSSFile <- 'rentSS.csv'
   subGeoFile <- 'Vic_Suburbs.shp'
   lgaGeoFile <- 'Vic_LGAs.shp'
   sla1GeoFile <- 'Vic_SLA1.shp'
@@ -39,6 +41,8 @@
 
   rawSales <- read.csv(paste0(dataPath, saleFile), stringsAsFactors = FALSE)
   rawRents <- read.csv(paste0(dataPath, rentFile), stringsAsFactors = FALSE)
+  saleSS <- read.csv(paste0(dataPath, saleSSFile), stringsAsFactors = FALSE)
+  rentSS <- read.csv(paste0(dataPath, rentSSFile), stringsAsFactors = FALSE)
   subShp <- readShapePoly(paste0(dataPath, subGeoFile))
   lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
   sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
@@ -142,6 +146,20 @@
  ## Convert back to regular data.frame
   
   allTrans <- allSP@data
+  
+ ## Add SS Measures
+  
+  # Build Single SS File
+  ssAll <- rbind(rentSS[, c('AddressID', 'L_choice_25000', 
+                          'T64_Integration_Segment_Length_Wgt_R25000_metric')],
+                 saleSS[, c('AddressID', 'L_choice_25000', 
+                          'T64_Integration_Segment_Length_Wgt_R25000_metric')])
+  names(ssAll)[2:3] <- c('ssChoice', 'ssInteg')
+  
+  # Add Measure to trans
+  allTrans$ssChoice <- ssAll$ssChoice[match(allTrans$AddressID,
+                                            ssAll$AddressID)]
+  allTrans$ssInteg <- ssAll$ssInteg[match(allTrans$AddressID, ssAll$AddressID)]
 
  ## Clean up memory
   rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); gc()
@@ -159,6 +177,10 @@
   allTrans <- subset(allTrans, !is.na(Bedrooms))
   allTrans <- subset(allTrans, !is.na(Baths))
 
+  # Missing SS values
+  allTrans <- subset(allTrans, !is.na(ssChoice))
+  allTrans <- subset(allTrans, !is.na(ssInteg))
+  
  ## Remove suspect values
   
   # Set limits

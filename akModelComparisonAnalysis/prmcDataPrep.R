@@ -67,6 +67,20 @@
   # Set transaction Type   
   rawSales$transType <- 'sale'  
   rawRents$transType <- 'rent'
+  
+ ## Fix missing lat long
+  
+  # ID missing
+  sXY <- which(is.na(rawSales$Property_Latitude) | 
+                   is.na(rawSales$Property_Longitude))
+  rXY <- which(is.na(rawRents$Property_Latitude) | 
+                   is.na(rawRents$Property_Longitude))
+  
+  # Fix, if possible
+  rawSales$Property_Latitude[sXY] <- rawSales$Street_Centroid_Latitude[sXY]
+  rawSales$Property_Longitude[sXY] <- rawSales$Street_Centroid_Longitude[sXY]
+  rawRents$Property_Latitude[rXY] <- rawRents$Street_Centroid_Latitude[rXY]
+  rawRents$Property_Longitude[rXY] <- rawRents$Street_Centroid_Longitude[rXY]
 
  ## Limit both datasets to a standard field list  
 

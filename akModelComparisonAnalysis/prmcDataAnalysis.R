@@ -60,7 +60,7 @@
  ## Set the specification (formula)
 
  regSpec <- log(transValue) ~ log(AreaSize) + Bedrooms + Baths + 
-    as.factor(postCode) + as.factor(transQtr) +
+    as.factor(postCode) + as.factor(transQtr) + ssInteg + ssChoice
 
  ## Estimate models and make new predictions: Global by Use
 
@@ -103,7 +103,7 @@
   
   altSpec2 <- log(transValue) ~ log(AreaSize) + Bedrooms + Baths + 
     HasPool + HasGarage + HasAirConditioning + HasFireplace +
-    as.factor(postCode) + as.factor(transMonth) + ssChoice + ssInteg
+    as.factor(postCode) + as.factor(transMonth) 
   
   # For houses
   houseResultsA1 <- prrCrossReg(altSpec1, 
@@ -198,6 +198,11 @@
                     prrMakeTrends, byUse=TRUE, xData=xTrans)
   globUseW <- lapply(list('transYear', 'transQtr', 'transMonth'),
                     prrMakeTrends, byUse=TRUE, xData=xTrans, weighted=TRUE)
+  
+  
+  
+  
+  
   
   ## By Suburb
   

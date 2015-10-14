@@ -150,9 +150,9 @@
  ## Add SS Measures
   
   # Build Single SS File
-  ssAll <- rbind(rentSS[, c('AddressID', 'L_choice_25000', 
+  ssAll <- rbind(rentSS[, c('AddressID', 'L_choice_2500', 
                           'T64_Integration_Segment_Length_Wgt_R25000_metric')],
-                 saleSS[, c('AddressID', 'L_choice_25000', 
+                 saleSS[, c('AddressID', 'L_choice_2500', 
                           'T64_Integration_Segment_Length_Wgt_R25000_metric')])
   names(ssAll)[2:3] <- c('ssChoice', 'ssInteg')
   
@@ -162,7 +162,8 @@
   allTrans$ssInteg <- ssAll$ssInteg[match(allTrans$AddressID, ssAll$AddressID)]
 
  ## Clean up memory
-  rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); gc()
+  rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); 
+  rm(rentSS, saleSS, ssAll); gc()
 
 ### DATA CLEANING --------------------------------------------------------------  
   

@@ -60,7 +60,7 @@
  ## Set the specification (formula)
 
  regSpec <- log(transValue) ~ log(AreaSize) + Bedrooms + Baths + 
-    as.factor(postCode) + as.factor(transQtr)
+    as.factor(postCode) + as.factor(transQtr) +
 
  ## Estimate models and make new predictions: Global by Use
 
@@ -87,7 +87,7 @@
  ## Calculate the ratio
 
   # Extract vales
-  crmValues <- rbind(houseResults, unitResults)
+  crmValues <- rbind(houseResults$results, unitResults$results)
 
   # Calculate the ratio
   crmValues$prRatio <- crmValues$Price / (crmValues$Rent * 52 / 12)
@@ -98,12 +98,12 @@
   
   # Specify two alternative models
   
-  altSpec1 <- log(transValue) ~ Bedrooms + 
-    as.factor(postCode) + as.factor(transYear)
+  altSpec1 <- log(transValue) ~ Bedrooms + ssInteg + ssChoice +
+     as.factor(transMonth) 
   
   altSpec2 <- log(transValue) ~ log(AreaSize) + Bedrooms + Baths + 
     HasPool + HasGarage + HasAirConditioning + HasFireplace +
-    as.factor(postCode) + as.factor(transMonth)
+    as.factor(postCode) + as.factor(transMonth) + ssChoice + ssInteg
   
   # For houses
   houseResultsA1 <- prrCrossReg(altSpec1, 
@@ -142,8 +142,8 @@
                              verbose=TRUE)
   
   # Extract vales
-  crmAltValues1 <- rbind(houseResultsA1, unitResultsA1)
-  crmAltValues2 <- rbind(houseResultsA2, unitResultsA2)
+  crmAltValues1 <- rbind(houseResultsA1$results, unitResultsA1$results)
+  crmAltValues2 <- rbind(houseResultsA2$results, unitResultsA2$results)
   
   # Calculate the ratio
   crmAltValues1$prRatio <- crmAltValues1$Price / (crmAltValues1$Rent * 52 / 12)

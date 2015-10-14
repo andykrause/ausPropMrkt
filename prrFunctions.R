@@ -162,8 +162,22 @@ prrCrossReg <- function(formula,               # LM regression formula
   if(verbose) cat('Merging data\n')
   allData <- rbind(saleData, rentData)
 
+  ## Extract model information
+  saleModelInfo <- list(coef=summary(saleModel)$coefficients,
+                        r2=summary(saleModel)$r.squared,
+                        sigma=summary(saleModel)$r.squared,
+                        resid=summary(saleModel)$residuals)
+  rentModelInfo <- list(coef=summary(rentModel)$coefficients,
+                        r2=summary(rentModel)$r.squared,
+                        sigma=summary(rentModel)$r.squared,
+                        resid=summary(rentModel)$residuals)
+  
+  
+  
  ## Return values
-  return(allData[ ,c('UID', 'Price', 'Rent')])
+  return(list(results = allData[ ,c('UID', 'Price', 'Rent')],
+              saleModel = saleModelInfo,
+              rentModel = rentModelInfo))
          
 }
 

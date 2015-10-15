@@ -94,7 +94,7 @@
 
  ## Calculate sensitivity to the model
   
- if(testCRMSpec){
+ if(testCRMSens){
   
   # Specify two alternative models
   
@@ -198,11 +198,6 @@
                     prrMakeTrends, byUse=TRUE, xData=xTrans)
   globUseW <- lapply(list('transYear', 'transQtr', 'transMonth'),
                     prrMakeTrends, byUse=TRUE, xData=xTrans, weighted=TRUE)
-  
-  
-  
-  
-  
   
   ## By Suburb
   

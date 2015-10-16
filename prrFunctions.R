@@ -181,78 +181,6 @@ prrCrossReg <- function(formula,               # LM regression formula
          
 }
 
-### Function to build PRR trends by different temporal breakdowns ----------------------------------
-
-prrMakeTrends <- function(timeField, 
-                          xData,            # Dataset including time categories and PRR ratios
-                          byUse=FALSE,
-                          geog=NULL,
-                          geogName=NULL,
-                          weighted=FALSE
-){
-  
-  if(!is.null(geog)){
-    xData <- xData[xData[,geog]==geogName, ]
-  }
-  
-  
-  if(byUse){
-    
-    hTemp <- xData[xData$PropertyType == 'House', timeField]
-    uTemp <- xData[xData$PropertyType == 'Unit', timeField]
-    hCount <- tapply(xData$prRatio[xData$PropertyType == 'House'],
-                     hTemp, length)
-    hRes <- tapply(xData$prRatio[xData$PropertyType == 'House'],
-                   hTemp, median)
-    uCount <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
-                     uTemp, length)
-    uRes <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
-                   uTemp, median)
-    
-    if(weighted){
-      hh <- hCount * hRes
-      uu <- uCount * uRes
-      xx <- (hh+uu) / (hCount + uCount)
-      return(list(allCount = hCount + uCount,
-                  allResults = xx))
-    }
-    else
-    {
-      return(list(houseCount = hCount,
-                  houseResults = hRes,
-                  unitCount = uCount,
-                  unitResults = uRes))
-      
-    }   
-    
-  } else {
-    temporalScale <- xData[,timeField]  
-    xRes <- tapply(xData$prRatio, temporalScale, median)
-    xCount <- tapply(xData$prRatio, temporalScale, length)
-    
-    return(list(allCount = xCount,
-                allResults = xRes))
-  }
-}
-### Wrapper function that allow prrMakeTrends to be applied to a list of geographic places --------
-
-prrWrapper <- function(geoList,      # List of geographic areas (suburbs for now)
-                       xData         # Dataset including time categories
-)
-{
-  
-  # Isolate necessary data
-  yData <- xData[xData$Suburb == geoList, ]
-  
-  # Calculate trends
-  yRes <- prrMakeTrends(yData)
-  
-  # Return values
-  return(yRes)
-}  
-
-
-
 ### Function to determine which geo areas meet use and time criteria -----------
 
 prrGeoLimit <- function(transData,               # Dataframe of trans data
@@ -318,4 +246,336 @@ applyThres <- function(thresData,       # Threshold data object from prrGeoLimit
   
   # Add to existing transactions
   return(cbind(transData, all))
+}
+
+
+if(F){
+  
+  # Examples of use
+  
+  # Global
+  glob <- prrTrender(list('transYear', 'transQtr', 'transMonth'), xData=xTrans)
+  
+  # Global by Use
+  globBU <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
+                       xData=xTrans, byUse=TRUE)
+  
+  # glob by use weighted
+  globBUW <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
+                        xData=xTrans, byUse=TRUE, weighted=TRUE)
+  
+  ## All LGAs at qtr level
+  lgaQ <- prrTrender(list('transQtr'), xData=xTrans, geog='lga',
+                     geogName='all')
+  
+  ## All LGAs at qtr level by Use
+  lgaQU <- prrTrender(list('transQtr'), xData=xTrans, geog='lga',
+                      geogName='all', byUse=TRUE)
+  
+  
+  ## All GLS at qtr level by use weighted
+  lgaQUW <- prrTrender(list('transQtr'), xData=xTrans, geog='lga',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  
+}
+
+### Wrapper function for handling the prrMakeTrends() --------------------------
+
+prrTrender <- function(timeFields,       # List of time fields to use
+                       xData,            # Dataset including time and PRR ratios
+                       byUse=FALSE,      # Calculate by use?
+                       geog=NULL,        # WHich geog level to divide by
+                       geogName=NULL,    # which geog areas to use
+                       weighted=FALSE    # provide single, weighted output
+){
+  
+  ## Remove months if by geography
+  
+  if(!is.null(geog)) timeFields <- timeFields[timeFields!='transMonth']
+  if(length(timeFields) == 0) return(cat('Cannot select only months',
+                                         ' when analysing at sub metro level'))
+  if(!is.null(geogName)){
+    if(geogName == 'all' & length(timeFields) > 1){
+      return(cat('Can only select one time field when analyzing',
+                 ' multiple geographies'))
+    } 
+  }
+  
+  ## Main call to the prrMakeTrends() function
+  
+  # If not doing all geogNames
+  if(is.null(geogName) || geogName != 'all'){
+    
+    # If more than one geogName
+    if(!is.null(geogName) && length(geogName) > 1) {
+      return(cat('You cannot select more than one geography.',
+                 ' Use "all" here if you want more than one'))  
+    } 
+    
+    # Just One or none geogName
+    else 
+    {
+      tempData <- lapply(timeFields, prrMakeTrends, byUse=byUse, xData=xData,
+                         geog=geog, geogName=geogName, weighted=weighted)
+      names(tempData) <- timeFields
+    }
+  } 
+  
+  ## If doing all geognames in a geog
+  else
+  {
+    
+    ## Call a function to get correct data
+    geogFilter <- prrFilterData(geog=geog, timeField=timeFields,
+                                byUse=byUse)
+    
+    tempData <- prrGeogMkr(geogFilter, xData=xData, byUse=byUse, geog=geog, 
+                           timeFields=timeFields, weighted=weighted)
+    
+  } 
+  
+  ## Convert existing list into data frames  
+  
+  xDFs <- lapply(tempData, prrToDF)
+  
+  ## Convert dataframes into tidy datasets    
+  
+  tidyPRR <- lapply(xDFs, prrMelt)
+  tidyCount <- lapply(xDFs, prrMelt, exclField='prr')
+  
+  ## Combine all into a list 
+  
+  # Set up blank list
+  allRes <- list()
+  
+  # Loop though and assign to spots
+  for(i in 1:length(tempData)){
+    allRes[[i]] <- list(data=xDFs[[i]],
+                        tidyPRR=tidyPRR[[i]],
+                        tidyCount=tidyCount[[i]])
+  }
+  
+  # Name list items
+  names(allRes) <- names(tempData)
+  
+  ## Return object
+  
+  return(allRes)
+}
+
+### Function to build PRR trends by different temporal breakdowns --------------
+
+prrMakeTrends <- function(timeField,        # Time field to analyse
+                          xData,            # Dataset w/ time and PRR ratios
+                          byUse=FALSE,      # Calculate by use
+                          geog=NULL,        # Which geog level to divide by
+                          geogName=NULL,    # Which geog areas to use
+                          weighted=FALSE    # provide single, weighted output?
+){
+  
+  ## Select particular geography
+  
+  if(!is.null(geog)){
+    xData <- xData[xData[,geog]==geogName, ]
+  }
+  
+  ## If calculating by Use
+  
+  if(byUse){
+    
+    # Divide into use
+    hTemp <- xData[xData$PropertyType == 'House', timeField]
+    uTemp <- xData[xData$PropertyType == 'Unit', timeField]
+    
+    # Calculate count per category
+    hCount <- tapply(xData$prRatio[xData$PropertyType == 'House'],
+                     hTemp, length)
+    uCount <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
+                     uTemp, length)
+    
+    # Calculate median PRR per category
+    hRes <- tapply(xData$prRatio[xData$PropertyType == 'House'],
+                   hTemp, median)
+    uRes <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
+                   uTemp, median)
+    
+    ## If weighting by category
+    
+    if(weighted){
+      
+      # Make weighted sums
+      hh <- hCount * hRes
+      uu <- uCount * uRes
+      
+      # Calculate weighted values
+      xx <- (hh+uu) / (hCount + uCount)
+      
+      # Return results
+      return(list(allCount = hCount + uCount,
+                  allResults = xx))
+    }
+    else
+    {
+      
+      # Return unweighted results
+      return(list(houseCount = hCount,
+                  houseResults = hRes,
+                  unitCount = uCount,
+                  unitResults = uRes))
+      
+    }   
+    
+  } 
+  
+  ## If not by use
+  else 
+  {
+    
+    # Extract temporal scale
+    temporalScale <- xData[,timeField]
+    
+    # Calculate count
+    xCount <- tapply(xData$prRatio, temporalScale, length)
+    
+    # Calculate median PRR
+    xRes <- tapply(xData$prRatio, temporalScale, median)
+    
+    # Return not by use results
+    return(list(allCount = xCount, allResults = xRes))
+  }
+}
+
+### Function to convert prrObj into simple data frame --------------------------
+
+prrToDF <- function(prrObj       ## prrObj[[x]] from prrMakeTrends() 
+){
+  
+  ## If obj is not by Use
+  
+  if(length(prrObj) < 4){
+    
+    #Combine columns
+    dfTemp <- as.data.frame(cbind(as.numeric(unlist(prrObj[1])),
+                                  as.numeric(unlist(prrObj[2]))))
+    names(dfTemp) <- c('count', 'prr')
+    
+    # Add Time variable
+    dfTemp$time <- names(prrObj$allCount)
+    
+    # Add Type Variable
+    dfTemp$type <- 'both'
+    
+    
+  } else {
+    
+    # Combine Columns
+    hTemp <- as.data.frame(cbind(as.numeric(unlist(prrObj[1])),
+                                 as.numeric(unlist(prrObj[2]))))
+    names(hTemp) <- c('count', 'prr')
+    uTemp <- as.data.frame(cbind(as.numeric(unlist(prrObj[3])),
+                                 as.numeric(unlist(prrObj[4]))))
+    names(uTemp) <- c('count', 'prr')
+    
+    # Add Time variables
+    hTemp$time <- names(prrObj$houseCount)
+    uTemp$time <- names(prrObj$unitCount)
+    
+    # Add Type variable
+    hTemp$type <- 'house'
+    uTemp$type <- 'unit'
+    
+    # Combine into single DF
+    dfTemp <- rbind(hTemp, uTemp)
+  }
+  
+  ## Return Values (re-order fields)
+  return(dfTemp[ ,c('type', 'time', 'count', 'prr')])
+}
+
+
+### Function to melt DFs into tidy data (for ggplot) ---------------------------
+
+prrMelt <- function(prrObj,                  # Base prrObj after prrToDF()
+                    exclField='count'        # Field to ignore 'count' | 'prr'
+){
+  
+  # Set libraries
+  library(reshape2)
+  
+  # Define the value field
+  valueField <- ifelse(exclField == 'count', 'prr', 'count')
+  
+  # Remove field to ignore
+  xCut <- which(names(prrObj) == exclField)
+  xObj <- prrObj[ ,-xCut]
+  
+  # Determine tidy IDs
+  idNames <- names(xObj)[names(xObj) != valueField]
+  
+  # Melt to a tidy dataset
+  meltObj <- melt(xObj, id=idNames)
+  
+  ## Return values
+  return(meltObj)
+  
+}
+
+### Function that determine correct data field based on arguments --------------
+
+prrFilterData <- function(geog,
+                          timeField,
+                          byUse){
+  fieldName <- paste0(ifelse(timeField=='transYear', 'YT', 'QT'),
+                      "_",
+                      ifelse(byUse, 'both', 'either'),
+                      "_",
+                      geog)
+  return(fieldName)
+}
+
+### Function that handles mulitple geography situations ------------------------
+
+prrGeogMkr <- function(geogFilter, xData, byUse, geog, timeFields,
+                       weighted){
+  
+  ## Extract correct data
+  
+  # Find and extract geog filter field
+  geoField <- xData[names(xData) == geogFilter]
+  geoData <- xData[which(geoField == 1), ]
+  
+  # Get acceptable list of geographies
+  geoTable <- table(geoData[geog])
+  okGeos <- names(geoTable)[geoTable > 0]
+  
+  ## Run the trend maker
+  
+  geoTrends <- mapply(prrMakeTrends, timeField = timeFields, geogName=okGeos,
+                      MoreArgs=list(byUse=byUse, xData=geoData,
+                                    geog=geog, weighted=weighted))
+  
+  ## Turn into data frames
+  
+  if(byUse == FALSE | weighted == TRUE){
+    
+    iRes <- list()
+    for(iR in 1:(length(geoTrends) / 2)){
+      iRes[[iR]] <- list(allCount = geoTrends[[(iR * 2) - 1]],
+                         allResults = geoTrends[[iR * 2]])
+    } # Ends iR Loop
+  } 
+  else 
+  {
+    
+    iRes <- list()
+    for(iR in 1:(length(geoTrends) / 4)){
+      iRes[[iR]] <- list(houseCount = geoTrends[[(iR * 4) - 3]],
+                         houseResults = geoTrends[[(iR * 4) - 2]],
+                         unitCount = geoTrends[[(iR * 4) - 1]],
+                         unitResults = geoTrends[[iR * 4]])
+    } # Ends jk loop
+  } # Ends if/else
+  
+  names(iRes) <- okGeos
+  return(iRes)
 }

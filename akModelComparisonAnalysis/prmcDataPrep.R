@@ -28,8 +28,7 @@
   dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
   saleFile <- 'sales10_15.csv'
   rentFile <- 'rents10_15.csv'
-  saleSSFile <- 'soldSS.csv'
-  rentSSFile <- 'rentSS.csv'
+  ssFile <- 'allSS.csv'
   subGeoFile <- 'Vic_Suburbs.shp'
   lgaGeoFile <- 'Vic_LGAs.shp'
   sla1GeoFile <- 'Vic_SLA1.shp'
@@ -41,8 +40,7 @@
 
   rawSales <- read.csv(paste0(dataPath, saleFile), stringsAsFactors = FALSE)
   rawRents <- read.csv(paste0(dataPath, rentFile), stringsAsFactors = FALSE)
-  saleSS <- read.csv(paste0(dataPath, saleSSFile), stringsAsFactors = FALSE)
-  rentSS <- read.csv(paste0(dataPath, rentSSFile), stringsAsFactors = FALSE)
+  ssData <- read.csv(paste0(dataPath, ssFile), stringsAsFactors = FALSE)
   subShp <- readShapePoly(paste0(dataPath, subGeoFile))
   lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
   sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
@@ -164,20 +162,19 @@
  ## Add SS Measures
   
   # Build Single SS File
-  ssAll <- rbind(rentSS[, c('AddressID', 'L_choice_2500', 
-                          'T64_Integration_Segment_Length_Wgt_R25000_metric')],
-                 saleSS[, c('AddressID', 'L_choice_2500', 
-                          'T64_Integration_Segment_Length_Wgt_R25000_metric')])
-  names(ssAll)[2:3] <- c('ssChoice', 'ssInteg')
+  ssTrim <- ssData[, c('AddressID', 'L_choice_2500', 
+                          'T64_Integration_Segment_Length_Wgt_R25000_metric')]
+  names(ssTrim)[2:3] <- c('ssChoice', 'ssInteg')
   
   # Add Measure to trans
-  allTrans$ssChoice <- ssAll$ssChoice[match(allTrans$AddressID,
-                                            ssAll$AddressID)]
-  allTrans$ssInteg <- ssAll$ssInteg[match(allTrans$AddressID, ssAll$AddressID)]
+  allTrans$ssChoice <- ssTrim$ssChoice[match(allTrans$AddressID,
+                                            ssTrim$AddressID)]
+  allTrans$ssInteg <- ssTrim$ssInteg[match(allTrans$AddressID, 
+                                           ssTrim$AddressID)]
 
  ## Clean up memory
   rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); 
-  rm(rentSS, saleSS, ssAll); gc()
+  rm(ssData, ssTrim); gc()
 
 ### DATA CLEANING --------------------------------------------------------------  
   

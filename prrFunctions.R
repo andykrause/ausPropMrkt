@@ -379,6 +379,9 @@ prrMakeTrends <- function(timeField,        # Time field to analyse
     xData <- xData[xData[,geog]==geogName, ]
   }
   
+  ## Find Max
+  lMax <- length(table(xData[,timeField]))
+  
   ## If calculating by Use
   
   if(byUse){
@@ -393,11 +396,22 @@ prrMakeTrends <- function(timeField,        # Time field to analyse
     uCount <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
                      uTemp, length)
     
+    if(length(hCount) != lMax || length(uCount) != lMax){
+      return(list(allCount = 0,
+                  allResults = 0))
+    }
+    
     # Calculate median PRR per category
     hRes <- tapply(xData$prRatio[xData$PropertyType == 'House'],
                    hTemp, median)
     uRes <- tapply(xData$prRatio[xData$PropertyType == 'Unit'],
                    uTemp, median)
+    
+    # Check to make sure both have enough
+    testH <- unlist(lapply(hRes, function(x) length(unlist(x))))
+    testU <- unlist(lapply(uRes, function(x) length(unlist(x))))
+    hRes <- hRes[testH == max(testH)]
+    uRes <- uRes[testU == max(testU)]
     
     ## If weighting by category
     
@@ -408,7 +422,7 @@ prrMakeTrends <- function(timeField,        # Time field to analyse
       uu <- uCount * uRes
       
       # Calculate weighted values
-      xx <- (hh+uu) / (hCount + uCount)
+      xx <- (hh + uu) / (hCount + uCount)
       
       # Return results
       return(list(allCount = hCount + uCount,
@@ -577,5 +591,7 @@ prrGeogMkr <- function(geogFilter, xData, byUse, geog, timeFields,
   } # Ends if/else
   
   names(iRes) <- okGeos
+  testL <- unlist(lapply(iRes, function(x) length(unlist(x))))
+  iRes <- iRes[testL == max(testL)]
   return(iRes)
 }

@@ -191,31 +191,38 @@
   
   # Basic
   glob <- prrTrender(list('transYear', 'transQtr', 'transMonth'), xData=xTrans)
+  globY <- glob$transYear
+  globQ <- glob$transQtr
   
   # By Use
   globBU <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
                        xData=xTrans, byUse=TRUE)
+  globBUY <- globBU$transYear
+  globBUQ <- globBU$transQtr
   
   # By use weighted
   globBUW <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
                         xData=xTrans, byUse=TRUE, weighted=TRUE)
+  globBUWY <- globBUW$transYear
+  globBUWQ <- globBUW$transQtr
   
- ## All LGAs 
+  
+ ## All lgas 
   
   # Basic
-  lgaY <- prrTrender('transYear', xData=xTrans, geog='lga', geogName='all')
-  lgaQ <- prrTrender('transQtr', xData=xTrans, geog='lga', geogName='all')
+ lgaY <- prrTrender('transYear', xData=xTrans, geog='lga', geogName='all')
+ lgaQ <- prrTrender('transQtr', xData=xTrans, geog='lga', geogName='all')
   
   # By Use
-  lgaYU <- prrTrender('transYear', xData=xTrans, geog='lga', 
+ lgaYU <- prrTrender('transYear', xData=xTrans, geog='lga', 
                       geogName='all', byUse=TRUE)
-  lgaQU <- prrTrender('transQtr', xData=xTrans, geog='lga', 
+ lgaQU <- prrTrender('transQtr', xData=xTrans, geog='lga', 
                       geogName='all', byUse=TRUE)
   
   # By use weighted
-  lgaYUW <- prrTrender('transYear', xData=xTrans, geog='lga',
+ lgaYUW <- prrTrender('transYear', xData=xTrans, geog='lga',
                        geogName='all', byUse=TRUE, weighted=TRUE)
-  lgaQUW <- prrTrender('transQtr', xData=xTrans, geog='lga',
+ lgaQUW <- prrTrender('transQtr', xData=xTrans, geog='lga',
                        geogName='all', byUse=TRUE, weighted=TRUE)
   
  ## All SLA1s 
@@ -275,6 +282,27 @@
 ### Save Workspace -------------------------------------------------------------
   
   save.image(paste0(dataPath, 'prrWrkspc.RData'))
+  save(globY, globQ, globBUY, globBUQ, globBUWY, globBUWQ, 
+      lgaY, lgaQ, lgaYU, lgaQU, lgaYUW, lgaQUW,
+      slaY, slaQ, slaYU, slaQU, slaYUW, slaQUW,
+      pcY, pcQ, pcYU, pcQU, pcYUW, pcQUW,
+      subY, subQ, subYU, subQU, subYUW, subQUW,
+      file = paste0(dataPath, 'plotObjs.rData'))
   
 ### Visualize Results ----------------------------------------------------------  
+  
+  
+  ggplot(prrObj, aes(x=time, y=value)) + geom_line()
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   

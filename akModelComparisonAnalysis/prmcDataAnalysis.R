@@ -187,27 +187,94 @@
     
 ### Break down results by dimensions -------------------------------------------
   
-  ## Global analysis by year, qtr and days(^-1)
+ ## Global
   
-  glob <- lapply(list('transYear', 'transQtr', 'transMonth'),
-                 prrMakeTrends, byUse=FALSE, xData=xTrans)
+  # Basic
+  glob <- prrTrender(list('transYear', 'transQtr', 'transMonth'), xData=xTrans)
   
-  ## Global Trends by property type
+  # By Use
+  globBU <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
+                       xData=xTrans, byUse=TRUE)
   
-  globUse <- lapply(list('transYear', 'transQtr', 'transMonth'),
-                    prrMakeTrends, byUse=TRUE, xData=xTrans)
-  globUseW <- lapply(list('transYear', 'transQtr', 'transMonth'),
-                    prrMakeTrends, byUse=TRUE, xData=xTrans, weighted=TRUE)
+  # By use weighted
+  globBUW <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
+                        xData=xTrans, byUse=TRUE, weighted=TRUE)
   
-  ## By Suburb
+ ## All LGAs 
   
-   subYear <- mapply(prrMakeTrends, timeField='transYear',  
-             geogName=names(table(xTrans$suburb[xTrans$YT_either_suburb==1])), 
-             MoreArgs=list(xData = xTrans[xTrans$YT_either_suburb==1,],
-                           geog='suburb'))
+  # Basic
+  lgaY <- prrTrender('transYear', xData=xTrans, geog='lga', geogName='all')
+  lgaQ <- prrTrender('transQtr', xData=xTrans, geog='lga', geogName='all')
   
-   subYearU <- mapply(prrMakeTrends, timeField='transYear',  
-                      geogName=names(table(xTrans$suburb[xTrans$YT_both_suburb==1])), 
-                      MoreArgs=list(xData = xTrans[xTrans$YT_both_suburb==1,],
-                                    geog='suburb', byUse=TRUE))
-   
+  # By Use
+  lgaYU <- prrTrender('transYear', xData=xTrans, geog='lga', 
+                      geogName='all', byUse=TRUE)
+  lgaQU <- prrTrender('transQtr', xData=xTrans, geog='lga', 
+                      geogName='all', byUse=TRUE)
+  
+  # By use weighted
+  lgaYUW <- prrTrender('transYear', xData=xTrans, geog='lga',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  lgaQUW <- prrTrender('transQtr', xData=xTrans, geog='lga',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  
+ ## All SLA1s 
+  
+  # Basic
+  slaY <- prrTrender('transYear', xData=xTrans, geog='sla1', geogName='all')
+  slaQ <- prrTrender('transQtr', xData=xTrans, geog='sla1', geogName='all')
+  
+  # By Use
+  slaYU <- prrTrender('transYear', xData=xTrans, geog='sla1', 
+                      geogName='all', byUse=TRUE)
+  slaQU <- prrTrender('transQtr', xData=xTrans, geog='sla1', 
+                      geogName='all', byUse=TRUE)
+  
+  # By use weighted
+  slaYUW <- prrTrender('transYear', xData=xTrans, geog='sla1',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  slaQUW <- prrTrender('transQtr', xData=xTrans, geog='sla1',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  
+  ## All PostCodes 
+  
+  # Basic
+  pcY <- prrTrender('transYear', xData=xTrans, geog='postCode', geogName='all')
+  pcQ <- prrTrender('transQtr', xData=xTrans, geog='postCode', geogName='all')
+  
+  # By Use
+  pcYU <- prrTrender('transYear', xData=xTrans, geog='postCode', 
+                      geogName='all', byUse=TRUE)
+  pcQU <- prrTrender('transQtr', xData=xTrans, geog='postCode', 
+                      geogName='all', byUse=TRUE)
+  
+  # By use weighted
+  pcYUW <- prrTrender('transYear', xData=xTrans, geog='postCode',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  pcQUW <- prrTrender('transQtr', xData=xTrans, geog='postCode',
+                       geogName='all', byUse=TRUE, weighted=TRUE)
+  
+  ## All Suburbs
+  
+  # Basic
+  subY <- prrTrender('transYear', xData=xTrans, geog='suburb', geogName='all')
+  subQ <- prrTrender('transQtr', xData=xTrans, geog='suburb', geogName='all')
+  
+  # By Use
+  subYU <- prrTrender('transYear', xData=xTrans, geog='suburb', 
+                     geogName='all', byUse=TRUE)
+  subQU <- prrTrender('transQtr', xData=xTrans, geog='suburb', 
+                     geogName='all', byUse=TRUE)
+  
+  # By use weighted
+  subYUW <- prrTrender('transYear', xData=xTrans, geog='suburb',
+                      geogName='all', byUse=TRUE, weighted=TRUE)
+  subQUW <- prrTrender('transQtr', xData=xTrans, geog='suburb',
+                      geogName='all', byUse=TRUE, weighted=TRUE)
+
+### Save Workspace -------------------------------------------------------------
+  
+  save.image(paste0(dataPath, 'prrWrkspc.RData'))
+  
+### Visualize Results ----------------------------------------------------------  
+  

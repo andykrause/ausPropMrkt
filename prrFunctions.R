@@ -595,3 +595,110 @@ prrGeogMkr <- function(geogFilter, xData, byUse, geog, timeFields,
   iRes <- iRes[testL == max(testL)]
   return(iRes)
 }
+
+
+
+### Function that finds the proper object given various parameters -------------
+
+prrFindObj <- function(geoType,             # all, lga, sla1, postCode, suburb
+                       timeType,            # year or qtr
+                       useType,             # Split by use (comb or use)
+                       wgtType,             # Weighted or not (yes or no)
+                       valType,             # Data type Count or PRR
+                       geoName=NULL         # Specific Geography Name
+)
+{
+  
+  ## Test for proper match between geoType and geoName
+  
+  if(geoType != 'all' & 
+     is.null(geoName)) return(cat('You must select a',
+                                  'specific geography name.'))
+  
+  ## Define the large object table  
+  
+  objTable <- data.frame(name = c('globY', 'globQ', 'globBUY', 'globBUQ',
+                                  'globBUWY', 'globBUWQ', 'lgaY', 'lgaQ',
+                                  'lgaYU', 'lgaQU', 'lgaYUW', 'lgaQUW', 'slaY',
+                                  'slaQ', 'slaYU', 'slaQU', 'slaYUW', 'slaQUW',
+                                  'pcY', 'pcQ', 'pcYU', 'pcQU', 'pcYUW', 
+                                  'pcQUW', 'subY', 'subQ', 'subYU', 'subQU', 
+                                  'subYUW', 'subQUW'),
+                         geoType = c(rep('all', 6), rep('lga', 6), 
+                                     rep('sla1', 6), rep('postCode', 6), 
+                                     rep('suburb', 6)),
+                         timeType = rep(c('year', 'qtr'), 15),
+                         useType = rep(c('comb', 'comb', 'use', 'use', 
+                                         'use', 'use'), 5),
+                         wgtType = rep(c('no', 'no', 'no', 'no', 
+                                         'yes', 'yes'), 5))
+  
+  ## Find the actual object name  
+  
+  objName <- objTable$name[objTable$geoType == geoType & 
+                             objTable$timeType == timeType &
+                             objTable$useType == useType & 
+                             objTable$wgtType == wgtType]
+  objName <- as.character(objName)
+  
+  ## Extract out the proper table from the object  
+  
+  # If global geography
+  if(geoType == 'all'){
+    if(valType == 'Count'){
+      obj <- get(objName)$tidyCount
+    } else {
+      obj <- get(objName)$tidyPRR
+    }
+  }
+  
+  # If specific geography
+  else 
+  {
+    objX <- get(objName)
+    geoX <- which(names(objX) == geoName)
+    if(length(geoX) == 0) return(cat('Geography not found, Check name'))
+    objY <- objX[[geoX]]
+    if(valType == 'Count'){
+      obj <- objY$tidyCount
+    } else {
+      obj <- objY$tidyPRR
+    }
+  }
+  
+  ## Return the specific object  
+  
+  return(obj)
+}
+
+### General plotting function --------------------------------------------------     
+
+prrTimePlot <- function(prrObj,
+                        lineSize=2
+){
+  
+  # Determine if by use or not  
+  useGroup <- ifelse(length(table(prrObj$type) > 1), TRUE, FALSE)
+  
+  # if by use  
+  if(useGroup){
+    plotObj <- ggplot(prrObj, aes(x=as.numeric(time), y=value, colour=type)) +
+      geom_line(size=lineSize) +
+      labs(y='Price to Rent Ratio', x='Month from June 2010') + 
+      theme(legend.position='none')
+    
+  }
+  
+  # If not by use  
+  else 
+  {
+    plotObj <- ggplot(prrObj, aes(x=as.numeric(time), y=value)) +
+      geom_line(size=lineSize)
+  }
+  
+  # Return plot obj  
+  return(plotObj)
+}
+
+
+

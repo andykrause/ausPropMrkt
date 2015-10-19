@@ -287,6 +287,7 @@
       slaY, slaQ, slaYU, slaQU, slaYUW, slaQUW,
       pcY, pcQ, pcYU, pcQU, pcYUW, pcQUW,
       subY, subQ, subYU, subQU, subYUW, subQUW,
+      subShp, lgaShp, sla1Shp, postCodeShp,
       file = paste0(dataPath, 'plotObjs.rData'))
   
 ### Visualize Results ----------------------------------------------------------  

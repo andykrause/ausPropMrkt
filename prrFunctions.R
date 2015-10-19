@@ -713,5 +713,48 @@ prrTimePlot <- function(prrObj,
   return(plotObj)
 }
 
+### Median method approach -----------------------------------------------------
+
+prrMedMethod <- function(transData,              # transaction dataset
+                         timeField='transYear',  # timefield to use
+                         byUse = FALSE           #Split by use
+                         )
+  {
+  
+  # Separate sales and rents
+  sData <- transData[transData$transType == 'sale', ]
+  rData <- transData[transData$transType == 'rent', ]
+  
+  # Extract time field
+  sTime <- sData[ ,timeField]
+  rTime <- rData[ ,timeField]
+  
+  if(!byUse){
+    
+    # Calculate price trends
+    sMed <- tapply(sData$transValue, sTime, median)
+    rMed <- tapply(rData$transValue, rTime, median)
+    prr <- sMed/(rMed * 52/12)
+    
+  } else {
+    
+    sh <- which(sData$PropertyType == 'House')
+    rh <- which(rData$PropertyType == 'House')
+    su <- which(sData$PropertyType == 'Unit')
+    ru <- which(rData$PropertyType == 'Unit')
+    
+    # Extract time field
+    shMed <- tapply(sData$transValue[sh], sTime[sh], median)
+    rhMed <- tapply(rData$transValue[rh], sTime[rh], median)
+    suMed <- tapply(sData$transValue[su], sTime[su], median)
+    ruMed <- tapply(rData$transValue[ru], sTime[ru], median)
+    
+    prr <- c(shMed/(rhMed * 52/12), suMed/(ruMed * 52/12)) 
+    
+  }  
+    
+  return(prr)
+  
+}
 
 

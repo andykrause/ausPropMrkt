@@ -580,15 +580,24 @@ prrGeogMkr <- function(geogFilter, xData, byUse, geog, timeFields,
   } 
   else 
   {
-    
-    iRes <- list()
-    for(iR in 1:(length(geoTrends) / 4)){
-      iRes[[iR]] <- list(houseCount = geoTrends[[(iR * 4) - 3]],
-                         houseResults = geoTrends[[(iR * 4) - 2]],
-                         unitCount = geoTrends[[(iR * 4) - 1]],
-                         unitResults = geoTrends[[iR * 4]])
-    } # Ends jk loop
-  } # Ends if/else
+
+  # if long geotrends
+    if(length(geoTrends) > length(okGeos)){
+      iRes <- list()
+      for(iR in 1:(length(geoTrends) / 4)){
+       iRes[[iR]] <- list(houseCount = geoTrends[[(iR * 4) - 3]],
+                          houseResults = geoTrends[[(iR * 4) - 2]],
+                          unitCount = geoTrends[[(iR * 4) - 1]],
+                          unitResults = geoTrends[[iR * 4]])
+     } # Ends jk loop
+   } # Ends if/else
+   else
+   {
+     iRes <- geoTrends
+   }
+ } #ends if(byUse == FALSE....)
+  
+ ## Fix up names
   
   names(iRes) <- okGeos
   testL <- unlist(lapply(iRes, function(x) length(unlist(x))))

@@ -19,7 +19,7 @@ Sold_All = Sold_I_ss
 
 
 
-## 2. Clean Data
+### 2. Clean Data ----
 
 cleanData = function(x,npar=TRUE,print=TRUE){
   x = subset(x, x$Property_Latitude < 0)
@@ -96,9 +96,8 @@ Sold_All$DateNew = fixAPMDates(as.vector(Sold_All$EventDate))
 
 # create dataFiel YearNew
 
-fixAPMyears <- function(xDates      # Vector of dates to be fixed
-)
-{
+fixAPMyears <- function(xDates      # Vector of dates to be fixed ) 
+                        {
   
   ## Set required libraries
   
@@ -125,7 +124,7 @@ Sold_All$YearNew = fixAPMyears(Sold_All$EventDate)
 Rent_All$YearNew = fixAPMyears(Rent_All$EventDate)
 
 ### Finding locations where a sensible model can be built
-## 3.1. find postcodes with rental / sold / units / houses
+### 3.1. find postcodes with rental / sold / units / houses ----
 
 summary(shKeep)
 
@@ -183,7 +182,7 @@ thresData = findPostCodes(Rent_All, Sold_All)
 
 
 
-## 3.2 reduce data to subburbs / zipcode with minimal numbers
+### 3.2 reduce data to subburbs / zipcode with minimal numbers -------
 
 applyThres <- function(thresData,       # Threshold data object from prrGeoLimit
                        transData,       # Set of transaction data
@@ -225,7 +224,7 @@ summary(Sold_House)
 summary(Rent_House)
 summary(Sold_Units)
   
-## 4. Create global model for Rental and Sold Market
+### 4. Create global model for Rental and Sold Market -----
 findModel = function(x,npar=TRUE,print=TRUE){
   x = lm( log(EventPrice) ~ EventYear+AreaSize+Bedrooms+Parking+factor(Postcode),x)
   summary(x)
@@ -239,8 +238,7 @@ Sold_House_Model = findModel(Sold_House)
 summary(Sold_House_Model)
 
 
-## 5. Aplly global model to other market
-
+### 5. Aplly global model to other market ----
 # create new variable for created price
 
 predictApply = function(datasetToApply,predictionmodel,rentYes,npar=TRUE,print=TRUE){
@@ -269,7 +267,7 @@ Rent_Units$Price = exp(predict(Sold_Unit_Model, newdata = Rent_Units))
 
 
 
-## 6. Create Price / Rent ratio
+### 6. Create Price / Rent ratio ----
 applyRatio = function(datasetToApply,npar=TRUE,print=TRUE){
   datasetToApply$PropertyRentRatio = datasetToApply$Price/datasetToApply$Rent
 }

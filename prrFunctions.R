@@ -611,9 +611,9 @@ prrFindObj <- function(geoType,             # all, lga, sla1, postCode, suburb
   
   ## Test for proper match between geoType and geoName
   
-  if(geoType != 'all' & 
-     is.null(geoName)) return(cat('You must select a',
-                                  'specific geography name.'))
+  if(geoType != 'metro' & 
+     (is.null(geoName) || geoName == "")) return(cat('You must select a',
+                                                    'specific geography name.'))
   
   ## Define the large object table  
   
@@ -624,14 +624,14 @@ prrFindObj <- function(geoType,             # all, lga, sla1, postCode, suburb
                                   'pcY', 'pcQ', 'pcYU', 'pcQU', 'pcYUW', 
                                   'pcQUW', 'subY', 'subQ', 'subYU', 'subQU', 
                                   'subYUW', 'subQUW'),
-                         geoType = c(rep('all', 6), rep('lga', 6), 
+                         geoType = c(rep('metro', 6), rep('lga', 6), 
                                      rep('sla1', 6), rep('postCode', 6), 
                                      rep('suburb', 6)),
                          timeType = rep(c('year', 'qtr'), 15),
                          useType = rep(c('comb', 'comb', 'use', 'use', 
                                          'use', 'use'), 5),
-                         wgtType = rep(c('no', 'no', 'no', 'no', 
-                                         'yes', 'yes'), 5))
+                         wgtType = rep(c(FALSE, FALSE, FALSE, FALSE, 
+                                         TRUE, TRUE), 5))
   
   ## Find the actual object name  
   
@@ -641,10 +641,13 @@ prrFindObj <- function(geoType,             # all, lga, sla1, postCode, suburb
                              objTable$wgtType == wgtType]
   objName <- as.character(objName)
   
-  ## Extract out the proper table from the object  
+ ## Extract out the proper table from the object  
+  
+  # If not found 
+  if(length(objName) == 0) return('notFound')
   
   # If global geography
-  if(geoType == 'all'){
+  if(geoType == 'metro'){
     if(valType == 'Count'){
       obj <- get(objName)$tidyCount
     } else {
@@ -666,8 +669,9 @@ prrFindObj <- function(geoType,             # all, lga, sla1, postCode, suburb
     }
   }
   
-  ## Return the specific object  
+  # Return the specific object  
   
+  #return(obj)
   return(obj)
 }
 
@@ -685,7 +689,7 @@ prrTimePlot <- function(prrObj,
     plotObj <- ggplot(prrObj, aes(x=as.numeric(time), y=value, colour=type)) +
       geom_line(size=lineSize) +
       labs(y='Price to Rent Ratio', x='Month from June 2010') + 
-      theme(legend.position='none')
+      theme(legend.position='bottom')
     
   }
   

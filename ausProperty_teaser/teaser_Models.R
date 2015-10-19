@@ -14,8 +14,8 @@
 
 ## 1. Load data
 
-Rent_All = 
-Sold_All = SoldP
+Rent_All = Rent_III_ss
+Sold_All = Sold_I_ss
 
 
 

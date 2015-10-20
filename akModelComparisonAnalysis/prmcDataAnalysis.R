@@ -62,9 +62,14 @@
   mmGlobQ <- prrMedMethod(allTrans, 'transQtr')
   
   mmGlobBUY <- prrMedMethod(allTrans, 'transYear', TRUE)
+  mmGlobBUQ <- prrMedMethod(allTrans, 'transQtr', TRUE)
+  
+  mmGlobBUWY <- prrMedMethod(allTrans, 'transYear', TRUE, TRUE)
+  mmGlobBUWQ <- prrMedMethod(allTrans, 'transQtr', TRUE, TRUE)
+  
+ ## At LGA Level
   
   
-
 ### Cross regression comparison method -----------------------------------------
 
  ## Set the specification (formula)

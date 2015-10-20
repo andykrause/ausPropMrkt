@@ -71,8 +71,8 @@ prrDirectCompare <- function(sales,               # Data.frame of sales
  ## Compute Ratios
   
   # Compute observation level ratios
-  sAnchRatio <- mTrans[,saleField] / (mTrans$adjRent * 52 / 12)
-  rAnchRatio <- mTrans$adjSale / (mTrans[,rentField] * 52 / 12)
+  sAnchRatio <- mTrans[,saleField] / (mTrans$adjRent * 52)
+  rAnchRatio <- mTrans$adjSale / (mTrans[,rentField] * 52)
   mAnchRatio <- (sAnchRatio + rAnchRatio) / 2
   
   # Calculate the median per time period
@@ -717,7 +717,8 @@ prrTimePlot <- function(prrObj,
 
 prrMedMethod <- function(transData,              # transaction dataset
                          timeField='transYear',  # timefield to use
-                         byUse = FALSE           #Split by use
+                         byUse = FALSE ,         #Split by use
+                         wgtd = FALSE            # Weight by use
                          )
   {
   
@@ -734,7 +735,11 @@ prrMedMethod <- function(transData,              # transaction dataset
     # Calculate price trends
     sMed <- tapply(sData$transValue, sTime, median)
     rMed <- tapply(rData$transValue, rTime, median)
-    prr <- sMed/(rMed * 52/12)
+    prrCount <- tapply(transData, transData[,timeField], length)
+    prr <- sMed/(rMed * 52)
+    
+    return(list(allCount=prrCount,
+                allResults=prr))
     
   } else {
     
@@ -749,11 +754,61 @@ prrMedMethod <- function(transData,              # transaction dataset
     suMed <- tapply(sData$transValue[su], sTime[su], median)
     ruMed <- tapply(rData$transValue[ru], sTime[ru], median)
     
-    prr <- c(shMed/(rhMed * 52/12), suMed/(ruMed * 52/12)) 
+    shCount <- tapply(sData$transValue[sh], sTime[sh], length)
+    rhCount <- tapply(rData$transValue[rh], sTime[rh], length)
+    suCount <- tapply(sData$transValue[su], sTime[su], length)
+    ruCount <- tapply(rData$transValue[ru], sTime[ru], length)
     
+    if(wgtd){
+ 
+      shTemp <- shMed * shCount
+      rhTemp <- rhMed * rhCount
+      suTemp <- suMed * suCount
+      ruTemp <- ruMed * ruCount
+      
+      hTemp <- (shMed/(rhMed*52)) * (length(c(sh,rh)))
+      uTemp <- (suMed/(ruMed*52)) * (length(c(su,ru)))
+      prr <- (hTemp + uTemp) / length(c(sh,rh,su,ru))
+      prrCount <- tapply(transData, transData[,timeField], length)
+      
+      return(list(allCount=prrCount,
+                  allResults=prr))
+      
+    } else {
+      return(list(houseCount=shCount+rhCount,
+                  houseResults = shMed/(rhMed * 52),
+                  unitCount=suCount + ruCount,
+                  unitResults=suMed/(ruMed * 52))) 
+    
+    }
   }  
     
   return(prr)
+  
+}
+
+
+prrGeoMed <- function(geoName, geog, transData,
+                      timeField='transYear', byUse=FALSE, wgtd=FALSE){
+  
+  geoField <- transData[,geog]
+  geoX <- which(geoField == geoName)
+  geoData <- transData[geoX, ]
+  
+  prr <- prrMedMethod(geoData, timeField=timeField, byUse=byUse, wgtd=wgtd)
+  return(prr)
+}
+
+prrGeoWrap <- function(geog, transData, timeField, byUse, wgtd){
+  
+  geoFilter <- prrFilterData(geog=geog, timeField=timeField, byUse=byUse)
+  idX <- which(transData[,geoFilter] == 1)
+  xData <- transData[idX, ]
+  geoTable <- table(xData[,geog])
+  okGeos <- names(geoTable[geoTable > 1])
+  
+  qq<-lapply(okGeos, prrGeoMed, geog=geog, transData=xData, timeField=timeField,
+             byUse=byUse, wgtd=wgtd)
   
 }
 

@@ -43,13 +43,6 @@
     load(paste0(dataPath, 'prrWrkspc.RData'))
   }
   
- ## Load in Geographical Data
-  
-  subShp <- readShapePoly(paste0(dataPath, subGeoFile))
-  lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
-  sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
-  postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
-
 ### Cross regression comparison method -----------------------------------------
 
  ## Set the specification (formula)
@@ -207,7 +200,59 @@
   globBUWY <- globBUW$transYear
   globBUWQ <- globBUW$transQtr
   
+
+  ggplot(globY$tidyPRR, aes(x=as.numeric(time), y=value)) + 
+    geom_line(size=3, colour='red') +
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_line(colour='gray20')) +
+    #labs(title = 'Price to Rent Ratio \n Melbourne Metro Region') +
+    xlab("Time") + ylab("Price to Rent Ratio")
   
+  ggplot(globQ$tidyPRR, aes(x=as.numeric(time), y=value)) + 
+    geom_line(size=3, colour='red') +
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_line(colour='gray20')) +
+    #labs(title = 'Price to Rent Ratio \n Melbourne Metro Region') +
+    xlab("Time") + ylab("Price to Rent Ratio")
+  
+  ggplot(globBUY$tidyPRR, 
+         aes(x=as.numeric(time), y=value, colour=type)) + 
+    geom_line(size=3) +
+    scale_colour_manual(values=c('blue', 'green')) + 
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_line(colour='gray20')) +
+    #labs(title = 'Price to Rent Ratio \n Melbourne Metro Region') +
+    xlab("Time") + ylab("Price to Rent Ratio")
+  
+  ggplot(globBU$transQtr$tidyPRR, 
+         aes(x=as.numeric(time), y=value, colour=type)) + 
+    geom_line(size=3) +
+    scale_colour_manual(values=c('blue', 'green')) + 
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_blank()) +
+    #labs(title = 'Price to Rent Ratio \n Melbourne Metro Region') +
+    xlab("Time") + ylab("Price to Rent Ratio") +
+    scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015)
+  
+  ggplot(globBU$transMonth$tidyPRR, 
+         aes(x=as.numeric(time), y=value, colour=type)) + 
+    geom_line(size=3) +
+    scale_colour_manual(values=c('blue', 'green')) + 
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_blank()) +
+    #labs(title = 'Price to Rent Ratio \n Melbourne Metro Region') +
+    xlab("Time") + ylab("Price to Rent Ratio")
+  
+  
+  
+####  
+  
+    
  ## All lgas 
   
   # Basic

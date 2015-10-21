@@ -812,4 +812,75 @@ prrGeoWrap <- function(geog, transData, timeField, byUse, wgtd){
   
 }
 
+### Function that converts a tidy data object to a data.frame ------------------
+
+prrTidyToDF <- function(tidyObj    # Tidy data object
+){
+  
+  # Set up blank objects / extract names
+  newList <- list()
+  newNames <- names(tidyObj)
+  
+  
+  # Cycle through and pull out data and names
+  for(ij in 1:length(tidyObj)){
+    newList[[ij]] <- tidyObj[[ij]]$tidyPRR
+    newList[[ij]]$geoName <- newNames[ij]
+  }
+  
+  # Return Value
+  return(newList)
+} 
+
+### Plot for comparing all metro to individual geographies ---------------------  
+
+geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
+                        metroPRR,       # object with all metro data
+                        geog,                 # Geography level
+                        timeField='transYear' # time field
+){
+  
+  ## create data
+  
+  # geog specific data frame
+  geoDF <- rbind.fill(tidyToDF(geoPRR))
+  geoDF$scale <- geog
+  
+  # general (metro) data 
+  gq <- metroPRR$tidyPRR
+  gq$geoName='metro'
+  gq$scale='all'
+  
+  # Combine
+  geoDFx <- rbind(geoDF, gq)
+  
+  # Set location of metro data
+  if(timeField=='transYear'){
+    gcLoc <- ((nrow(geoDFx)-5):(nrow(geoDFx)))
+  } else {
+    gcLoc <- ((nrow(geoDFx)-19):(nrow(geoDFx)))
+  }
+  
+  ## Build plot
+  
+  gcPlot <- ggplot(geoDFx, 
+                   aes(x=as.numeric(time), y=value, 
+                       group=geoName, colour=scale)) + 
+    geom_line(size=.2, colour='gray40') +
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_blank()) +
+    xlab("Time") + 
+    ylab("Price to Rent Ratio") +
+    theme(legend.position='none') +
+    geom_line(data=geoDFx[gcLoc,], aes(x=as.numeric(time),
+                                       y=value), colour='orange', size=2)
+  
+  
+  ## Return Value  
+  return(gcPlot)  
+} 
+
+
+
 

@@ -870,12 +870,17 @@ geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
     theme(panel.background = element_rect(colour='black', fill='black'),
           panel.grid.major=element_line(colour='gray20'),
           panel.grid.minor=element_blank()) +
-    xlab("Time") + 
+    xlab("") + 
     ylab("Price to Rent Ratio") +
     theme(legend.position='none') +
     geom_line(data=geoDFx[gcLoc,], aes(x=as.numeric(time),
-                                       y=value), colour='orange', size=2)
-  
+                                       y=value), colour='orange', size=2) +
+    scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
+    theme(plot.background=element_rect(fill='gray10'),
+          axis.title.y=element_text(colour='white'),
+          legend.background=element_rect(fill='gray10'),
+          legend.key=element_rect(fill='gray10', color='gray10'),
+          legend.text=element_text(color='white'))
   
   ## Return Value  
   return(gcPlot)  

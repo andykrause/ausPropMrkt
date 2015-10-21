@@ -147,6 +147,9 @@
   spJoin <- over(allSP, subShp)
   allSP@data$suburb <- as.character(spJoin$NAME_2006)
   
+   # correct error in names
+  allSP@data$suburb <- gsub(' - Bal', '', allSP@data$suburb)
+  
   # Add SLA1
   spJoin <- over(allSP, sla1Shp)
   allSP@data$sla1 <- as.character(spJoin$SLA_NAME11)

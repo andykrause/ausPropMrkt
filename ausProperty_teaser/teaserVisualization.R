@@ -41,8 +41,10 @@
           panel.grid.major=element_line(colour='gray20'),
           panel.grid.minor=element_line(colour='gray20')) +
     xlab("") + ylab("Price to Rent Ratio") +
-    scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015)
-  
+    scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
+    scale_y_continuous(limits = c(21, 28)) +
+    theme(plot.background=element_rect(fill='gray10'),
+          axis.title.y=element_text(colour='white'))
   
   # Prices and Rents
   
@@ -78,7 +80,12 @@
           panel.grid.minor=element_line(colour='gray20')) +
     xlab("") + ylab("Index (2010 Q3 = 100)") +
   scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
-    theme(legend.position='bottom', legend.title=element_blank())
+    theme(legend.position='bottom', legend.title=element_blank()) + 
+    theme(plot.background=element_rect(fill='gray10'),
+          axis.title.y=element_text(colour='white'),
+          legend.background=element_rect(fill='gray10'),
+          legend.key=element_rect(fill='gray10', color='gray10'),
+          legend.text=element_text(color='white'))
 
  ## Quarterly by use
   
@@ -92,6 +99,53 @@
           panel.grid.minor=element_line(colour='gray20')) +
     xlab("") + ylab("Price to Rent Ratio") +
     scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
-   theme(legend.position='bottom', legend.title=element_blank())
+   theme(legend.position='bottom', legend.title=element_blank())+
+  theme(plot.background=element_rect(fill='gray10'),
+        axis.title.y=element_text(colour='white'),
+        legend.background=element_rect(fill='gray10'),
+        legend.key=element_rect(fill='gray10', color='gray10'),
+        legend.text=element_text(color='white'))
   
  ## 
+  
+  geoCompPlot(subQ, globQ, 'suburb', 'transQtr')
+ 
+  prrMin <- function(x) min(x$tidyPRR$value)
+  prrMax <- function(x) max(x$tidyPRR$value)
+  prrMean <- function(x) mean(x$tidyPRR$value)
+  subMean <- unlist(lapply(subQ, prrMean))
+  top3 <- order(subMean, decreasing=T)[1:3]
+  bot3 <- order(subMean)[3:1]
+  all6 <- c(top3, bot3)
+  sub6 <- subQ[all6]
+  sub6DF <- rbind.fill(prrTidyToDF(sub6))
+  sub6DF$type <- NULL
+  sub6DF$variable <- NULL
+  sub6DF$geoName <- factor(sub6DF$geoName, levels=names(subQ)[all6])
+  sub6Tidy <- melt(sub6DF)
+  
+  ggplot(sub6Tidy, aes(x=as.numeric(time), y=value, group=geoName,
+                       colour=geoName)) + 
+    geom_line(size=2) +
+    scale_colour_manual(values=c('blue', 'royalblue' , 'cadetblue',
+                                 'firebrick2', 'red', 'darkred')) + 
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_line(colour='gray20')) +
+    xlab("") + ylab("Price to Rent Ratio") +
+    scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
+    facet_wrap(~geoName) + 
+    theme(legend.position='bottom', legend.title=element_blank() )+
+  theme(plot.background=element_rect(fill='gray10'),
+        axis.title.y=element_text(colour='white'),
+        legend.background=element_rect(fill='gray10'),
+        legend.key=element_rect(fill='gray10', color='gray10'),
+        legend.text=element_text(color='white'))
+  
+  
+  
+  
+  
+  
+  
+  

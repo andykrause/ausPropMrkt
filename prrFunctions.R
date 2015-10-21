@@ -843,7 +843,7 @@ geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
   ## create data
   
   # geog specific data frame
-  geoDF <- rbind.fill(tidyToDF(geoPRR))
+  geoDF <- rbind.fill(prrTidyToDF(geoPRR))
   geoDF$scale <- geog
   
   # general (metro) data 
@@ -853,6 +853,7 @@ geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
   
   # Combine
   geoDFx <- rbind(geoDF, gq)
+  geoDFx$value <- 1/geoDFx$value
   
   # Set location of metro data
   if(timeField=='transYear'){
@@ -866,16 +867,21 @@ geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
   gcPlot <- ggplot(geoDFx, 
                    aes(x=as.numeric(time), y=value, 
                        group=geoName, colour=scale)) + 
-    geom_line(size=.2, colour='gray40') +
+    geom_line(size=.1, colour='gray40') +
     theme(panel.background = element_rect(colour='black', fill='black'),
           panel.grid.major=element_line(colour='gray20'),
           panel.grid.minor=element_blank()) +
     xlab("") + 
-    ylab("Price to Rent Ratio") +
+    ylab("Gross ROI (1 / PRR)") +
     theme(legend.position='none') +
     geom_line(data=geoDFx[gcLoc,], aes(x=as.numeric(time),
                                        y=value), colour='orange', size=2) +
     scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.02, .07),
+                       breaks=seq(.025, .07, .005), 
+                       labels=paste0(format(100*(
+                         seq(.025, .07, .005)),
+                         nsmall=1), "%")) +
     theme(plot.background=element_rect(fill='gray10'),
           axis.title.y=element_text(colour='white'),
           legend.background=element_rect(fill='gray10'),

@@ -25,12 +25,11 @@
  ## Source Files
 
   # File containing function for working with prr and APM data
-  source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                'master/prrFunctions.R'))
+  source('/Users/gaschwanden/Documents/R_Workspace/ausPropMrkt/prrFunctions.R')
 
  ## Set the path to the data
 
-  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  dataPath <- "/Users/gaschwanden/Documents/R_Workspace/ausPropMrkt"
   subGeoFile <- 'Vic_Suburbs.shp'
   lgaGeoFile <- 'Vic_LGAs.shp'
   sla1GeoFile <- 'Vic_SLA1.shp'
@@ -42,8 +41,7 @@
   
   # Conditional depending on reBuild
   if(reBuildData){
-    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                  'master/akModelComparisonAnalysis/prmcDataPrep.R'))
+    source(paste0('/Users/gaschwanden/Documents/R_Workspace/ausPropMrkt/prmcDataPrep.R'))
   } else {
     load(paste0(dataPath, 'prrWrkspc.RData'))
   }

@@ -71,8 +71,8 @@ prrDirectCompare <- function(sales,               # Data.frame of sales
  ## Compute Ratios
   
   # Compute observation level ratios
-  sAnchRatio <- mTrans[,saleField] / (mTrans$adjRent * 52 / 12)
-  rAnchRatio <- mTrans$adjSale / (mTrans[,rentField] * 52 / 12)
+  sAnchRatio <- mTrans[,saleField] / (mTrans$adjRent * 52)
+  rAnchRatio <- mTrans$adjSale / (mTrans[,rentField] * 52)
   mAnchRatio <- (sAnchRatio + rAnchRatio) / 2
   
   # Calculate the median per time period
@@ -717,7 +717,8 @@ prrTimePlot <- function(prrObj,
 
 prrMedMethod <- function(transData,              # transaction dataset
                          timeField='transYear',  # timefield to use
-                         byUse = FALSE           #Split by use
+                         byUse = FALSE ,         #Split by use
+                         wgtd = FALSE            # Weight by use
                          )
   {
   
@@ -734,7 +735,11 @@ prrMedMethod <- function(transData,              # transaction dataset
     # Calculate price trends
     sMed <- tapply(sData$transValue, sTime, median)
     rMed <- tapply(rData$transValue, rTime, median)
-    prr <- sMed/(rMed * 52/12)
+    prrCount <- tapply(transData, transData[,timeField], length)
+    prr <- sMed/(rMed * 52)
+    
+    return(list(allCount=prrCount,
+                allResults=prr))
     
   } else {
     
@@ -749,12 +754,144 @@ prrMedMethod <- function(transData,              # transaction dataset
     suMed <- tapply(sData$transValue[su], sTime[su], median)
     ruMed <- tapply(rData$transValue[ru], sTime[ru], median)
     
-    prr <- c(shMed/(rhMed * 52/12), suMed/(ruMed * 52/12)) 
+    shCount <- tapply(sData$transValue[sh], sTime[sh], length)
+    rhCount <- tapply(rData$transValue[rh], sTime[rh], length)
+    suCount <- tapply(sData$transValue[su], sTime[su], length)
+    ruCount <- tapply(rData$transValue[ru], sTime[ru], length)
     
+    if(wgtd){
+ 
+      shTemp <- shMed * shCount
+      rhTemp <- rhMed * rhCount
+      suTemp <- suMed * suCount
+      ruTemp <- ruMed * ruCount
+      
+      hTemp <- (shMed/(rhMed*52)) * (length(c(sh,rh)))
+      uTemp <- (suMed/(ruMed*52)) * (length(c(su,ru)))
+      prr <- (hTemp + uTemp) / length(c(sh,rh,su,ru))
+      prrCount <- tapply(transData, transData[,timeField], length)
+      
+      return(list(allCount=prrCount,
+                  allResults=prr))
+      
+    } else {
+      return(list(houseCount=shCount+rhCount,
+                  houseResults = shMed/(rhMed * 52),
+                  unitCount=suCount + ruCount,
+                  unitResults=suMed/(ruMed * 52))) 
+    
+    }
   }  
     
   return(prr)
   
 }
+
+
+prrGeoMed <- function(geoName, geog, transData,
+                      timeField='transYear', byUse=FALSE, wgtd=FALSE){
+  
+  geoField <- transData[,geog]
+  geoX <- which(geoField == geoName)
+  geoData <- transData[geoX, ]
+  
+  prr <- prrMedMethod(geoData, timeField=timeField, byUse=byUse, wgtd=wgtd)
+  return(prr)
+}
+
+prrGeoWrap <- function(geog, transData, timeField, byUse, wgtd){
+  
+  geoFilter <- prrFilterData(geog=geog, timeField=timeField, byUse=byUse)
+  idX <- which(transData[,geoFilter] == 1)
+  xData <- transData[idX, ]
+  geoTable <- table(xData[,geog])
+  okGeos <- names(geoTable[geoTable > 1])
+  
+  qq<-lapply(okGeos, prrGeoMed, geog=geog, transData=xData, timeField=timeField,
+             byUse=byUse, wgtd=wgtd)
+  
+}
+
+### Function that converts a tidy data object to a data.frame ------------------
+
+prrTidyToDF <- function(tidyObj    # Tidy data object
+){
+  
+  # Set up blank objects / extract names
+  newList <- list()
+  newNames <- names(tidyObj)
+  
+  
+  # Cycle through and pull out data and names
+  for(ij in 1:length(tidyObj)){
+    newList[[ij]] <- tidyObj[[ij]]$tidyPRR
+    newList[[ij]]$geoName <- newNames[ij]
+  }
+  
+  # Return Value
+  return(newList)
+} 
+
+### Plot for comparing all metro to individual geographies ---------------------  
+
+geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
+                        metroPRR,       # object with all metro data
+                        geog,                 # Geography level
+                        timeField='transYear' # time field
+){
+  
+  ## create data
+  
+  # geog specific data frame
+  geoDF <- rbind.fill(prrTidyToDF(geoPRR))
+  geoDF$scale <- geog
+  
+  # general (metro) data 
+  gq <- metroPRR$tidyPRR
+  gq$geoName='metro'
+  gq$scale='all'
+  
+  # Combine
+  geoDFx <- rbind(geoDF, gq)
+  geoDFx$value <- 1/geoDFx$value
+  
+  # Set location of metro data
+  if(timeField=='transYear'){
+    gcLoc <- ((nrow(geoDFx)-5):(nrow(geoDFx)))
+  } else {
+    gcLoc <- ((nrow(geoDFx)-19):(nrow(geoDFx)))
+  }
+  
+  ## Build plot
+  
+  gcPlot <- ggplot(geoDFx, 
+                   aes(x=as.numeric(time), y=value, 
+                       group=geoName, colour=scale)) + 
+    geom_line(size=.1, colour='gray40') +
+    theme(panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_blank()) +
+    xlab("") + 
+    ylab("Gross ROI (1 / PRR)") +
+    theme(legend.position='none') +
+    geom_line(data=geoDFx[gcLoc,], aes(x=as.numeric(time),
+                                       y=value), colour='orange', size=2) +
+    scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.02, .07),
+                       breaks=seq(.025, .07, .005), 
+                       labels=paste0(format(100*(
+                         seq(.025, .07, .005)),
+                         nsmall=1), "%")) +
+    theme(plot.background=element_rect(fill='gray10'),
+          axis.title.y=element_text(colour='white'),
+          legend.background=element_rect(fill='gray10'),
+          legend.key=element_rect(fill='gray10', color='gray10'),
+          legend.text=element_text(color='white'))
+  
+  ## Return Value  
+  return(gcPlot)  
+} 
+
+
 
 

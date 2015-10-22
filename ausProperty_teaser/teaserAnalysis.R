@@ -20,7 +20,6 @@
   library(stringr)
   library(maptools)
   library(sp)
-  library(rgeos)
 
  ## Source Files
 
@@ -29,11 +28,15 @@
 
  ## Set the path to the data
 
+<<<<<<< HEAD
   dataPath <- "/Users/gaschwanden/Documents/R_Workspace/ausPropMrkt"
   subGeoFile <- 'Vic_Suburbs.shp'
   lgaGeoFile <- 'Vic_LGAs.shp'
   sla1GeoFile <- 'Vic_SLA1.shp'
   postGeoFile <- 'Vic_PostCodes.shp'
+=======
+  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+>>>>>>> origin/master
 
 ### Read in and prepare data ---------------------------------------------------------------
   
@@ -46,13 +49,6 @@
     load(paste0(dataPath, 'prrWrkspc.RData'))
   }
   
- ## Load in Geographical Data
-  
-  subShp <- readShapePoly(paste0(dataPath, subGeoFile))
-  lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
-  sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
-  postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
-
 ### Cross regression comparison method -----------------------------------------
 
  ## Set the specification (formula)
@@ -88,8 +84,9 @@
   crmValues <- rbind(houseResults$results, unitResults$results)
 
   # Calculate the ratio
-  crmValues$prRatio <- crmValues$Price / (crmValues$Rent * 52 / 12)
-
+  crmValues$prRatio <- crmValues$Price / (crmValues$Rent * 52)
+  crmValues$yield <- 1/crmValues$prRatio
+  
  ## Calculate sensitivity to the model
   
  if(testCRMSens){
@@ -174,7 +171,12 @@
   
  } else {
  
+   
+   allTrans$rent <- crmValues$Rent[match(allTrans$UID, crmValues$UID)]
+   allTrans$price <- crmValues$Price[match(allTrans$UID, crmValues$UID)]
    allTrans$prRatio <- crmValues$prRatio[match(allTrans$UID, crmValues$UID)]
+   allTrans$yield <- crmValues$yield[match(allTrans$UID, crmValues$UID)]
+   
    xTrans <- subset(allTrans, !is.na(prRatio)) 
        
  }
@@ -203,7 +205,6 @@
                         xData=xTrans, byUse=TRUE, weighted=TRUE)
   globBUWY <- globBUW$transYear
   globBUWQ <- globBUW$transQtr
-  
   
  ## All lgas 
   
@@ -285,23 +286,6 @@
       slaY, slaQ, slaYU, slaQU, slaYUW, slaQUW,
       pcY, pcQ, pcYU, pcQU, pcYUW, pcQUW,
       subY, subQ, subYU, subQU, subYUW, subQUW,
-      subShp, lgaShp, sla1Shp, postCodeShp,
+      subShp, lgaShp, sla1Shp, postCodeShp, xTrans,
       file = paste0(dataPath, 'plotObjs.rData'))
-  
-### Visualize Results ----------------------------------------------------------  
-  
-  
-  ggplot(prrObj, aes(x=time, y=value)) + geom_line()
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   

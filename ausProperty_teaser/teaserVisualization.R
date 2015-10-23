@@ -22,129 +22,255 @@
   source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
               'master/prrFunctions.R'))
 
+  source('c:/dropbox/stsShardFunctions.R')
+
  ## Set the path to the data
 
   dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
 
 ### Load the data --------------------------------------------------------------
   
+  load(paste0(dataPath, 'prrWrkspc.RData'))
   load(paste0(dataPath, 'plotObjs.rData'))
+
+### Create a custom plotting theme ---------------------------------------------
   
+  theme_mry <- theme_grey() +
+    theme(text = element_text(size=9),
+          panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_line(colour='gray20'),
+          plot.background=element_rect(fill='gray10'),
+          axis.title.y=element_text(colour='white'),
+          axis.text.y=element_text(hjust=1),
+          legend.position='bottom',
+          legend.background=element_rect(fill='gray10'),
+          legend.key=element_rect(fill='gray10', color='gray10'),
+          legend.text=element_text(color='white'),
+          legend.title=element_blank())
+  
+################################################################################  
 ### Visualize Results ----------------------------------------------------------  
+
+### Quarterly for entire metro region ------------------------------------------
   
- ## Quarterly for all areas
+ ## Extract crossReg method
+ 
+  crMetro <- globQ$tidyPRR
+  crMetro$value <- 1 / globQ$tidyPRR$value
+  crMetro$type <- 'Cross Regression'
+
+ ## Creat the basic median value methods  
   
-  # PRR
-  metroQ <- globQ$tidyPRR
-  metroQ$value <- 1/globQ$tidyPRR$value
+  mmMetroSale <- spaceTimeShard(allTrans[allTrans$transType == 'sale', ],
+                                 metric='transValue',
+                                 spaceField='all', 
+                                 timeField = 'transQtr',
+                                 defDim='time',
+                                 stsLimit=1,
+                                 calcs=list(median='median'))
   
-  metroQPlot <- ggplot(metroQ, aes(x=as.numeric(time), y=value)) + 
-                geom_line(size=2, colour='orange') +
-                theme(panel.background = element_rect(colour='black', 
-                                                      fill='black'),
-                      panel.grid.major=element_line(colour='gray20'),
-                      panel.grid.minor=element_line(colour='gray20')) +
-                xlab("") + ylab("Gross ROI (1 / PRR)") +
-                scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
-                scale_y_continuous(limits=c(.038, .046),
-                       breaks=seq(.036, .048, .001), 
-                       labels=paste0(format(100*(seq(.036, .048, .001)),
+  mmMetroRent <- spaceTimeShard(allTrans[allTrans$transType == 'rent', ],
+                                 metric='transValue',
+                                 spaceField='all', 
+                                 timeField = 'transQtr',
+                                 defDim='time',
+                                 stsLimit=1,
+                                 calcs=list(median='median'))
+  
+  mmMetro <- 1 / (mmMetroSale[[2]]$median / (52 * mmMetroRent[[2]]$median))
+  mmMetro <- data.frame(type = 'Median Method',
+                        time = 1:20,
+                        variable = 'prr',
+                        value = as.numeric(mmMetro))
+  
+ ## Combine into a single object
+  
+  metroTidy <- rbind(crMetro, mmMetro)
+  metroTidy$variable <- NULL
+  
+ ## Make Plot
+  
+  metroQPlot <- ggplot(metroTidy, aes(x=as.numeric(time), y=value, 
+                                      group=type)) + 
+                geom_line(aes(colour=type, size=type, linetype=type)) +
+                scale_size_manual(values=c(1,1)) +
+                scale_colour_manual(values=c('orange', 'gray60')) +
+                scale_linetype_manual(values=c(1,3)) + 
+                xlab("") + ylab("Rental Yield\n") +
+                scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+                scale_y_continuous(limits=c(.032, .046),
+                       breaks=seq(.032, .048, .001), 
+                       labels=paste0(format(100*(seq(.032, .048, .001)),
                                             nsmall=1), "%")) +
-                theme(plot.background=element_rect(fill='gray10'),
-                axis.title.y=element_text(colour='white'))
+                theme_mry
   
+
+ ## Export Plot
+ 
   png(height=1200, width=2400, filename="c:/temp/metroQ.png", type="cairo",
       res=300)
     print(metroQPlot)
   dev.off()
-  
-  # Prices and Rents
-  
-  sX <- which(xTrans$transType == 'sale')
-  rX <- which(xTrans$transType != 'sale')
 
-  pMed <- as.data.frame(tapply(xTrans$transValue[sX],
-                              xTrans$transQtr[sX], median))
-  pMed$qtr <- rownames(pMed)
-  names(pMed)[1] <- 'value'
-  pMed$Transaction <- 'Prices'
+### Compare metro prices and rents ---------------------------------------------  
   
-  rMed <- as.data.frame(tapply(xTrans$transValue[rX], 
-                                xTrans$transQtr[rX], median) * 52)
-  rMed$qtr <- rownames(rMed)
-  names(rMed)[1] <- 'value'
-  rMed$Transaction <- 'Annual Rents'
+  ## Create cr simple price and rent values
   
-  pMedR <- pMed
-  pMedR$value <- (pMedR$value / pMed$value[1]) * 100
-  rMedR <- rMed
-  rMedR$value <- (rMedR$value / rMed$value[1]) * 100
+  crMetroPrice <- spaceTimeShard(xTrans,
+                                 metric='price',
+                                 spaceField='all', 
+                                 timeField = 'transQtr',
+                                 defDim='time',
+                                 stsLimit=1,
+                                 calcs=list(median='median'))
   
-  allMedR <- rbind(pMedR, rMedR)
-  amTidy <- melt(allMedR, id=c('qtr', 'Transaction'))
+  crMetroRent <- spaceTimeShard(xTrans,
+                                metric='rent',
+                                spaceField='all', 
+                                timeField = 'transQtr',
+                                defDim='time',
+                                stsLimit=1,
+                                calcs=list(median='median'))
   
-  prPlot <- ggplot(amTidy,  aes(x=as.numeric(qtr), y=value, 
-                                colour=Transaction)) + 
-                   geom_line(size=2) +
-                   scale_colour_manual(values=c('royalblue', 'green')) + 
-                   theme(panel.background = element_rect(colour='black', 
-                                                         fill='black'),
-                         panel.grid.major=element_line(colour='gray20'),
-                         panel.grid.minor=element_line(colour='gray20')) +
-                   xlab("") + ylab("Index (2010 Q3 = 100)") +
-                   scale_x_continuous(breaks=seq(2,18,4), labels=2011:2015) +
-                   theme(legend.position='bottom', legend.title=element_blank()) + 
-                   theme(plot.background=element_rect(fill='gray10'),
-                         axis.title.y=element_text(colour='white'),
-                         legend.background=element_rect(fill='gray10'),
-                         legend.key=element_rect(fill='gray10', color='gray10'),
-                         legend.text=element_text(color='white'))
-
+ ## Combine into tidy data frame
+  
+  prComp <- data.frame(time = rep(1:20, 4),
+                       method = c(rep('Cross Regression', 40),
+                                  rep('Median Method', 40)),
+                       type = c(rep('Prices', 20), rep('Rents', 20),
+                                rep('Prices', 20), rep('Rents', 20)),
+                       value = c(crMetroPrice[[2]]$median / 
+                                   crMetroPrice[[2]]$median[1],
+                                 crMetroRent[[2]]$median / 
+                                   crMetroRent[[2]]$median[1],
+                                 mmMetroSale[[2]]$median / 
+                                   mmMetroSale[[2]]$median[1],
+                                 mmMetroRent[[2]]$median / 
+                                   mmMetroRent[[2]]$median[1]))
+  prComp$value <- prComp$value * 100
+  
+  
+ ## Make Plot
+  
+  prPlot <- ggplot(prComp, aes(x=as.numeric(time), y=value, 
+                        group=method)) + 
+    geom_line(aes(colour=method, size=method, linetype=method)) +
+    scale_size_manual(values=c(1,1)) +
+    scale_colour_manual(values=c('orange', 'gray60')) +
+    scale_linetype_manual(values=c(1,3)) + 
+    xlab("") + ylab("Price and Rent Index (June 2010 = 100)\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(84, 124),
+                       breaks=seq(84, 124, 4)) +
+    theme_mry +
+    facet_wrap(~type)
+    
+ ## Export Plot
+  
   png(height=1200, width=2400, filename="c:/temp/price_v_rent.png", 
       type="cairo",
       res=300)
   print(prPlot)
   dev.off()
+
+### Metro by Use ---------------------------------------------------------------  
   
- ## Quarterly by use
+ ## Extra cross reg values
+
+  crMetroUse <- globBUQ$tidyPRR
+  crMetroUse$value <- 1 / globBUQ$tidyPRR$value
+  crMetroUse$method <- 'Cross Regression'
+  crMetroUse$type <- c(rep("Houses", 20), rep('Units', 20))
   
-  # PRR
   
-  metroUseQ <- globBUQ$tidyPRR
-  metroUseQ$value <- 1/globBUQ$tidyPRR$value
+ ## Creat the basic median value methods  
   
-  byUsePlot <- ggplot(metroUseQ, aes(x=as.numeric(time), y=value, 
-                              group=type, colour=type)) + 
-                      geom_line(size=2) +
-                      scale_colour_manual(values=c('red', 'yellow')) + 
-                      theme(panel.background = element_rect(colour='black',
-                                                            fill='black'),
-                      panel.grid.major=element_line(colour='gray20'),
-                      panel.grid.minor=element_line(colour='gray20')) +
-                      xlab("") + ylab("Gross ROI (1 / PRR)") +
-                      scale_x_continuous(breaks=seq(2, 18, 4), 
-                                         labels=2011:2015) +
-                      scale_y_continuous(limits=c(.035, .048),
-                                         breaks=seq(.036, .047, .001), 
-                                         labels=paste0(format(100*(
-                                           seq(.036, .047, .001)),
-                                                 nsmall=1), "%")) +
-                      theme(legend.position='bottom', 
-                            legend.title=element_blank())+
-                      theme(plot.background=element_rect(fill='gray10'),
-                            axis.title.y=element_text(colour='white'),
-                            legend.background=element_rect(fill='gray10'),
-                            legend.key=element_rect(fill='gray10', 
-                                                    color='gray10'),
-                            legend.text=element_text(color='white'))
+  mmMetroUHSale <- spaceTimeShard(allTrans[allTrans$transType == 'sale' &
+                                           allTrans$PropertyType == 'House', ],
+                                  metric='transValue',
+                                  spaceField='all', 
+                                  timeField = 'transQtr',
+                                  defDim='time',
+                                  stsLimit=1,
+                                  calcs=list(median='median'))
+  
+  mmMetroUUSale <- spaceTimeShard(allTrans[allTrans$transType == 'sale' &
+                                           allTrans$PropertyType == 'Unit', ],
+                                  metric='transValue',
+                                  spaceField='all', 
+                                  timeField = 'transQtr',
+                                  defDim='time',
+                                  stsLimit=1,
+                                  calcs=list(median='median'))
+  
+  mmMetroUHRent <- spaceTimeShard(allTrans[allTrans$transType == 'rent' &
+                                           allTrans$PropertyType == 'House', ],
+                                  metric='transValue',
+                                  spaceField='all', 
+                                  timeField = 'transQtr',
+                                  defDim='time',
+                                  stsLimit=1,
+                                  calcs=list(median='median'))
+  
+  mmMetroUURent <- spaceTimeShard(allTrans[allTrans$transType == 'rent' &
+                                           allTrans$PropertyType == 'Unit', ],
+                                  metric='transValue',
+                                  spaceField='all', 
+                                  timeField = 'transQtr',
+                                  defDim='time',
+                                  stsLimit=1,
+                                  calcs=list(median='median'))
+  
+  # Conver to tidy data frame
+  mmMetroUH <- 1 / (mmMetroUHSale[[2]]$median /
+                      (52 * mmMetroUHRent[[2]]$median))
+  mmMetroUU <- 1 / (mmMetroUUSale[[2]]$median /
+                      (52 * mmMetroUURent[[2]]$median))
+  
+  mmMetroUse <- data.frame(method = 'Median Method',
+                           type = c(rep("Houses", 20), rep('Units', 20)),
+                           time = rep(1:20, 2),
+                           variable = 'prr',
+                           value = as.numeric(c(mmMetroUH, mmMetroUU)))
+                        
+  # Combine
+  metroUse <- rbind(crMetroUse[1:20,],
+                    mmMetroUse[1:20,],
+                    crMetroUse[21:40,],
+                    mmMetroUse[21:40,])
+  metroUse$colInd <- c(rep("Houses - Cross Regression",20),
+                       rep("Houses - Median Method           ",20),
+                       rep("Units - Cross Regression",20), 
+                       rep("Units - Median Method",20))
+
+ ## Combine datasets
+  
+  usePlot <- ggplot(metroUse, aes(x=as.numeric(time), y=value, 
+                               group=method)) + 
+    geom_line(aes(colour=colInd, size=colInd, linetype=colInd)) +
+    scale_size_manual(values=c(1,1,1,1)) +
+    scale_colour_manual(values=c('red', 'gray60', 'yellow', 'gray60')) +
+    scale_linetype_manual(values=c(1,3,1,3)) + 
+    xlab("") + ylab("Rental Yield\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.03, .048),
+                       breaks=seq(.03, .048, .002), 
+                       labels=paste0(format(100*(seq(.03, .048, .002)),
+                                            nsmall=1), "%")) +
+    theme_mry +
+    facet_wrap(~type)
+  usePlot
+  
+## Export Plot
   
   png(height=1200, width=2400, filename="c:/temp/byUse.png", 
       type="cairo",
       res=300)
-  print(byUsePlot)
+  print(usePlot)
   dev.off()
  
-## 
+### Rental Yield Variation 
   
   png(height=1200, width=2400, filename="c:/temp/roiVariation.png", 
       type="cairo",
@@ -167,15 +293,11 @@
 
   suburbPlot <- ggplot(sub6Tidy, aes(x=as.numeric(time), y=value, group=geoName,
                        colour=geoName)) + 
-                       geom_line(size=2) +
+                       geom_line(size=1) +
                        scale_colour_manual(values=c('blue', 'royalblue' , 
                                                     'cadetblue', 'indianred1',
                                                     'red', 'darkred')) + 
-                       theme(panel.background = element_rect(colour='black',
-                                                             fill='black'),
-                             panel.grid.major=element_line(colour='gray20'),
-                             panel.grid.minor=element_line(colour='gray20')) +
-                       xlab("") +  ylab("Gross ROI (1 / PRR)") +
+                       xlab("") +  ylab("Rental Yield\n") +
                        scale_y_continuous(limits=c(.02, .07),
                                           breaks=seq(.02, .07, .01), 
                                           labels=paste0(format(100*(
@@ -184,15 +306,9 @@
                        scale_x_continuous(breaks=seq(2,18,4), 
                                           labels=2011:2015) +
                        facet_wrap(~geoName) + 
-                       theme(legend.position='bottom', 
-                             legend.title=element_blank() )+
-                       theme(plot.background=element_rect(fill='gray10'),
-                             axis.title.y=element_text(colour='white'),
-                             legend.background=element_rect(fill='gray10'),
-                             legend.key=element_rect(fill='gray10', 
-                                                     color='gray10'),
-                             legend.text=element_text(color='white'))
-  
+                       theme_mry +
+                           theme(strip.text.x = element_text(size = 10))
+                                 
   png(height=1200, width=2400, filename="c:/temp/topSuburbs.png", 
       type="cairo",
       res=300)
@@ -200,6 +316,15 @@
   dev.off()
   
   
+###################################
+  
+  
+  metroPrice <- spaceTimeShard(xTrans, 
+                               'price',
+                               'all', 'transQtr', defDim='time',
+                               stsLimit=1,
+                               calcs=list(median='median',
+                                          stdev='sd'))
   
   
   

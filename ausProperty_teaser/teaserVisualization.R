@@ -22,7 +22,8 @@
   source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
               'master/prrFunctions.R'))
 
-  source('c:/dropbox/stsShardFunctions.R')
+  source(paste0('https://raw.githubusercontent.com/andykrause/',
+                'dataAnalysisTools/master/stShardFunctions.R'))
 
  ## Set the path to the data
 

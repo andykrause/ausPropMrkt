@@ -28,15 +28,11 @@
 
  ## Set the path to the data
 
-<<<<<<< HEAD
   dataPath <- "/Users/gaschwanden/Documents/R_Workspace/ausPropMrkt"
   subGeoFile <- 'Vic_Suburbs.shp'
   lgaGeoFile <- 'Vic_LGAs.shp'
   sla1GeoFile <- 'Vic_SLA1.shp'
   postGeoFile <- 'Vic_PostCodes.shp'
-=======
-  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
->>>>>>> origin/master
 
 ### Read in and prepare data ---------------------------------------------------------------
   

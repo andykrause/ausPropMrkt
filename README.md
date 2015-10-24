@@ -46,7 +46,7 @@ This process requires a specific directory structure.
 
 #### Converting .zip files
 
-Begin by downloading the **apmDataPrep.R** file from this repository at: [https://github.com/andykrause/ausPropMrkt](https://github.com/andykrause/ausPropMrkt "Git")
+Begin by downloading the **buildAPMData.R** file from this repository at: [https://github.com/andykrause/ausPropMrkt](https://github.com/andykrause/ausPropMrkt "Git")
 
 The following are required R libraries: `RCurl, RODBC, RSQLite, plyr`
 

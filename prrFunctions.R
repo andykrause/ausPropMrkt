@@ -929,10 +929,11 @@ aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
                            yield=(geoRents$median * 52) / geoPrices$median)
   } else {
     
-    geoTable <- data.frame(timeName=xPrice$timeName,
-                           price=xPrice$median,
-                           rent=xRent$median,
-                           yield=(xRent$median * 52) / xPrice$median)
+    geoTable <- data.frame(timeName=xPrice$stsDF$timeName,
+                           price=xPrice$stsDF$median,
+                           rent=xRent$stsDF$median,
+                           yield=((xRent$stsDF$median * 52) / 
+                             xPrice$stsDF$median))
     
   }
     

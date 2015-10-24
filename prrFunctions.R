@@ -895,6 +895,51 @@ geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
 ################################################################################
 ### New Australia Rent Yield Functions (works with stShard operations) ---------
 
+aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
+                          defDim, stsLimit, calcs){
+  
+  ## Calculate prices and rents
+  
+  xPrice <- spaceTimeShard(stsData[stsData$transType == 'sale', ],
+                           metric=metrics[1], spaceField=spaceField,
+                           timeField=timeField, defDim=defDim, 
+                           stsLimit=stsLimit, calcs=calcs)
+  
+  xRent <- spaceTimeShard(stsData[stsData$transType == 'rent', ],
+                          metric=metrics[2], spaceField=spaceField,
+                          timeField=timeField, defDim=defDim, 
+                          stsLimit=stsLimit, calcs=calcs)
+  
+  ## If not doing all spatial areas
+  
+  if(spaceField != 'all'){
+  
+  # Trim results to geographies with both prices and rents  
+    okNames <- intersect(names(xPrice[[2]]), names(xRent[[2]]))
+    geoPrices <- xPrice[[4]]
+    geoPrices <- geoPrices[geoPrices$spaceName %in% okNames,]
+    geoRents <- xRent[[4]]
+    geoRents <- geoRents[geoRents$spaceName %in% okNames,]
+  
+  # Convert to exportable table
+    geoTable <- data.frame(timeName=geoPrices$timeName,
+                           spaceName=geoPrices$spaceName,
+                           price=geoPrices$median,
+                           rent=geoRents$median,
+                           yield=(geoRents$median * 52) / geoPrices$median)
+  } else {
+    
+    geoTable <- data.frame(timeName=xPrice$timeName,
+                           price=xPrice$median,
+                           rent=xRent$median,
+                           yield=(xRent$median * 52) / xPrice$median)
+    
+  }
+    
+  ## Export data  
+  
+  return(geoTable)
+}
 
 
 

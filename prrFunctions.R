@@ -892,6 +892,9 @@ geoCompPlot <- function(geoPRR,         # prrObj with geog specific data
   return(gcPlot)  
 } 
 
+################################################################################
+### New Australia Rent Yield Functions (works with stShard operations) ---------
+
 
 
 

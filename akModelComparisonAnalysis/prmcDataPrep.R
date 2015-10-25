@@ -295,7 +295,7 @@
   
  ## Write workspace
 
-  save.image(paste0(dataPath, 'prrWrkspc.RData'))
+  save.image(paste0(dataPath, 'cleanData.RData'))
              
  ## Write .csv
  

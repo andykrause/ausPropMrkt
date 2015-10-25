@@ -354,22 +354,96 @@
                                 defDim='time', stsLimit=3, 
                                 calcs=list(median='median'))
   
+ ## LGA  
   
-### Visualize Results ----------------------------------------------------------  
+  dmLgaYields <- spaceTimeShard(stsData = dmData,
+                                metric=c('saleYield'),
+                                spaceField='lga', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use   
+  dmLgaYieldsH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                 metric=c('saleYield'),
+                                 spaceField='lga', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  dmLgaYieldsU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                 metric=c('saleYield'),
+                                 spaceField='lga', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  ## SLA1 
+  
+  dmSlaYields <- spaceTimeShard(stsData = dmData,
+                                metric=c('saleYield'),
+                                spaceField='sla1', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use   
+  dmSlaYieldsH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                 metric=c('saleYield'),
+                                 spaceField='sla1', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  dmSlaYieldsU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                 metric=c('saleYield'),
+                                 spaceField='sla1', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median')) 
 
+  ## Suburb
   
+  dmSubYields <- spaceTimeShard(stsData = dmData,
+                                metric=c('saleYield'),
+                                spaceField='suburb', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use   
+  dmSubYieldsH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                 metric=c('saleYield'),
+                                 spaceField='suburb', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  dmSubYieldsU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                 metric=c('saleYield'),
+                                 spaceField='suburb', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median')) 
+  
+  ## PostCode 
+  
+  dmPCYields <- spaceTimeShard(stsData = dmData,
+                                metric=c('saleYield'),
+                                spaceField='postCode', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use   
+  dmPCYieldsH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                 metric=c('saleYield'),
+                                 spaceField='postCode', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  dmPCYieldsU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                 metric=c('saleYield'),
+                                 spaceField='postCode', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median')) 
+  
+### Clean up workspace and save ------------------------------------------------
+  
+  rm(crmValues)
     
-### Save Workspace -------------------------------------------------------------
-  
-  save.image(paste0(dataPath, 'prrWrkspc.RData'))
-  save(globY, globQ, globBUY, globBUQ, globBUWY, globBUWQ, 
-       lgaY, lgaQ, lgaYU, lgaQU, lgaYUW, lgaQUW,
-       slaY, slaQ, slaYU, slaQU, slaYUW, slaQUW,
-       pcY, pcQ, pcYU, pcQU, pcYUW, pcQUW,
-       subY, subQ, subYU, subQU, subYUW, subQUW,
-       subShp, lgaShp, sla1Shp, postCodeShp, xTrans,
-       file = paste0(dataPath, 'plotObjs.rData'))  
-  
+  save.image(paste0(dataPath, 'analysisResults.RData'))
+
   
   
   

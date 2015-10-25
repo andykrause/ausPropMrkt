@@ -26,6 +26,10 @@
   # File containing function for working with prr and APM data
   source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                 'master/prrFunctions.R'))
+  
+  # File containing function for analyzing data
+  source(paste0('https://raw.githubusercontent.com/andykrause/',
+                'dataAnalysisTools/master/stShardFunctions.R'))
 
  ## Set the path to the data
 
@@ -44,7 +48,7 @@
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/akModelComparisonAnalysis/prmcDataPrep.R'))
   } else {
-    load(paste0(dataPath, 'prrWrkspc.RData'))
+    load(paste0(dataPath, 'cleanData.RData'))
   }
   
  ## Load in Geographical Data
@@ -54,20 +58,118 @@
   sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
   postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
 
-### Median method approach
+### Median method approach -----------------------------------------------------
   
- ## Global Analysis
+ ## Metro Analysis
+
+  # Metro 
+  mmMetYields <- aryStsGeoWrap(stsData = allTrans,
+                             metric=c('transValue', 'transValue'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
   
-  mmGlobY <- prrMedMethod(allTrans)
-  mmGlobQ <- prrMedMethod(allTrans, 'transQtr')
+  # Metro by Use
+  mmMetYieldsH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House',],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='all', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
   
-  mmGlobBUY <- prrMedMethod(allTrans, 'transYear', TRUE)
-  mmGlobBUQ <- prrMedMethod(allTrans, 'transQtr', TRUE)
+  mmMetYieldsU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit',],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='all', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
   
-  mmGlobBUWY <- prrMedMethod(allTrans, 'transYear', TRUE, TRUE)
-  mmGlobBUWQ <- prrMedMethod(allTrans, 'transQtr', TRUE, TRUE)
   
  ## At LGA Level
+  
+  # All Uses
+  mmLgaYields <- aryStsGeoWrap(stsData = allTrans,
+                               metric=c('transValue', 'transValue'),
+                               spaceField='lga', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+  # By Use
+  mmLgaYieldsH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='lga', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+  mmLgaYieldsU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                                metric=c('transValue', 'transValue'),
+                                spaceField='lga', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+ ## At SLA1 Level
+  
+  # All Uses  
+  mmSlaYields <- aryStsGeoWrap(stsData = allTrans,
+                               metric=c('transValue', 'transValue'),
+                               spaceField='sla1', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+  # By Use
+  mmSlaYieldsH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                                metric=c('transValue', 'transValue'),
+                                spaceField='sla1', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  mmSlaYieldsU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                                metric=c('transValue', 'transValue'),
+                                spaceField='sla1', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+ ## At Suburb Level
+  
+  # All Uses  
+  mmSuburbYields <- aryStsGeoWrap(stsData = allTrans,
+                                  metric=c('transValue', 'transValue'),
+                                  spaceField='suburb', timeField='transQtr',
+                                  defDim='time', stsLimit=3, 
+                                  calcs=list(median='median'))
+  
+  # By Use
+  mmSuburbYieldsH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                                   metric=c('transValue', 'transValue'),
+                                   spaceField='suburb', timeField='transQtr',
+                                   defDim='time', stsLimit=3, 
+                                   calcs=list(median='median'))
+
+  mmSuburbYieldsU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                                   metric=c('transValue', 'transValue'),
+                                   spaceField='suburb', timeField='transQtr',
+                                   defDim='time', stsLimit=3, 
+                                   calcs=list(median='median'))
+  
+  ## At PostCode Level
+  
+  # All Uses   
+  mmPCYields <- aryStsGeoWrap(stsData = allTrans,
+                              metric=c('transValue', 'transValue'),
+                              spaceField='postCode', timeField='transQtr',
+                              defDim='time', stsLimit=3, 
+                              calcs=list(median='median'))
+  
+  # by Use   
+  mmPCYieldsM <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='postCode', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  # All Uses   
+  mmPCYieldsU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='postCode', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
   
   
 ### Cross regression comparison method -----------------------------------------
@@ -105,11 +207,11 @@
   crmValues <- rbind(houseResults$results, unitResults$results)
 
   # Calculate the ratio
-  crmValues$prRatio <- crmValues$Price / (crmValues$Rent * 52 / 12)
+  crmValues$yield <- (crmValues$Rent * 52) / crmValues$Price
 
   # Add Ratio to full dataset 
-  allTrans$prRatio <- crmValues$prRatio[match(allTrans$UID, crmValues$UID)]
-  xTrans <- subset(allTrans, !is.na(prRatio)) 
+  allTrans$yield <- crmValues$yield[match(allTrans$UID, crmValues$UID)]
+  xTrans <- subset(allTrans, !is.na(yield)) 
        
 ### Output raw results ---------------------------------------------------------
   
@@ -117,119 +219,156 @@
     
 ### Break down results by dimensions -------------------------------------------
   
- ## Global
+ ## Metro
   
-  # Basic
-  glob <- prrTrender(list('transYear', 'transQtr', 'transMonth'), xData=xTrans)
-  globY <- glob$transYear
-  globQ <- glob$transQtr
-  
-  # By Use
-  globBU <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
-                       xData=xTrans, byUse=TRUE)
-  globBUY <- globBU$transYear
-  globBUQ <- globBU$transQtr
-  
-  # By use weighted
-  globBUW <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
-                        xData=xTrans, byUse=TRUE, weighted=TRUE)
-  globBUWY <- globBUW$transYear
-  globBUWQ <- globBUW$transQtr
-  
-  
- ## All lgas 
-  
-  # Basic
-  lgaY <- prrTrender('transYear', xData=xTrans, geog='lga', geogName='all')
-  lgaQ <- prrTrender('transQtr', xData=xTrans, geog='lga', geogName='all')
+  # Metro 
+  crMetYields <- spaceTimeShard(stsData = xTrans,
+                               metric=c('yield'),
+                               spaceField='all', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
   
   # By Use
-  lgaYU <- prrTrender('transYear', xData=xTrans, geog='lga', 
-                      geogName='all', byUse=TRUE)
-  lgaQU <- prrTrender('transQtr', xData=xTrans, geog='lga', 
-                      geogName='all', byUse=TRUE)
-  
-  # By use weighted
-  lgaYUW <- prrTrender('transYear', xData=xTrans, geog='lga',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  lgaQUW <- prrTrender('transQtr', xData=xTrans, geog='lga',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  
- ## All SLA1s 
-  
-  # Basic
-  slaY <- prrTrender('transYear', xData=xTrans, geog='sla1', geogName='all')
-  slaQ <- prrTrender('transQtr', xData=xTrans, geog='sla1', geogName='all')
-  
-  # By Use
-  slaYU <- prrTrender('transYear', xData=xTrans, geog='sla1', 
-                      geogName='all', byUse=TRUE)
-  slaQU <- prrTrender('transQtr', xData=xTrans, geog='sla1', 
-                      geogName='all', byUse=TRUE)
-  
-  # By use weighted
-  slaYUW <- prrTrender('transYear', xData=xTrans, geog='sla1',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  slaQUW <- prrTrender('transQtr', xData=xTrans, geog='sla1',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  
-  ## All PostCodes 
-  
-  # Basic
-  pcY <- prrTrender('transYear', xData=xTrans, geog='postCode', geogName='all')
-  pcQ <- prrTrender('transQtr', xData=xTrans, geog='postCode', geogName='all')
-  
-  # By Use
-  pcYU <- prrTrender('transYear', xData=xTrans, geog='postCode', 
-                      geogName='all', byUse=TRUE)
-  pcQU <- prrTrender('transQtr', xData=xTrans, geog='postCode', 
-                      geogName='all', byUse=TRUE)
-  
-  # By use weighted
-  pcYUW <- prrTrender('transYear', xData=xTrans, geog='postCode',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  pcQUW <- prrTrender('transQtr', xData=xTrans, geog='postCode',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  
-  ## All Suburbs
-  
-  # Basic
-  subY <- prrTrender('transYear', xData=xTrans, geog='suburb', geogName='all')
-  subQ <- prrTrender('transQtr', xData=xTrans, geog='suburb', geogName='all')
-  
-  # By Use
-  subYU <- prrTrender('transYear', xData=xTrans, geog='suburb', 
-                     geogName='all', byUse=TRUE)
-  subQU <- prrTrender('transQtr', xData=xTrans, geog='suburb', 
-                     geogName='all', byUse=TRUE)
-  
-  # By use weighted
-  subYUW <- prrTrender('transYear', xData=xTrans, geog='suburb',
-                      geogName='all', byUse=TRUE, weighted=TRUE)
-  subQUW <- prrTrender('transQtr', xData=xTrans, geog='suburb',
-                      geogName='all', byUse=TRUE, weighted=TRUE)
+  crMetYieldsH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                metric=c('yield'),
+                                spaceField='all', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
 
+  crMetYieldsU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                metric=c('yield'),
+                                spaceField='all', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+ ## LGA
+  
+  crLgaYields <- spaceTimeShard(stsData = xTrans,
+                                metric=c('yield'),
+                                spaceField='lga', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use
+  crLgaYieldsH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                 metric=c('yield'),
+                                 spaceField='lga', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  crLgaYieldsU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                 metric=c('yield'),
+                                 spaceField='lga', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median')) 
+  
+  ## SLA1
+  
+  crSlaYields <- spaceTimeShard(stsData = xTrans,
+                                metric=c('yield'),
+                                spaceField='sla1', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use
+  crSlaYieldsH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                 metric=c('yield'),
+                                 spaceField='sla1', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  crSlaYieldsU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                 metric=c('yield'),
+                                 spaceField='sla1', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+
+  ## Suburb
+  
+  crSuburbYields <- spaceTimeShard(stsData = xTrans,
+                                metric=c('yield'),
+                                spaceField='suburb', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use
+  crSuburbYieldsH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                 metric=c('yield'),
+                                 spaceField='suburb', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  crSuburbYieldsU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                 metric=c('yield'),
+                                 spaceField='suburb', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  ## post code
+  
+  crPCYields <- spaceTimeShard(stsData = xTrans,
+                                metric=c('yield'),
+                                spaceField='postCode', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use
+  crPCYieldsH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                 metric=c('yield'),
+                                 spaceField='postCode', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+  crPCYieldsU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                 metric=c('yield'),
+                                 spaceField='postCode', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+### Direct Match ---------------------------------------------------------------
+  
+ ## Create data
+  
+  dmData <- arySaleRentMatch(sales=allTrans[allTrans$transType=='sale',], 
+                             rentals=allTrans[allTrans$transType=='rent',],
+                             matchField='AddressID', saleField='transValue',
+                             rentField='transValue', timeField='transQtr')
+  
+  
+ ## All Metro  
+  dmMetYields <- spaceTimeShard(stsData = dmData,
+                                metric=c('saleYield'),
+                                spaceField='all', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  # By Use   
+  dmMetYieldsH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                metric=c('saleYield'),
+                                spaceField='all', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  dmMetYieldsU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                metric=c('saleYield'),
+                                spaceField='all', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+  
+### Visualize Results ----------------------------------------------------------  
+
+  
+    
 ### Save Workspace -------------------------------------------------------------
   
   save.image(paste0(dataPath, 'prrWrkspc.RData'))
   save(globY, globQ, globBUY, globBUQ, globBUWY, globBUWQ, 
-      lgaY, lgaQ, lgaYU, lgaQU, lgaYUW, lgaQUW,
-      slaY, slaQ, slaYU, slaQU, slaYUW, slaQUW,
-      pcY, pcQ, pcYU, pcQU, pcYUW, pcQUW,
-      subY, subQ, subYU, subQU, subYUW, subQUW,
-      subShp, lgaShp, sla1Shp, postCodeShp, xTrans,
-      file = paste0(dataPath, 'plotObjs.rData'))
-  
-### Visualize Results ----------------------------------------------------------  
-  
-  
-  ggplot(prrObj, aes(x=time, y=value)) + geom_line()
-  
-  
-  
-  
-  
-  
+       lgaY, lgaQ, lgaYU, lgaQU, lgaYUW, lgaQUW,
+       slaY, slaQ, slaYU, slaQU, slaYUW, slaQUW,
+       pcY, pcQ, pcYU, pcQU, pcYUW, pcQUW,
+       subY, subQ, subYU, subQU, subYUW, subQUW,
+       subShp, lgaShp, sla1Shp, postCodeShp, xTrans,
+       file = paste0(dataPath, 'plotObjs.rData'))  
   
   
   

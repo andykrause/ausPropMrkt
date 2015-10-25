@@ -46,33 +46,33 @@ prrDirectCompare <- function(sales,               # Data.frame of sales
                   by=matchField)
   
   # Rename Match Fields
-  names(mTrans) <- c(matchField, saleField, 'saleTime', rentField, 'rentTime')
+  names(mTrans) <- c(matchField, 'saleValue', 'saleTime', 'rentValue', 'rentTime')
   
  ## Make time adjustments to matched transactions
   
   # Create the rent index
-  rentTrend <- as.numeric(tapply(mTrans[,rentField], mTrans$rentTime, median))
+  rentTrend <- as.numeric(tapply(mTrans$rentValue, mTrans$rentTime, median))
   rentIndex <- rentTrend / rentTrend[1]
   
   # Create the sale index
-  saleTrend <- as.numeric(tapply(mTrans[,saleField], mTrans$saleTime, median))
+  saleTrend <- as.numeric(tapply(mTrans$saleValue, mTrans$saleTime, median))
   saleIndex <- saleTrend / saleTrend[1]
   
   # Make the adjustments to the rentals
   rentAdj <- (rentIndex[as.numeric(as.factor(mTrans$saleTime))] /
                 rentIndex[as.numeric(as.factor(mTrans$rentTime))])
-  mTrans$adjRent <- mTrans[,rentField] * rentAdj
+  mTrans$adjRent <- mTrans$rentValue * rentAdj
   
   # Make the adjustments to the sales
   saleAdj <- (saleIndex[as.numeric(as.factor(mTrans$rentTime))] /
                 saleIndex[as.numeric(as.factor(mTrans$saleTime))])
-  mTrans$adjSale <- mTrans[,saleField] * saleAdj
+  mTrans$adjSale <- mTrans$saleValue * saleAdj
   
  ## Compute Ratios
   
   # Compute observation level ratios
-  sAnchRatio <- mTrans[,saleField] / (mTrans$adjRent * 52)
-  rAnchRatio <- mTrans$adjSale / (mTrans[,rentField] * 52)
+  sAnchRatio <- mTrans$saleValue / (mTrans$adjRent * 52)
+  rAnchRatio <- mTrans$adjSale / (mTrans$rentValue * 52)
   mAnchRatio <- (sAnchRatio + rAnchRatio) / 2
   
   # Calculate the median per time period
@@ -942,5 +942,80 @@ aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
   return(geoTable)
 }
 
+### Function to compare price and rent on only matched properties ----------------------------------
 
+arySaleRentMatch <- function(sales,               # Data.frame of sales
+                             rentals,             # Data.frame of rentals
+                             matchField = 'ID',   # Field containing matching ID
+                             saleField = 'Price', # Field containing sale price
+                             rentField = 'Rent',  # Field containing rent 
+                             timeField = 'Year'   # Field containing time breakdown
+){
+
+  ## Matching sales to rentals
+  
+  # Remove NAs in matchField
+  xSales <- subset(sales, !is.na(sales[matchField]))
+  xRentals <- subset(rentals, !is.na(rentals[matchField]))
+
+  # Sort to order
+  xSales <- xSales[order(xSales[,matchField]),]
+  xRentals <- xRentals[order(xRentals[,matchField]),]
+  
+  # Extract matching field
+  sMatch <- xSales[ ,matchField]
+  rMatch <- xRentals[ ,matchField]
+  
+  # Perform cross match identification
+  mSales <- xSales[!is.na(match(sMatch, rMatch)), ]
+  mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
+  
+  # Make the match
+  mTrans <- merge(mSales[, c(matchField, saleField, timeField)],
+                  mRentals[, c(matchField, rentField, timeField)],
+                  by=matchField)
+  
+  # Rename Match Fields
+  names(mTrans) <- c(matchField, 'saleValue', 'saleTime', 'rentValue', 'rentTime')
+  
+  ## Make time adjustments to matched transactions
+  
+  # Create the rent index
+  rentTrend <- as.numeric(tapply(mTrans$rentValue, mTrans$rentTime, median))
+  rentIndex <- rentTrend / rentTrend[1]
+  
+  # Create the sale index
+  saleTrend <- as.numeric(tapply(mTrans$saleValue, mTrans$saleTime, median))
+  saleIndex <- saleTrend / saleTrend[1]
+  
+  # Make the adjustments to the rentals
+  rentAdj <- (rentIndex[as.numeric(as.factor(mTrans$saleTime))] /
+                rentIndex[as.numeric(as.factor(mTrans$rentTime))])
+  mTrans$adjRent <- mTrans$rentValue * rentAdj
+  
+  # Make the adjustments to the sales
+  saleAdj <- (saleIndex[as.numeric(as.factor(mTrans$rentTime))] /
+                saleIndex[as.numeric(as.factor(mTrans$saleTime))])
+  mTrans$adjSale <- mTrans$saleValue * saleAdj
+  
+  # Calc Yields
+  mTrans$saleYield <- (mTrans$adjRent * 52) / mTrans$saleValue
+  mTrans$rentYield <- (mTrans$rentValue * 52) / mTrans$adjSale
+  
+ ## Add Location variables
+  
+  mTrans$lga <- xSales$lga[match(mTrans$AddressID, xSales$AddressID)]
+  mTrans$sla1 <- xSales$sla1[match(mTrans$AddressID, xSales$AddressID)]
+  mTrans$suburb <- xSales$suburb[match(mTrans$AddressID, xSales$AddressID)]
+  mTrans$postCode <- xSales$postCode[match(mTrans$AddressID, xSales$AddressID)]
+  mTrans$latitude <- xSales$Property_Latitude[match(mTrans$AddressID, 
+                                                    xSales$AddressID)]
+  mTrans$longitude <- xSales$Property_Longitude[match(mTrans$AddressID, 
+                                                      xSales$AddressID)]
+  mTrans$PropertyType <- xSales$PropertyType[match(mTrans$AddressID, 
+                                                   xSales$AddressID)]
+
+  ## Return Values    
+  return(mTrans)  
+}  
 

@@ -31,8 +31,8 @@
 
 ### Load the data --------------------------------------------------------------
   
-  load(paste0(dataPath, 'prrWrkspc.RData'))
-  load(paste0(dataPath, 'plotObjs.rData'))
+  load(paste0(dataPath, 'cleanData.RData'))
+  load(paste0(dataPath, 'analysisResults.rData'))
 
 ### Create a custom plotting theme ---------------------------------------------
   
@@ -53,65 +53,73 @@
 ################################################################################  
 ### Visualize Results ----------------------------------------------------------  
 
-### Quarterly for entire metro region ------------------------------------------
+### Entire Metro Region --------------------------------------------------------
   
- ## Extract crossReg method
- 
-  crMetro <- globQ$tidyPRR
-  crMetro$value <- 1 / globQ$tidyPRR$value
-  crMetro$type <- 'Cross Regression'
-
- ## Creat the basic median value methods  
+ ## Build data
   
-  mmMetroSale <- spaceTimeShard(allTrans[allTrans$transType == 'sale', ],
-                                 metric='transValue',
-                                 spaceField='all', 
-                                 timeField = 'transQtr',
-                                 defDim='time',
-                                 stsLimit=1,
-                                 calcs=list(median='median'))
+  # Median Method
+  mmMetro <- mmMetYields[ ,c('timeName', 'yield')]
+  mmMetro$Method  <- 'Median Method'
   
-  mmMetroRent <- spaceTimeShard(allTrans[allTrans$transType == 'rent', ],
-                                 metric='transValue',
-                                 spaceField='all', 
-                                 timeField = 'transQtr',
-                                 defDim='time',
-                                 stsLimit=1,
-                                 calcs=list(median='median'))
+  # Cross Regression Method
+  crMetro <- crMetYields[[4]][ ,c('timeName', 'median')]
+  crMetro$Method  <- 'Cross Regression'
+  names(crMetro)[names(crMetro) == 'median'] <- 'yield'
   
-  mmMetro <- 1 / (mmMetroSale[[2]]$median / (52 * mmMetroRent[[2]]$median))
-  mmMetro <- data.frame(type = 'Median Method',
-                        time = 1:20,
-                        variable = 'prr',
-                        value = as.numeric(mmMetro))
+  # Direct Match
+  dmMetro <- dmMetYields[[4]][ ,c('timeName', 'median')]
+  dmMetro$Method  <- 'Direct Match'
+  names(dmMetro)[names(dmMetro) == 'median'] <- 'yield'
   
- ## Combine into a single object
+  # Combine
+  metro <- rbind(mmMetro, crMetro, dmMetro)
   
-  metroTidy <- rbind(crMetro, mmMetro)
-  metroTidy$variable <- NULL
+ ## Make Plot with Direct match
   
- ## Make Plot
-  
-  metroQPlot <- ggplot(metroTidy, aes(x=as.numeric(time), y=value, 
-                                      group=type)) + 
-                geom_line(aes(colour=type, size=type, linetype=type)) +
-                scale_size_manual(values=c(1,1)) +
-                scale_colour_manual(values=c('orange', 'gray60')) +
-                scale_linetype_manual(values=c(1,3)) + 
-                xlab("") + ylab("Rental Yield\n") +
-                scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
-                scale_y_continuous(limits=c(.032, .046),
-                       breaks=seq(.032, .048, .001), 
-                       labels=paste0(format(100*(seq(.032, .048, .001)),
-                                            nsmall=1), "%")) +
-                theme_mry
+  metroPlot_DM <- ggplot(metro, aes(x=as.numeric(timeName), y=yield, 
+                                      group=Method)) + 
+                  geom_line(aes(colour=Method, size=Method, linetype=Method)) +
+                  scale_size_manual(values=c(1,1, 1)) +
+                  scale_colour_manual(values=c('orange', 'green', 'gray60')) +
+                  scale_linetype_manual(values=c(1,3, 3)) + 
+                  xlab("") + ylab("Rental Yield\n") +
+                  scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+                  scale_y_continuous(limits=c(.032, .048),
+                         breaks=seq(.032, .048, .001), 
+                         labels=paste0(format(100*(seq(.032, .048, .001)),
+                                              nsmall=1), "%")) +
+                  theme_mry
   
 
  ## Export Plot
  
-  png(height=1200, width=2400, filename="c:/temp/metroQ.png", type="cairo",
+  png(height=1200, width=2400, filename="c:/temp/metro_dm.png", type="cairo",
       res=300)
-    print(metroQPlot)
+    print(metroPlot_DM)
+  dev.off()
+  
+  ## Make Plot without Direct match
+  
+  metroPlot <- ggplot(metro[1:40,], aes(x=as.numeric(timeName), y=yield, 
+                                    group=Method)) + 
+               geom_line(aes(colour=Method, size=Method, linetype=Method)) +
+               scale_size_manual(values=c(1,1)) +
+               scale_colour_manual(values=c('orange', 'gray60')) +
+               scale_linetype_manual(values=c(1,3)) + 
+               xlab("") + ylab("Rental Yield\n") + 
+               scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+               scale_y_continuous(limits=c(.032, .048),
+                                  breaks=seq(.032, .048, .001), 
+                                  labels=paste0(format(100*(seq(.032, .048, .001)),
+                                                nsmall=1), "%")) +
+               theme_mry
+  
+  
+  ## Export Plot
+  
+  png(height=1200, width=2400, filename="c:/temp/metro.png", type="cairo",
+      res=300)
+  print(metroPlot)
   dev.off()
 
 ### Compare metro prices and rents ---------------------------------------------  
@@ -317,15 +325,125 @@
   dev.off()
   
   
-###################################
+### By Bedrooms ----------------------------------------------------------------
   
+  # By Use
+  crMetHB1 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House' &
+                                         xTrans$Bedrooms == 1, ],
+                                 metric=c('yield'),
+                                 spaceField='all', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
   
-  metroPrice <- spaceTimeShard(xTrans, 
-                               'price',
-                               'all', 'transQtr', defDim='time',
-                               stsLimit=1,
-                               calcs=list(median='median',
-                                          stdev='sd'))
+  crMetHB2 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House' &
+                                      xTrans$Bedrooms == 2, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
   
+  crMetHB3 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House' &
+                                      xTrans$Bedrooms == 3, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
   
+  crMetHB4 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House' &
+                                      xTrans$Bedrooms == 4, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+  crMetHB5 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House' &
+                                      xTrans$Bedrooms >= 5, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+  crMetUB1 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit' &
+                                      xTrans$Bedrooms == 1, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+  crMetUB2 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit' &
+                                      xTrans$Bedrooms == 2, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+  crMetUB3 <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit' &
+                                      xTrans$Bedrooms >= 3, ],
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+ ##
+  crHB1 <- crMetHB1[[4]][,c('timeName', 'median')]
+  names(crHB1)[2] <- 'yield'
+  crHB1$Use <- 'House'
+  crHB1$Beds <- '1 Bed  '
+  
+  crHB2 <- crMetHB2[[4]][,c('timeName', 'median')]
+  names(crHB2)[2] <- 'yield'
+  crHB2$Use <- 'House'
+  crHB2$Beds <- '2 Beds  '
+  
+  crHB3 <- crMetHB3[[4]][,c('timeName', 'median')]
+  names(crHB3)[2] <- 'yield'
+  crHB3$Use <- 'House'
+  crHB3$Beds <- '3 Beds  '
+  
+  crHB4 <- crMetHB4[[4]][,c('timeName', 'median')]
+  names(crHB4)[2] <- 'yield'
+  crHB4$Use <- 'House'
+  crHB4$Beds <- '4 Beds  '
+  
+  crHB5 <- crMetHB5[[4]][,c('timeName', 'median')]
+  names(crHB5)[2] <- 'yield'
+  crHB5$Use <- 'House'
+  crHB5$Beds <- '5+ Beds  '
+  
+  crUB1 <- crMetUB1[[4]][,c('timeName', 'median')]
+  names(crUB1)[2] <- 'yield'
+  crUB1$Use <- 'Unit'
+  crUB1$Beds <- '1 Bed  '
+  
+  crUB2 <- crMetUB2[[4]][,c('timeName', 'median')]
+  names(crUB2)[2] <- 'yield'
+  crUB2$Use <- 'Unit'
+  crUB2$Beds <- '2 Beds  '
+  
+  crUB3 <- crMetUB3[[4]][,c('timeName', 'median')]
+  names(crUB3)[2] <- 'yield'
+  crUB3$Use <- 'Unit'
+  crUB3$Beds <- '3 Beds  '
+  
+  crBeds <- rbind(crHB1, crHB2, crHB3, crHB4, crHB5, crUB1, crUB2, crUB3)
+  
+  bedPlot <- ggplot(crBeds, aes(x=as.numeric(timeName), y=yield, 
+                                  group=as.factor(Beds))) + 
+    geom_line(aes(colour=as.factor(Beds))) +
+    scale_colour_manual(values=c('red', 'orange', 'green', 'blue', 'purple')) +
+    xlab("") + ylab("Rental Yield\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.03, .048),
+                       breaks=seq(.03, .048, .002), 
+                       labels=paste0(format(100*(seq(.03, .048, .002)),
+                                            nsmall=1), "%")) +
+    theme_mry +
+    facet_wrap(~Use)
+  bedPlot
+  
+  png(height=1200, width=2400, filename="c:/temp/byBedroom.png", 
+      type="cairo",
+      res=300)
+  print(bedPlot)
+  dev.off()
   

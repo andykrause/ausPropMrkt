@@ -181,13 +181,16 @@ if(reCalcRatios){
 
  ## Set the specification (formula)
 
-  regSpec <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
-                log(AreaSize) +Bedrooms + Baths + ssInteg + ssChoice
-
+  regSpecH <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+                 log(AreaSize) +Bedrooms + Baths + ssInteg + ssChoice
+  
+  regSpecU <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+    + Bedrooms + Baths + ssInteg + ssChoice
+  
  ## Estimate models and make new predictions: Global by Use
 
   # For houses
-  houseResults <- prrCrossReg(regSpec, 
+  houseResults <- prrCrossReg(regSpecH, 
                             subset(allTrans, transType == 'sale' &
                                              PropertyType == 'House' & 
                                              YT_house_postCode == 1),
@@ -197,7 +200,7 @@ if(reCalcRatios){
                             verbose=TRUE)
   
   # For Units
-  unitResults <- prrCrossReg(regSpec, 
+  unitResults <- prrCrossReg(regSpecU, 
                            subset(allTrans, transType == 'sale' &
                                     PropertyType == 'Unit' & 
                                     YT_unit_postCode == 1),

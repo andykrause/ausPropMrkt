@@ -9,7 +9,8 @@
   ## Set parameters
 
   reBuildData <- FALSE     # Enter TRUE if you wish to rebuild data from raw
-
+  reCalcRatios <- FALSE    # Enter TRUE if you wish to recalc ratios
+  
  ## Load Libraries
 
   library(plyr)
@@ -58,6 +59,10 @@
   sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
   postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
 
+################################################################################  
+### Calculate ratios
+if(reCalcRatios){
+  
 ### Median method approach -----------------------------------------------------
   
  ## Metro Analysis
@@ -444,9 +449,18 @@
     
   save.image(paste0(dataPath, 'analysisResults.RData'))
 
+} else {
   
+  load(paste0(dataPath, 'analysisResults.RData'))
   
+}
+
+################################################################################
+### Analyse differences --------------------------------------------------------  
   
-  
-  
+  mmMetYieldsP <- spaceTimeShard(stsData = xTrans[xTrans$transType=='sale',],
+                                metric=c('transValue'),
+                                spaceField='all', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
   

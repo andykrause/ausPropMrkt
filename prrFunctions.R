@@ -930,6 +930,7 @@ aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
   } else {
     
     geoTable <- data.frame(timeName=xPrice$stsDF$timeName,
+                           spaceName='all',
                            price=xPrice$stsDF$median,
                            rent=xRent$stsDF$median,
                            yield=((xRent$stsDF$median * 52) / 

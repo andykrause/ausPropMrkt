@@ -942,7 +942,7 @@ aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
   
   return(list(stsDF=geoTable,
               priceStsTable=xPrice$stTable,
-              rentStsTable=xPrice$stTable))
+              rentStsTable=xRent$stTable))
 }
 
 ### Function to compare price and rent on only matched properties ----------------------------------
@@ -1025,12 +1025,12 @@ arySaleRentMatch <- function(sales,               # Data.frame of sales
 
 aryAggrGeoData <- function(geoList,
                            indexList,
-                           allGeo=FALSE
+                           geoSplit=FALSE
 ){
   
   
   ## Build Mixed unweighted
-  
+    
   mixData <- aryAggrMethData(mmObj=geoList$mm$all,
                              irObj=geoList$ir$all,
                              dmObj=geoList$dm$all,
@@ -1038,7 +1038,7 @@ aryAggrGeoData <- function(geoList,
   
   ## Build Mixed weighted
   
-  if(allGeo){
+  if(!geoSplit){
     
     mixDataWgt <- mixData
     
@@ -1077,7 +1077,14 @@ aryAggrGeoData <- function(geoList,
   
   ## Build unit specific weighted
   
-  # Calculate separate dataset for house and units
+  if(!geoSplit){
+    
+    useWgt <- aryWeightUses(houseData, unitData, geoList, 
+                            pIndex=indexList$all, geoSplit=FALSE) 
+  } else {
+    
+   
+   # Calculate separate dataset for house and units
   houseDataW <- aryAggrMethData(mmObj=geoList$mm$house,
                                 irObj=geoList$ir$house,
                                 dmObj=geoList$dm$house,
@@ -1097,7 +1104,8 @@ aryAggrGeoData <- function(geoList,
   
   # Calculate use specific data
   useWgt <- aryWeightUses(houseDataW, unitDataW, geoList, 
-                          pIndex=indexList$all)  
+                          pIndex=indexList$all, geoSplit=TRUE)  
+  }
   
   return(list(mix=mixData,
               mixWgt=mixDataWgt,
@@ -1106,14 +1114,14 @@ aryAggrGeoData <- function(geoList,
   
 }
 
+## Function to aggregate different method's data -------------------------------
 
-
-
-aryAggrMethData <- function(mmObj,       # Med Meth obj from aryStsGeoWrap
-                            irObj,       # Cross Reg obj from spaceTimeShard()
-                            dmObj,       # Match obj from spaceTimeShard()
-                            pIndex,      # A price index at the time scale
-                            wgt=FALSE    # weight based observations
+aryAggrMethData <- function(mmObj,          # Med Meth obj from aryStsGeoWrap
+                            irObj,          # Cross Reg obj from spaceTimeShard()
+                            dmObj,          # Match obj from spaceTimeShard()
+                            pIndex,         # A price index at the time scale
+                            wgt=FALSE,      # weight based observations
+                            geoSplit=FALSE  # is not all geo areas
 ){  
   
   ## Isolate the correct data from each object
@@ -1153,8 +1161,9 @@ aryAggrMethData <- function(mmObj,       # Med Meth obj from aryStsGeoWrap
   } else {
     
     # Weights Tables
-    mmWgts <- aryConvStsTables(mmObj$priceStsTable + mmObj$rentStsTable,
-                               allGeo)$wgts
+    mmPrice <- mmObj$priceStsTable[rownames(mmObj$priceStsTable) %in% allGeo,]
+    mmRent <- mmObj$rentStsTable[rownames(mmObj$rentStsTable) %in% allGeo,]
+    mmWgts <- aryConvStsTables(mmPrice + mmRent, allGeo)$wgts
     irWgts <- aryConvStsTables(irObj$stTable, allGeo)$wgts
     dmWgts <- aryConvStsTables(dmObj$stTable, allGeo)$wgts
     
@@ -1237,28 +1246,67 @@ aryConvStsTables <- function(stTable,       # stsTable from stsSharder
 aryWeightUses <- function(hDataW,       # House wgt data from aryAggrMethData
                           uDataW,       # unit wgt data from aryAggrMethData
                           geoList,      # Full geolist from  aryAggrGeoData
-                          pIndex        # Price time index
+                          pIndex,       # Price time index
+                          geoSplit=F    # is not all areas?
+                               
 ){  
   
   ## Calculate house vs unit weights
+  if(geoSplit){
+    
+  # Find acceptable geos
+    mmHPrice <- geoList$mm$house$priceStsTable
+    mmHRent <- geoList$mm$house$rentStsTable
+    mmUPrice <- geoList$mm$unit$priceStsTable
+    mmURent <- geoList$mm$unit$rentStsTable
+  
+    irHTable <- geoList$ir$house$stTable
+    irUTable <- geoList$ir$unit$stTable
+
+    dmHTable <- geoList$dm$house$stTable
+    dmUTable <- geoList$dm$unit$stTable
+  
+    allGeos <- c(rownames(mmHPrice), rownames(mmHRent), rownames(mmUPrice), 
+                rownames(mmURent), rownames(irHTable), rownames(irUTable),
+                rownames(dmHTable), rownames(dmUTable))
+    geoNames <- names(table(allGeos))
+    geoTable <- as.numeric(table(allGeos))
+    allGeos <- geoNames[which(geoTable == 8)]
+  
+    mmHPrice <- mmHPrice[rownames(mmHPrice) %in% allGeos, ]
+    mmHRent <- mmHRent[rownames(mmHRent) %in% allGeos, ]
+    mmUPrice <- mmUPrice[rownames(mmUPrice) %in% allGeos, ]
+    mmURent <- mmURent[rownames(mmURent) %in% allGeos, ]
+    irHTable <- irHTable[rownames(irHTable) %in% allGeos, ]
+    irUTable <- irUTable[rownames(irUTable) %in% allGeos, ]
+    dmHTable <- dmHTable[rownames(dmHTable) %in% allGeos, ]
+    dmUTable <- dmUTable[rownames(dmUTable) %in% allGeos, ]
+  
+  } else {
+    mmHPrice <- geoList$mm$house$priceStsTable
+    mmHRent <- geoList$mm$house$rentStsTable
+    mmUPrice <- geoList$mm$unit$priceStsTable
+    mmURent <- geoList$mm$unit$rentStsTable
+    
+    irHTable <- geoList$ir$house$stTable
+    irUTable <- geoList$ir$unit$stTable
+    
+    dmHTable <- geoList$dm$house$stTable
+    dmUTable <- geoList$dm$unit$stTable
+  }
   
   # Median method
-  mmHwgt <- (sum(geoList$mm$house$priceStsTable + 
-                   geoList$mm$house$rentStsTable)) / (
-                     sum(geoList$mm$house$priceStsTable + 
-                           geoList$mm$house$rentStsTable) + (
-                             sum(geoList$mm$unit$priceStsTable + 
-                                   geoList$mm$unit$rentStsTable)))
+  
+  mmHwgt <- (sum(mmHPrice + mmHRent)) / (sum(mmHPrice + mmHRent) +
+                                           sum(mmUPrice + mmURent))
   mmUwgt <- 1-mmHwgt
   
   # Impute method
-  irHwgt <- sum(geoList$ir$house$stTable) / (sum(geoList$ir$house$stTable)+
-                                               sum(geoList$ir$unit$stTable))  
+  irHwgt <- sum(irHTable) / (sum(irHTable + irUTable))  
   irUwgt <- 1-irHwgt
   
   # Match Method
-  dmHwgt <- sum(geoList$dm$house$stTable) / (sum(geoList$dm$house$stTable)+
-                                               sum(geoList$dm$unit$stTable))  
+  dmHwgt <- sum(dmHTable) / (sum(dmHTable + dmUTable))  
   dmUwgt <- 1-dmHwgt
   
   # Combine weights

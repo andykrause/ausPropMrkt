@@ -133,11 +133,11 @@ fixAPMDates <- function(xDates      # Vector of dates to be fixed
 
 ### Regression function that creates imputed rent and sales values -------------------------------
 
-prrCrossReg <- function(formula,               # LM regression formula
-                        saleData,              # Data containing sales
-                        rentData,              # Data containing rentals
-                        verbose = FALSE        # Show progress?
-                        ){
+prrImputeReg <- function(formula,               # LM regression formula
+                         saleData,              # Data containing sales
+                         rentData,              # Data containing rentals
+                         verbose = FALSE        # Show progress?
+                         ){
   
  ## Estimate models and make new predictions
   
@@ -939,7 +939,9 @@ aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
     
   ## Export data  
   
-  return(geoTable)
+  return(list(stsDF=geoTable,
+              priceStsTable=xPrice$stTable,
+              rentStsTable=xPrice$stTable))
 }
 
 ### Function to compare price and rent on only matched properties ----------------------------------

@@ -1022,121 +1022,284 @@ arySaleRentMatch <- function(sales,               # Data.frame of sales
   return(mTrans)  
 }  
 
-### Function for aggregating data from the three methods (med, imp, match)------
+
+aryAggrGeoData <- function(geoList,
+                           indexList,
+                           allGeo=FALSE
+){
+  
+  
+  ## Build Mixed unweighted
+  
+  mixData <- aryAggrMethData(mmObj=geoList$mm$all,
+                             irObj=geoList$ir$all,
+                             dmObj=geoList$dm$all,
+                             pIndex=indexList$all)
+  
+  ## Build Mixed weighted
+  
+  if(allGeo){
+    
+    mixDataWgt <- mixData
+    
+  } else {
+    
+    mixDataWgt <- aryAggrMethData(mmObj=geoList$mm$all,
+                                  irObj=geoList$ir$all,
+                                  dmObj=geoList$dm$all,
+                                  pIndex=indexList$all,
+                                  wgt=TRUE)
+  }
+  
+  ## Build Unit specific
+  
+  # Calculate separate dataset for house and units
+  houseData <- aryAggrMethData(mmObj=geoList$mm$house,
+                               irObj=geoList$ir$house,
+                               dmObj=geoList$dm$house,
+                               pIndex=indexList$house)
+  unitData <- aryAggrMethData(mmObj=geoList$mm$unit,
+                              irObj=geoList$ir$unit,
+                              dmObj=geoList$dm$unit,
+                              pIndex=indexList$unit)
+  
+  # Add labels
+  houseData$comp$use <- 'House'
+  houseData$diff$use <- 'House'
+  unitData$comp$use <- 'House'
+  unitData$diff$use <- 'House'
+  
+  # combine
+  useData <- list(comp=rbind(houseData$comp,
+                             unitData$comp),
+                  diff=rbind(houseData$diff,
+                             unitData$diff))
+  
+  ## Build unit specific weighted
+  
+  # Calculate separate dataset for house and units
+  houseDataW <- aryAggrMethData(mmObj=geoList$mm$house,
+                                irObj=geoList$ir$house,
+                                dmObj=geoList$dm$house,
+                                pIndex=indexList$house,
+                                wgt=TRUE)
+  unitDataW <- aryAggrMethData(mmObj=geoList$mm$unit,
+                               irObj=geoList$ir$unit,
+                               dmObj=geoList$dm$unit,
+                               pIndex=indexList$unit,
+                               wgt=TRUE)
+  
+  # Add labels
+  houseDataW$comp$use <- 'House'
+  houseDataW$diff$use <- 'House'
+  unitDataW$comp$use <- 'House'
+  unitDataW$diff$use <- 'House'
+  
+  # Calculate use specific data
+  useWgt <- aryWeightUses(houseDataW, unitDataW, geoList, 
+                          pIndex=indexList$all)  
+  
+  return(list(mix=mixData,
+              mixWgt=mixDataWgt,
+              use=useData,
+              useWgt=useWgt))
+  
+}
+
+
+
 
 aryAggrMethData <- function(mmObj,       # Med Meth obj from aryStsGeoWrap
-                            crObj,       # Cross Reg obj from spaceTimeShard()
+                            irObj,       # Cross Reg obj from spaceTimeShard()
                             dmObj,       # Match obj from spaceTimeShard()
-                            pIndex       # A price index at the time scale
-                            ){  
+                            pIndex,      # A price index at the time scale
+                            wgt=FALSE    # weight based observations
+){  
   
- ## Isolate the correct data from each object
+  ## Isolate the correct data from each object
   
-  mmObj <- mmObj[,c('timeName', 'spaceName', 'yield')]
-  crObj <- crObj$stsDF
-  dmObj <- dmObj$stsDF
-  names(crObj)[2] <- names(dmObj)[2] <- 'yield'
+  mmDF <- mmObj$stsDF[,c('timeName', 'spaceName', 'yield')]
+  irDF <- irObj$stsDF
+  dmDF <- dmObj$stsDF
+  names(irDF)[2] <- names(dmDF)[2] <- 'yield'
   
- ## Determine the spatial areas that exist in all objects  
+  ## Determine the spatial areas that exist in all objects  
   
   # Extract space from each
-  mmGeo <- levels(mmObj$spaceName)
-  crGeo <- levels(as.factor(crObj$spaceName))
-  dmGeo <- levels(as.factor(dmObj$spaceName))
+  mmGeo <- levels(mmDF$spaceName)
+  crGeo <- levels(as.factor(irDF$spaceName))
+  dmGeo <- levels(as.factor(dmDF$spaceName))
   
   # Determine intersect and limit to that
   allGeo <- intersect(intersect(mmGeo, crGeo),dmGeo)
-  mmObj <- subset(mmObj, mmObj$spaceName %in% allGeo)
-  crObj <- subset(crObj, crObj$spaceName %in% allGeo)
-  dmObj <- subset(dmObj, dmObj$spaceName %in% allGeo)
+  mmDF <- subset(mmDF, mmDF$spaceName %in% allGeo)
+  irDF <- subset(irDF, irDF$spaceName %in% allGeo)
+  dmDF <- subset(dmDF, dmDF$spaceName %in% allGeo)
   
- ## Extract counting parameters
+  ## Extract counting parameters
   
-  oLng <- nrow(mmObj)
-  tLng <- length(unique(mmObj$timeName))
-
- ## Build the comparison data set
+  oLng <- nrow(mmDF)
+  tLng <- length(unique(mmDF$timeName))
   
-  comData <- rbind(mmObj, crObj, dmObj)
-  comData$method <- c(rep('Median', oLng), rep('Impute', oLng),
-                      rep('Match', oLng))
+  ## Build the comparison data set
+  
+  # if not weighted
+  if(!wgt){
+    
+    comData <- rbind(mmDF, irDF, dmDF)
+    comData$method <- c(rep('Median', oLng), rep('Impute', oLng),
+                        rep('Match', oLng))
+    
+  } else {
+    
+    # Weights Tables
+    mmWgts <- aryConvStsTables(mmObj$priceStsTable + mmObj$rentStsTable,
+                               allGeo)$wgts
+    irWgts <- aryConvStsTables(irObj$stTable, allGeo)$wgts
+    dmWgts <- aryConvStsTables(dmObj$stTable, allGeo)$wgts
+    
+    # Add weights to DF 
+    mmDF$wgt <- mmWgts[match(mmDF$spaceName, names(mmWgts))]  
+    irDF$wgt <- irWgts[match(irDF$spaceName, names(irWgts))]  
+    dmDF$wgt <- dmWgts[match(dmDF$spaceName, names(dmWgts))]  
+    
+    # calc weighted yield components
+    mmDF$wYield <- mmDF$yield * mmDF$wgt
+    irDF$wYield <- irDF$yield * irDF$wgt
+    dmDF$wYield <- dmDF$yield * dmDF$wgt
+    
+    # sum to weighted yield
+    mmYields <- tapply(mmDF$wYield, mmDF$timeName, sum)
+    irYields <- tapply(irDF$wYield, irDF$timeName, sum)
+    dmYields <- tapply(dmDF$wYield, dmDF$timeName, sum)
+    
+    # combine together for weighted data
+    comData <- data.frame(timeName=rep(1:tLng, 3),
+                          spaceName=rep('all', 3*tLng),
+                          yield = c(mmYields, irYields, dmYields),
+                          method=c(rep('Median', tLng), rep('Impute', tLng),
+                                   rep('Match', tLng)))
+    
+    # create the dif data inputs
+    mmDF <- comData[comData$method == 'Median', ]
+    irDF <- comData[comData$method == 'Impute', ]
+    dmDF <- comData[comData$method == 'Match', ]
+    oLng <- tLng
+    
+  }
   
   # Re-orders levels
   comData$method <- factor(comData$method,
                            levels=c('Median', 'Impute', 'Match'))
   
- ## Build the differences dataset
+  ## Build the differences dataset
   
-  difData <- rbind(mmObj, crObj, dmObj)
+  difData <- rbind(mmDF, irDF, dmDF)
   difData$pIndex <- rep(pIndex, 3)
   difData$yield <- NULL
   difData$method <- c(rep('Impute - Median', oLng),
                       rep('Match - Median', oLng),
                       rep('Match - Impute', oLng))
-  difData$dif <- c(crObj$yield - mmObj$yield,
-                   dmObj$yield - mmObj$yield,
-                   dmObj$yield - crObj$yield)
+  difData$dif <- c(irDF$yield - mmDF$yield,
+                   dmDF$yield - mmDF$yield,
+                   dmDF$yield - irDF$yield)
   
   # Re-order levels
   difData$method <- factor(difData$method,
                            levels=c('Impute - Median', 'Match - Median',
                                     'Match - Impute'))
   
- ## Build the Median of each dataset  
+  ## Return data
+  return(list(comp = comData,
+              diff = difData))
+}
+
+### Function that calculates locations count weights ---------------------------
+
+aryConvStsTables <- function(stTable,       # stsTable from stsSharder
+                             allGeo         # List of OK geographies
+){
   
-  # Set identifiers
-  medX <- which(comData$method == 'Median')
-  impX <- which(comData$method == 'Impute')
-  matX <- which(comData$method == 'Match')
+  stTable <- as.data.frame(stTable)
   
-  # Create dataset
-  comMed <- data.frame(timeName = rep(1:tLng, 3),
-                       method = c(rep('Median', tLng),
-                                  rep('Impute', tLng),
-                                  rep('Match', tLng)),
-                       spaceName = rep('Median', tLng * 3),
-                       yield = c(as.numeric(tapply(comData$yield[medX], 
-                                                   comData$timeName[medX], 
-                                                   median)),
-                                 as.numeric(tapply(comData$yield[impX], 
-                                                   comData$timeName[impX], 
-                                                   median)),
-                                 as.numeric(tapply(comData$yield[matX], 
-                                                   comData$timeName[matX], 
-                                                   median))))
-  # Re-order the factors
-  comMed$method <- factor(comMed$method,
-                           levels=c('Median', 'Impute', 'Match'))
+  stTable <- stTable[rownames(stTable) %in% allGeo, ]
   
- ## Build the median of the difference dataset
+  stSums <- rowSums(stTable)
   
-  # Set identifiers
-  medXX <- which(comMed$method == 'Median')
-  impXX <- which(comMed$method == 'Impute')
-  matXX <- which(comMed$method == 'Match')
+  stWgts <- stSums / sum(stSums)
   
-  # Combine Data
-  difMed <- comMed
-  difMed$pIndex <- rep(pIndex, 3)
-  difMed$yield <- NULL
-  difMed$method <- c(rep('1. Impute - Median', tLng),
-                     rep('2. Match - Median', tLng),
-                     rep('3. Match - Impute', tLng))
-  difMed$dif <- c(comMed$yield[impXX] - comMed$yield[medXX],
-                  comMed$yield[matXX] - comMed$yield[medXX],
-                  comMed$yield[matXX] - comMed$yield[impXX])
+  return(list(sums=stSums,
+              wgts=stWgts))
+}
+
+### Function that combines and weights house and unit results ------------------
+
+aryWeightUses <- function(hDataW,       # House wgt data from aryAggrMethData
+                          uDataW,       # unit wgt data from aryAggrMethData
+                          geoList,      # Full geolist from  aryAggrGeoData
+                          pIndex        # Price time index
+){  
+  
+  ## Calculate house vs unit weights
+  
+  # Median method
+  mmHwgt <- (sum(geoList$mm$house$priceStsTable + 
+                   geoList$mm$house$rentStsTable)) / (
+                     sum(geoList$mm$house$priceStsTable + 
+                           geoList$mm$house$rentStsTable) + (
+                             sum(geoList$mm$unit$priceStsTable + 
+                                   geoList$mm$unit$rentStsTable)))
+  mmUwgt <- 1-mmHwgt
+  
+  # Impute method
+  irHwgt <- sum(geoList$ir$house$stTable) / (sum(geoList$ir$house$stTable)+
+                                               sum(geoList$ir$unit$stTable))  
+  irUwgt <- 1-irHwgt
+  
+  # Match Method
+  dmHwgt <- sum(geoList$dm$house$stTable) / (sum(geoList$dm$house$stTable)+
+                                               sum(geoList$dm$unit$stTable))  
+  dmUwgt <- 1-dmHwgt
+  
+  # Combine weights
+  hWgts <- c(rep(mmHwgt, 20), rep(irHwgt, 20), rep(dmHwgt, 20))
+  uWgts <- c(rep(mmUwgt, 20), rep(irUwgt, 20), rep(dmUwgt, 20))
+  
+  ## Build comp data
+  
+  compData <- hDataW$comp
+  compData$yield <- ((hDataW$comp$yield * hWgts) + 
+                       (uDataW$comp$yield * uWgts))
+  compData$use <- NULL
   
   # Re-order levels
-  difMed$method <- factor(difMed$method,
+  compData$method <- factor(compData$method,
+                            levels=c('Median', 'Impute', 'Match'))
+  
+  ## Build difference data
+  
+  difData <- compData
+  oLng <- 20
+  difData$pIndex <- rep(pIndex, 3)
+  difData$yield <- NULL
+  difData$method <- c(rep('Impute - Median', oLng),
+                      rep('Match - Median', oLng),
+                      rep('Match - Impute', oLng))
+  mmDF <- subset(compData, method=='Median')
+  irDF <- subset(compData, method=='Impute')
+  dmDF <- subset(compData, method=='Match')
+  difData$dif <- c(irDF$yield - mmDF$yield,
+                   dmDF$yield - mmDF$yield,
+                   dmDF$yield - irDF$yield)
+  
+  # Re-order levels
+  difData$method <- factor(difData$method,
                            levels=c('Impute - Median', 'Match - Median',
                                     'Match - Impute'))
   
+  ## Return values  
   
-  ## Return data
-  return(list(comp = comData,
-              diff = difData,
-              compMed = comMed,
-              diffMed = difMed))
+  return(list(comp=compData,
+              diff=difData))    
 }
-
 

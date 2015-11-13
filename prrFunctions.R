@@ -1019,3 +1019,121 @@ arySaleRentMatch <- function(sales,               # Data.frame of sales
   return(mTrans)  
 }  
 
+### Function for aggregating data from the three methods (med, imp, match)------
+
+aryAggrMethData <- function(mmObj,       # Med Meth obj from aryStsGeoWrap
+                            crObj,       # Cross Reg obj from spaceTimeShard()
+                            dmObj,       # Match obj from spaceTimeShard()
+                            pIndex       # A price index at the time scale
+                            ){  
+  
+ ## Isolate the correct data from each object
+  
+  mmObj <- mmObj[,c('timeName', 'spaceName', 'yield')]
+  crObj <- crObj$stsDF
+  dmObj <- dmObj$stsDF
+  names(crObj)[2] <- names(dmObj)[2] <- 'yield'
+  
+ ## Determine the spatial areas that exist in all objects  
+  
+  # Extract space from each
+  mmGeo <- levels(mmObj$spaceName)
+  crGeo <- levels(as.factor(crObj$spaceName))
+  dmGeo <- levels(as.factor(dmObj$spaceName))
+  
+  # Determine intersect and limit to that
+  allGeo <- intersect(intersect(mmGeo, crGeo),dmGeo)
+  mmObj <- subset(mmObj, mmObj$spaceName %in% allGeo)
+  crObj <- subset(crObj, crObj$spaceName %in% allGeo)
+  dmObj <- subset(dmObj, dmObj$spaceName %in% allGeo)
+  
+ ## Extract counting parameters
+  
+  oLng <- nrow(mmObj)
+  tLng <- length(unique(mmObj$timeName))
+
+ ## Build the comparison data set
+  
+  comData <- rbind(mmObj, crObj, dmObj)
+  comData$method <- c(rep('Median', oLng), rep('Impute', oLng),
+                      rep('Match', oLng))
+  
+  # Re-orders levels
+  comData$method <- factor(comData$method,
+                           levels=c('Median', 'Impute', 'Match'))
+  
+ ## Build the differences dataset
+  
+  difData <- rbind(mmObj, crObj, dmObj)
+  difData$pIndex <- rep(pIndex, 3)
+  difData$yield <- NULL
+  difData$method <- c(rep('Impute - Median', oLng),
+                      rep('Match - Median', oLng),
+                      rep('Match - Impute', oLng))
+  difData$dif <- c(crObj$yield - mmObj$yield,
+                   dmObj$yield - mmObj$yield,
+                   dmObj$yield - crObj$yield)
+  
+  # Re-order levels
+  difData$method <- factor(difData$method,
+                           levels=c('Impute - Median', 'Match - Median',
+                                    'Match - Impute'))
+  
+ ## Build the Median of each dataset  
+  
+  # Set identifiers
+  medX <- which(comData$method == 'Median')
+  impX <- which(comData$method == 'Impute')
+  matX <- which(comData$method == 'Match')
+  
+  # Create dataset
+  comMed <- data.frame(timeName = rep(1:tLng, 3),
+                       method = c(rep('Median', tLng),
+                                  rep('Impute', tLng),
+                                  rep('Match', tLng)),
+                       spaceName = rep('Median', tLng * 3),
+                       yield = c(as.numeric(tapply(comData$yield[medX], 
+                                                   comData$timeName[medX], 
+                                                   median)),
+                                 as.numeric(tapply(comData$yield[impX], 
+                                                   comData$timeName[impX], 
+                                                   median)),
+                                 as.numeric(tapply(comData$yield[matX], 
+                                                   comData$timeName[matX], 
+                                                   median))))
+  # Re-order the factors
+  comMed$method <- factor(comMed$method,
+                           levels=c('Median', 'Impute', 'Match'))
+  
+ ## Build the median of the difference dataset
+  
+  # Set identifiers
+  medXX <- which(comMed$method == 'Median')
+  impXX <- which(comMed$method == 'Impute')
+  matXX <- which(comMed$method == 'Match')
+  
+  # Combine Data
+  difMed <- comMed
+  difMed$pIndex <- rep(pIndex, 3)
+  difMed$yield <- NULL
+  difMed$method <- c(rep('1. Impute - Median', tLng),
+                     rep('2. Match - Median', tLng),
+                     rep('3. Match - Impute', tLng))
+  difMed$dif <- c(comMed$yield[impXX] - comMed$yield[medXX],
+                  comMed$yield[matXX] - comMed$yield[medXX],
+                  comMed$yield[matXX] - comMed$yield[impXX])
+  
+  # Re-order levels
+  difMed$method <- factor(difMed$method,
+                           levels=c('Impute - Median', 'Match - Median',
+                                    'Match - Impute'))
+  
+  
+  ## Return data
+  return(list(comp = comData,
+              diff = difData,
+              compMed = comMed,
+              diffMed = difMed))
+}
+
+

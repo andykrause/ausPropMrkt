@@ -229,237 +229,265 @@
   
   # By Appreciation
   metroDiffUPlot_A <- ggplot(metroData$use$diff, aes(x=pIndex, y=dif)) + 
-    geom_point(colour='black', size=2) + 
-    geom_smooth(method=lm) +
-    xlab("Home Price Movement in Qtr") +
-    ylab("Difference in Rental Yield Estimate\n") +
-    scale_x_continuous(limits=c(-.03, .07),
-                       breaks=seq(-.02, .06, .02), 
-                       labels=paste0(format(100 *
-                                              (seq(-.02, .06, .02)),
-                                            nsmall=1), "%")) +
-    scale_y_continuous(limits=c(0, .0092),
-                       breaks=seq(0, .008, .002), 
-                       labels=paste0(format(100 * 
-                                              (seq(0, .008, .002)),
-                                            nsmall=1), "%")) +
-    facet_wrap(~use+method) +
-    theme_prr
+                      geom_point(colour='black', size=2) + 
+                      geom_smooth(method=lm) +
+                      xlab("Home Price Movement in Qtr") +
+                      ylab("Difference in Rental Yield Estimate\n") +
+                      scale_x_continuous(limits=c(-.03, .07),
+                                         breaks=seq(-.02, .06, .02), 
+                                         labels=paste0(format(100 *
+                                                      (seq(-.02, .06, .02)),
+                                                       nsmall=1), "%")) +
+                      scale_y_continuous(limits=c(0, .0092),
+                                         breaks=seq(0, .008, .002), 
+                                         labels=paste0(format(100 * 
+                                                      (seq(0, .008, .002)),
+                                                       nsmall=1), "%")) +
+                      facet_wrap(~use+method) +
+                      theme_prr
   
   # By Time
   metroDiffUPlot_T <- ggplot(metroData$use$diff, aes(x=timeName, y=dif)) + 
-    geom_point(colour='black', size=2) + 
-    geom_smooth(method=lm) +
-    xlab("") +
-    ylab("Difference in Rental Yield Estimate\n") +
-    scale_x_continuous(breaks=seq(2, 18, 4), 
-                       labels=2011:2015) +
+                      geom_point(colour='black', size=2) + 
+                      geom_smooth(method=lm) +
+                      xlab("") + 
+                      ylab("Difference in Rental Yield Estimate\n")  +
+                      scale_x_continuous(breaks=seq(2, 18, 4), 
+                                         labels=2011:2015) +
+                      scale_y_continuous(limits=c(-.001, .011),
+                                         breaks=seq(0, .01, .002), 
+                                         labels=paste0(format(100 * 
+                                                      (seq(0, .01, .002)),
+                                                       nsmall=1), "%")) +
+                      facet_wrap(~use+method) +
+                      theme_prr
+
+ ## Combine all Metro differences
+  
+  metroDiffComp <- ggplot(metroData$mix$diff, aes(x=timeName, y=dif)) + 
+                      geom_point(colour='black', size=0) + 
+                      geom_smooth(method=lm, se=FALSE, colour='black',
+                                  size=1) +
+                      geom_smooth(data=metroData$useWgt$diff,
+                                  aes(x=timeName, y=dif),
+                                  method=lm, se=FALSE,
+                                  colour='red', size=1) +
+                      geom_smooth(data=metroData$use$diff[1:60,],
+                                  aes(x=timeName, y=dif),
+                                  method=lm, se=FALSE,
+                                  colour='blue', size=1) +
+                      geom_smooth(data=metroData$use$diff[61:120,],
+                                  aes(x=timeName, y=dif),
+                                  method=lm, se=FALSE,
+                                  colour='navy', size=1) +
+                      xlab("") + 
+                      ylab("Difference in Rental Yield Estimate\n")  +
+                      scale_x_continuous(breaks=seq(2, 18, 4), 
+                                         labels=2011:2015) +
+                      scale_y_continuous(limits=c(-.001, .011),
+                                         breaks=seq(0, .01, .002), 
+                                         labels=paste0(format(100 * 
+                                                      (seq(0, .01, .002)),
+                                                       nsmall=1), "%")) +
+                      facet_wrap(~method) +
+                      theme_prr
+
+### Lga Plots ------------------------------------------------------------------
+ 
+  ## LGA All
+  
+  lgaPlot <- ggplot(lgaData$mix$comp, aes(x=timeName, y=yield, 
+                                          group=spaceName)) + 
+    geom_line(colour='gray50', size= 0.1, lineend='round', linejoin='round') +
+    geom_line(data=lgaData$mixWgt$comp, 
+              aes(x=timeName, y=yield),
+              colour='black', size=1.5, lineend='round', linejoin='round') +
+    xlab("") + ylab("Rental Yield\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.015, .059),
+                       breaks=seq(.015, .059, .004), 
+                       labels=paste0(format(100 * (seq(.015,
+                                                       .059, .004)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~method)+
+    theme_prr
+  
+  ## LGA PLot Diffs all
+  
+  lgaDiffComp <- ggplot(lgaData$mix$diff, aes(x=timeName, y=dif, 
+                                              group=spaceName)) + 
+                 geom_point(colour='black', size=0) + 
+                 geom_smooth(data=lgaData$mix$diff,
+                             aes(x=timeName, y=dif, group=spaceName),
+                             method=lm, se=FALSE, colour='gray50') +
+    geom_smooth(data=lgaData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='black', size=2) +
+    geom_smooth(data=lgaData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='blue', size=2) +
+#     geom_smooth(data=metroData$use$diff[61:120,],
+#                 aes(x=timeName, y=dif),
+#                 method=lm, se=FALSE,
+#                 colour='navy', size=1) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+#     scale_x_continuous(breaks=seq(2, 18, 4), 
+#                        labels=2011:2015) +
+#     scale_y_continuous(limits=c(-.001, .011),
+#                        breaks=seq(0, .01, .002), 
+#                        labels=paste0(format(100 * 
+#                                               (seq(0, .01, .002)),
+#                                             nsmall=1), "%")) +
+    facet_wrap(~method) +
+    theme_prr
+  
+### Suburb Plots ---------------------------------------------------------------
+  
+  ## Suburb All
+  
+  suburbPlot <- ggplot(suburbData$mix$comp, aes(x=timeName, y=yield, 
+                                          group=spaceName)) + 
+    geom_line(colour='gray50', size= 0.1, lineend='round', linejoin='round') +
+    geom_line(data=suburbData$mixWgt$comp, 
+              aes(x=timeName, y=yield),
+              colour='black', size=1.5, lineend='round', linejoin='round') +
+    xlab("") + ylab("Rental Yield\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.01, .079),
+                       breaks=seq(.015, .059, .004), 
+                       labels=paste0(format(100 * (seq(.015,
+                                                       .059, .004)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~method)+
+    theme_prr
+  
+  ## LGA PLot Diffs all
+  
+  suburbDiffComp <- ggplot(suburbData$mix$diff, aes(x=timeName, y=dif, 
+                                              group=spaceName)) + 
+    geom_point(colour='black', size=0) + 
+    geom_smooth(data=suburbData$mix$diff,
+                aes(x=timeName, y=dif, group=spaceName),
+                method=lm, se=FALSE, colour='gray50') +
+    geom_smooth(data=suburbData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='black', size=2) +
+    geom_smooth(data=suburbData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='blue', size=2) +
+    #     geom_smooth(data=metroData$use$diff[61:120,],
+    #                 aes(x=timeName, y=dif),
+    #                 method=lm, se=FALSE,
+    #                 colour='navy', size=1) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    #     scale_x_continuous(breaks=seq(2, 18, 4), 
+    #                        labels=2011:2015) +
+         scale_y_continuous(limits=c(-.001, .011),
+                            breaks=seq(0, .01, .002), 
+                            labels=paste0(format(100 * 
+                                                   (seq(0, .01, .002)),
+                                                 nsmall=1), "%")) +
+    facet_wrap(~method) +
+    theme_prr
+  
+### All types of differences
+  
+  allDiffComp_T <- ggplot(lgaData$mix$diff, aes(x=timeName, y=dif, 
+                                                    group=spaceName)) + 
+                 geom_point(colour='black', size=0) + 
+    geom_smooth(data=suburbData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='black', size=2) +
+    geom_smooth(data=lgaData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='blue', size=2) +
+    geom_smooth(data=lgaData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='orange', size=2) +
+    geom_smooth(data=metroData$mix$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='green', size=2) +
+    geom_smooth(data=metroData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='red', size=2) +
+    geom_smooth(data=suburbData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=lm, se=FALSE,
+                colour='purple', size=2) +
+    
+    
+    #     geom_smooth(data=metroData$use$diff[61:120,],
+    #                 aes(x=timeName, y=dif),
+    #                 method=lm, se=FALSE,
+    #                 colour='navy', size=1) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    #     scale_x_continuous(breaks=seq(2, 18, 4), 
+    #                        labels=2011:2015) +
     scale_y_continuous(limits=c(-.001, .011),
                        breaks=seq(0, .01, .002), 
                        labels=paste0(format(100 * 
                                               (seq(0, .01, .002)),
                                             nsmall=1), "%")) +
-    facet_wrap(~use+method) +
+    facet_wrap(~method) +
     theme_prr
   
-  
-### Break into house and unit --------------------------------------------------
-  
- ## Build Data
-  
-  metroUseCompData <- data.frame(time=c(mmMetYields$timeName,
-                                        crMetYields$stsDF$timeName,
-                                        dmMetYields$stsDF$timeName,
-                                        mmMetYields$timeName,
-                                        crMetYields$stsDF$timeName,
-                                        dmMetYields$stsDF$timeName),
-                                 method=c(rep('Median', 20),
-                                          rep('Impute', 20),
-                                          rep('Match', 20),
-                                          rep('Median', 20),
-                                          rep('Impute', 20),
-                                          rep('Match', 20)),
-                                 use = c(rep('House', 60), rep('Unit', 60)),
-                                 yield=c(mmMetYieldsH$yield,
-                                         crMetYieldsH$stsDF$median,
-                                         dmMetYieldsH$stsDF$median,
-                                         mmMetYieldsU$yield,
-                                         crMetYieldsU$stsDF$median,
-                                         dmMetYieldsU$stsDF$median)) 
-  metroUseCompData$method <- factor(metroUseCompData$method,
-                                    levels=c('Median', 'Impute', 'Match'))
-
- ## Make Plot
-  
-  metroUsePlot <- ggplot(metroUseCompData, aes(x=as.numeric(time), y=yield, 
-                                         group=method)) + 
-    geom_line(aes(colour=method, size=method, linetype=method)) +
-    scale_size_manual(values=c(1.5, 1.5, 1.5)) +
-    scale_colour_manual(values=c('blue', 'green', 'gray10')) +
-    scale_linetype_manual(values=c(1, 2, 3)) + 
-    xlab("") + ylab("Rental Yield\n") +
-    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
-    scale_y_continuous(limits=c(.03, .05),
-                       breaks=seq(.03, .05, .002), 
-                       labels=paste0(format(100 * (seq(.03,
-                                                       .05, .002)),
-                                            nsmall=1), "%")) +
-    facet_wrap(~use) +
+  allDiffComp_A <- ggplot(lgaData$mix$diff, aes(x=pIndex, y=dif, 
+                                                group=spaceName)) + 
+    geom_point(colour='black', size=0) + 
+    geom_smooth(data=suburbData$mixWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=lm, se=FALSE,
+                colour='black', size=2) +
+    geom_smooth(data=lgaData$mixWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=lm, se=FALSE,
+                colour='blue', size=2) +
+    geom_smooth(data=lgaData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=lm, se=FALSE,
+                colour='orange', size=2) +
+    geom_smooth(data=metroData$mix$diff,
+                aes(x=pIndex, y=dif),
+                method=lm, se=FALSE,
+                colour='green', size=2) +
+    geom_smooth(data=metroData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=lm, se=FALSE,
+                colour='red', size=2) +
+    geom_smooth(data=suburbData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=lm, se=FALSE,
+                colour='purple', size=2) +
+    
+    
+    #     geom_smooth(data=metroData$use$diff[61:120,],
+    #                 aes(x=timeName, y=dif),
+    #                 method=lm, se=FALSE,
+    #                 colour='navy', size=1) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+#         scale_x_continuous(breaks=seq(2, 18, 4), 
+#                            labels=2011:2015) +
+        scale_y_continuous(limits=c(0, .0105),
+                           breaks=seq(0, .008, .002), 
+                           labels=paste0(format(100 * 
+                                                  (seq(0, .008, .002)),
+                                                nsmall=1), "%")) +
+    facet_wrap(~method) +
     theme_prr
   
-  
-### Metro difference by use ----------------------------------------------------  
-  
-  
-  ## Build home price trend set
-  
-  # Raw home price trend 
-  mmMetsPH <- spaceTimeShard(stsData = xTrans[xTrans$transType=='sale' &
-                                              xTrans$PropertyType == 'House',],
-                            metric=c('transValue'),
-                            spaceField='all', timeField='transQtr',
-                            defDim='time', stsLimit=3, 
-                            calcs=list(median='median'))
-  mmMetsPU <- spaceTimeShard(stsData = xTrans[xTrans$transType=='sale' &
-                                              xTrans$PropertyType=='Unit',],
-                            metric=c('transValue'),
-                            spaceField='all', timeField='transQtr',
-                            defDim='time', stsLimit=3, 
-                            calcs=list(median='median'))
-  
-  # Turn into index
-  pIndexH <- c(0, (mmMetsPH$stsDF$median[-1] / mmMetsPH$stsDF$median[-20]) - 1)
-  pIndexU <- c(0, (mmMetsPU$stsDF$median[-1] / mmMetsPU$stsDF$median[-20]) - 1)
-  
-  ## Build data set of differences in rental yield estimates  
-  
-  metroUseDiffData <- data.frame(priceIndex=c(rep(pIndexH, 3),
-                                           rep(pIndexU, 3)),
-                              use=c(rep('House', 60), rep('Unit', 60)),             
-                              method=c(rep('1. Impute - Median', 20),
-                                       rep('2. Match - Median', 20),
-                                       rep('3. Match - Impute', 20),
-                                       rep('1. Impute - Median', 20),
-                                       rep('2. Match - Median', 20),
-                                       rep('3. Match - Impute', 20)),
-                              yieldDif=c((crMetYieldsH$stsDF$median-
-                                            mmMetYieldsH$yield),
-                                         (dmMetYieldsH$stsDF$median-
-                                            mmMetYieldsH$yield),
-                                         (dmMetYieldsH$stsDF$median-
-                                            crMetYieldsH$stsDF$median),
-                                         (crMetYieldsU$stsDF$median-
-                                            mmMetYieldsU$yield),
-                                         (dmMetYieldsU$stsDF$median-
-                                            mmMetYieldsU$yield),
-                                         (dmMetYieldsU$stsDF$median-
-                                            crMetYieldsU$stsDF$median)))
-  
-  ## Make Plot
-  
-  metroUseDiffPlot <- ggplot(metroUseDiffData, aes(x=priceIndex, y=yieldDif)) + 
-    geom_point(colour='black', size=2) +  
-    geom_smooth(method=lm, size=1.5, aes(colour=use)) +
-    xlab("Home Price Movement in Qtr") +
-    ylab("Difference in Rental Yield Estimate\n") +
-    scale_x_continuous(limits=c(-.066, .143),
-                       breaks=seq(-.04, .14, .04), 
-                       labels=paste0(format(100 * (seq(-.04,
-                                                       .14, .04)),
-                                            nsmall=1), "%")) +
-    scale_y_continuous(limits=c(-0.001, .011),
-                       breaks=seq(0, .01, .0025), 
-                       labels=paste0(format(100 * (seq(0, .01, .0025)),
-                                            nsmall=1), "%")) +
-    facet_wrap(~use+method, nrow=2) +
-    theme_prr
-  
-  
-###  LGA Analysis --------------------------------------------------------------
-
-lgaData <- createAggData(mmLgaYields, crLgaYields, dmLgaYields, pIndex) 
-
-lgaPlot <- ggplot(lgaData$comp, aes(x=timeName, y=yield, 
-                                    group=spaceName)) + 
-           geom_line(colour='gray50') +
-           geom_line(data=lgaData$compMed, aes(x=timeName, y=yield), size=1.5) +
-           #scale_size_manual(values=c(1.5, 1.5, 1.5)) +
-           #scale_colour_manual(values=c('blue', 'green', 'gray10')) +
-           #scale_linetype_manual(values=c(1, 2, 3)) + 
-           xlab("") + ylab("Rental Yield\n") +
-           #scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015)   +
-           #scale_y_continuous(limits=c(.03, .05),
-           #                   breaks=seq(.03, .05, .002), 
-           #                   labels=paste0(format(100 * (seq(.03,
-           #                                                   .05, .002)),
-           #                                        nsmall=1), "%")) +
-           facet_wrap(~method) +
-           theme_prr
-
-
-lgaDifPlot <- ggplot(lgaData$diff, aes(x=pIndex, y=dif, 
-                                          group=spaceName)) + 
-              geom_point(size=0) +
-              geom_smooth(method=lm, size=.2, se=FALSE, colour='gray60') +
-              geom_smooth(data=lgaData$diffMed, method=lm, size=2,
-                          colour='gray10', se=TRUE) +
-  
-  #scale_size_manual(values=c(1.5, 1.5, 1.5)) +
-  #scale_colour_manual(values=c('blue', 'green', 'gray10')) +
-  #scale_linetype_manual(values=c(1, 2, 3)) + 
-  xlab("") + ylab("Rental Yield\n") +
-  #scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
-  #scale_y_continuous(limits=c(.03, .05),
-  #                   breaks=seq(.03, .05, .002), 
-  #                   labels=paste0(format(100 * (seq(.03,
-  #                                                   .05, .002)),
-  #                                        nsmall=1), "%")) +
-  facet_wrap(~method) +
-  theme_prr
-
-  
-### By Suburb ------------------------------------------------------------------
-
-
-subData <- createAggData(mmSuburbYields, crSuburbYields, dmSubYields, pIndex) 
-
-subPlot <- ggplot(subData$comp, aes(x=timeName, y=yield, 
-                                    group=spaceName)) + 
-  geom_line(colour='gray50') +
-  geom_line(data=subData$compMed, aes(x=timeName, y=yield), size=1.5) +
-  #scale_size_manual(values=c(1.5, 1.5, 1.5)) +
-  #scale_colour_manual(values=c('blue', 'green', 'gray10')) +
-  #scale_linetype_manual(values=c(1, 2, 3)) + 
-  xlab("") + ylab("Rental Yield\n") +
-  #scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015)   +
-  #scale_y_continuous(limits=c(.03, .05),
-  #                   breaks=seq(.03, .05, .002), 
-  #                   labels=paste0(format(100 * (seq(.03,
-  #                                                   .05, .002)),
-  #                                        nsmall=1), "%")) +
-  facet_wrap(~method) +
-  theme_prr
-
-
-subDifPlot <- ggplot(subData$diff, aes(x=pIndex, y=dif, 
-                                       group=spaceName)) + 
-  geom_point(size=0) +
-  geom_smooth(method=lm, size=.2, se=FALSE, colour='gray60') +
-  geom_smooth(data=subData$diffMed, method=lm, size=2,
-              colour='gray10', se=TRUE) +
-  
-  #scale_size_manual(values=c(1.5, 1.5, 1.5)) +
-  #scale_colour_manual(values=c('blue', 'green', 'gray10')) +
-  #scale_linetype_manual(values=c(1, 2, 3)) + 
-  xlab("") + ylab("Rental Yield\n") +
-  #scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
-  scale_y_continuous(limits=c(-.01, .03),
-                     breaks=seq(-.01, .03, .01), 
-                     labels=paste0(format(100 * (seq(-.01, .03, .01)),
-                                          nsmall=1), "%")) +
-  facet_wrap(~method) +
-  theme_prr
-
 ### Save Workspace -------------------------------------------------------------
 
   save.image(paste0(dataPath, 'vizResults.RData'))

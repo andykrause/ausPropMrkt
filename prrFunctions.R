@@ -1022,6 +1022,8 @@ arySaleRentMatch <- function(sales,               # Data.frame of sales
   return(mTrans)  
 }  
 
+################################################################################
+################################################################################
 
 aryAggrGeoData <- function(geoList,
                            indexList,
@@ -1034,7 +1036,8 @@ aryAggrGeoData <- function(geoList,
   mixData <- aryAggrMethData(mmObj=geoList$mm$all,
                              irObj=geoList$ir$all,
                              dmObj=geoList$dm$all,
-                             pIndex=indexList$all)
+                             pIndex=indexList$all,
+                             geoSplit=geoSplit)
   
   ## Build Mixed weighted
   
@@ -1048,6 +1051,7 @@ aryAggrGeoData <- function(geoList,
                                   irObj=geoList$ir$all,
                                   dmObj=geoList$dm$all,
                                   pIndex=indexList$all,
+                                  geoSplit=geoSplit,
                                   wgt=TRUE)
   }
   
@@ -1057,17 +1061,19 @@ aryAggrGeoData <- function(geoList,
   houseData <- aryAggrMethData(mmObj=geoList$mm$house,
                                irObj=geoList$ir$house,
                                dmObj=geoList$dm$house,
-                               pIndex=indexList$house)
+                               pIndex=indexList$house,
+                               geoSplit=geoSplit)
   unitData <- aryAggrMethData(mmObj=geoList$mm$unit,
                               irObj=geoList$ir$unit,
                               dmObj=geoList$dm$unit,
-                              pIndex=indexList$unit)
+                              pIndex=indexList$unit,
+                              geoSplit=geoSplit)
   
   # Add labels
   houseData$comp$use <- 'House'
   houseData$diff$use <- 'House'
-  unitData$comp$use <- 'House'
-  unitData$diff$use <- 'House'
+  unitData$comp$use <- 'Unit'
+  unitData$diff$use <- 'Unit'
   
   # combine
   useData <- list(comp=rbind(houseData$comp,
@@ -1080,7 +1086,8 @@ aryAggrGeoData <- function(geoList,
   if(!geoSplit){
     
     useWgt <- aryWeightUses(houseData, unitData, geoList, 
-                            pIndex=indexList$all, geoSplit=FALSE) 
+                            pIndex=indexList$all, 
+                            geoSplit=geoSplit) 
   } else {
     
    
@@ -1089,18 +1096,20 @@ aryAggrGeoData <- function(geoList,
                                 irObj=geoList$ir$house,
                                 dmObj=geoList$dm$house,
                                 pIndex=indexList$house,
+                                geoSplit=geoSplit,
                                 wgt=TRUE)
   unitDataW <- aryAggrMethData(mmObj=geoList$mm$unit,
                                irObj=geoList$ir$unit,
                                dmObj=geoList$dm$unit,
                                pIndex=indexList$unit,
+                               geoSplit=geoSplit,
                                wgt=TRUE)
   
   # Add labels
   houseDataW$comp$use <- 'House'
   houseDataW$diff$use <- 'House'
-  unitDataW$comp$use <- 'House'
-  unitDataW$diff$use <- 'House'
+  unitDataW$comp$use <- 'Unit'
+  unitDataW$diff$use <- 'Unit'
   
   # Calculate use specific data
   useWgt <- aryWeightUses(houseDataW, unitDataW, geoList, 
@@ -1126,7 +1135,13 @@ aryAggrMethData <- function(mmObj,          # Med Meth obj from aryStsGeoWrap
   
   ## Isolate the correct data from each object
   
-  mmDF <- mmObj$stsDF[,c('timeName', 'spaceName', 'yield')]
+#   if(geoSplit){
+    mmDF <- mmObj$stsDF[,c('timeName', 'spaceName', 'yield')]
+#   } else {
+#     mmDF <- mmObj$stsDF[ ,c('timeName', 'yield')]
+#     mmDF$spaceName <- 'all'
+#   }
+    
   irDF <- irObj$stsDF
   dmDF <- dmObj$stsDF
   names(irDF)[2] <- names(dmDF)[2] <- 'yield'

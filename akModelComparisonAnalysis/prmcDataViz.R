@@ -53,7 +53,10 @@
           legend.title=element_blank())
   
   theme_prr <- theme_grey() +
-    theme(text = element_text(size=10),
+    theme(text = element_text(size=11),
+          panel.background = element_rect(colour='gray95', fill='gray95'),
+          panel.grid.major=element_line(colour='white', size=.5),
+          panel.grid.minor=element_line(colour='white', size=.1),
           plot.background=element_rect(fill='white'),
           axis.title.y=element_text(colour='black'),
           axis.text.y=element_text(hjust=1),
@@ -62,82 +65,11 @@
           legend.key=element_rect(fill='white', color='white'),
           legend.text=element_text(color='black'),
           legend.title=element_blank(),
-          legend.key.width=unit(2, "cm"))
-  
- ## Set up custom functions
-  
-  createAggData <- function(mmObj, crObj, dmObj){  
-    
-    mmObj <- mmObj[,c('timeName', 'spaceName', 'yield')]
-    crObj <- crObj$stsDF
-    dmObj <- dmObj$stsDF
-    names(crObj)[2] <- names(dmObj)[2] <- 'yield'
-    
-    mmGeo <- levels(mmObj$spaceName)
-    crGeo <- levels(as.factor(crObj$spaceName))
-    dmGeo <- levels(as.factor(dmObj$spaceName))
-    allGeo <- intersect(intersect(mmGeo, crGeo),dmGeo)
-    
-    mmObj <- subset(mmObj, mmObj$spaceName %in% allGeo)
-    crObj <- subset(crObj, crObj$spaceName %in% allGeo)
-    dmObj <- subset(dmObj, dmObj$spaceName %in% allGeo)
-    
-    oLng <- nrow(mmObj)
-    
-    comData <- rbind(mmObj, crObj, dmObj)
-    comData$method <- c(rep('Median', oLng), rep('Impute', oLng),
-                        rep('Match', oLng))
-    
-    difData <- rbind(mmObj, crObj, dmObj)
-    difData$yield <- NULL
-    difData$method <- c(rep('1. Impute - Median', oLng),
-                        rep('2. Match - Median', oLng),
-                        rep('3. Match - Impute', oLng))
-    difData$dif <- c(crObj$yield - mmObj$yield,
-                     dmObj$yield - dmObj$yield,
-                     dmObj$yield - crObj$yield)
-    
-    medX <- which(comData$comp$method == 'Median')
-    impX <- which(comData$comp$method == 'Impute')
-    matX <- which(comData$comp$method == 'Match')
-    
-    comMed <- data.frame(timeName = rep(1:oLng, 3),
-                         method = c(rep('Median', oLng),
-                                    rep('Impute', oLng),
-                                    rep('Match', oLng)),
-                         spaceName = rep('Median', oLng * 3),
-                         yield = c(as.numeric(tapply(comData$comp$yield[medX], 
-                                                     comData$comp$timeName[medX], 
-                                                     median)),
-                                   as.numeric(tapply(comData$comp$yield[impX], 
-                                                     comData$comp$timeName[impX], 
-                                                     median)),
-                                   as.numeric(tapply(comData$comp$yield[matX], 
-                                                     comData$comp$timeName[matX], 
-                                                     median))))
-    
-    medXX <- which(comMed$method == 'Median')
-    impXX <- which(comMed$method == 'Impute')
-    matXX <- which(comMed$method == 'Match')
-    
-    difMed <- comMed
-    difMed$yield <- NULL
-    difMed$method <- c(rep('1. Impute - Median', oLng),
-                        rep('2. Match - Median', oLng),
-                        rep('3. Match - Impute', oLng))
-    difMed$dif <- c(comMed$yield[impXX] - comMed$yield[medXX],
-                    comMed$yield[matXX] - comMed$yield[medXX],
-                    comMed$yield[matXX] - comMed$yield[impXX])
-    
-    
-    ## Return
-    return(list(comp = comData,
-                diff = difData,
-                compMed = comMed,
-                diffMed = difMed))
-  }
-  
-  
+          legend.key.width=unit(2, "cm"),
+          strip.background = element_rect(fill = "orange", 
+                                          color = "orange", size = .1),
+          strip.text.x = element_text(face = "bold"),
+          strip.text.y = element_text(face = "bold"))
   
 ### Load Data ------------------------------------------------------------------  
 
@@ -155,30 +87,23 @@
 ################################################################################
 ### Data visualization ---------------------------------------------------------
 
-### Metro Level, difference in the three ---------------------------------------
-
-  ## Build data
+ ## Set colors
   
-  metroCompData <- data.frame(time=c(mmMetYields$timeName,
-                                     crMetYields$stsDF$timeName,
-                                     dmMetYields$stsDF$timeName),
-                              method=c(rep('Median', 20),
-                                       rep('Impute', 20),
-                                       rep('Match', 20)),
-                              yield=c(mmMetYields$yield,
-                                      crMetYields$stsDF$median,
-                                      dmMetYields$stsDF$median))
-  metroCompData$method <- factor(metroCompData$method,
-                                  levels=c('Median', 'Impute', 'Match'))
+  methCols <- c('navy', 'royalblue2', 'skyblue')
+  methSizes <- c(.5, 1.25, 2)
+  methLines <- c(1, 1, 1)  
   
- ## Make plot
+### Metro Level ----------------------------------------------------------------
 
-  metroPlot <- ggplot(metroCompData, aes(x=as.numeric(time), y=yield, 
-                                        group=method)) + 
-               geom_line(aes(colour=method, size=method, linetype=method)) +
-               scale_size_manual(values=c(1.5, 1.5, 1.5)) +
-               scale_colour_manual(values=c('gray10', 'blue', 'green')) +
-               scale_linetype_manual(values=c(3, 2, 1)) + 
+ ## Metro All
+
+  metroPlot <- ggplot(metroData$mix$comp,
+                      aes(x=timeName, y=yield, group=method)) + 
+               geom_line(aes(colour=method, size=method, linetype=method,
+                             lineend='round', linejoin='round')) +
+               scale_size_manual(values=methSizes) +
+               scale_colour_manual(values=methCols) +
+               scale_linetype_manual(values=methLines) + 
                xlab("") + ylab("Rental Yield\n") +
                scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
                scale_y_continuous(limits=c(.032, .048),
@@ -188,51 +113,156 @@
                                           nsmall=1), "%")) +
                theme_prr
 
-### Analyze difference between three based on home price trends ----------------  
+ ## Metro: Use Weighted
   
- ## Build home price trend set
-  
-  # Raw home price trend 
-  mmMetsP <- spaceTimeShard(stsData = xTrans[xTrans$transType=='sale',],
-                            metric=c('transValue'),
-                            spaceField='all', timeField='transQtr',
-                            defDim='time', stsLimit=3, 
-                            calcs=list(median='median'))
-
-  # Turn into index
-  pIndex <- c(0, (mmMetsP$stsDF$median[-1] / mmMetsP$stsDF$median[-20]) - 1)
-
- ## Build data set of differences in rental yield estimates  
-  
-  metroDiffData <- data.frame(priceIndex=rep(pIndex, 3),
-                              method=c(rep('1. Impute - Median', 20),
-                                       rep('2. Match - Median', 20),
-                                       rep('3. Match - Impute', 20)),
-                              yieldDif=c((crMetYields$stsDF$median-
-                                            mmMetYields$yield),
-                                         (dmMetYields$stsDF$median-
-                                            mmMetYields$yield),
-                                         (dmMetYields$stsDF$median-
-                                            crMetYields$stsDF$median)))
-
- ## Make Plot
-  
-  metroDiffPlot <- ggplot(metroDiffData, aes(x=priceIndex, y=yieldDif)) + 
-                   geom_point(colour='black', size=2) +  geom_smooth(method=lm) +
-                   xlab("Home Price Movement in Qtr") +
-                   ylab("Difference in Rental Yield Estimate\n") +
-                   scale_x_continuous(limits=c(-.065, .12),
-                       breaks=seq(-.04, .12, .04), 
-                       labels=paste0(format(100 * (seq(-.04,
-                                                       .12, .04)),
+  metroPlotUW <- ggplot(metroData$useWgt$comp, 
+                        aes(x=timeName, y=yield, group=method)) + 
+                 geom_line(aes(colour=method, size=method, linetype=method,
+                               lineend='round', linejoin='round')) +
+                 scale_size_manual(values=methSizes) +
+                 scale_colour_manual(values=methCols) +
+                 scale_linetype_manual(values=methLines) + 
+                 xlab("") + ylab("Rental Yield\n") +
+                 scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+                 scale_y_continuous(limits=c(.032, .048),
+                                    breaks=seq(.032, .048, .002), 
+                                    labels=paste0(format(100 * 
+                                                           (seq(.032, .048,
+                                                                .002)),
                                             nsmall=1), "%")) +
-                   scale_y_continuous(limits=c(0, .011),
-                       breaks=seq(0, .01, .0025), 
-                       labels=paste0(format(100 * (seq(0, .01, .0025)),
+                 theme_prr
+  
+ ## Metro: By Use  
+  
+  metroPlotUse <- ggplot(metroData$use$comp,
+                         aes(x=timeName, y=yield, group=method)) + 
+                  geom_line(aes(colour=method, size=method, linetype=method,
+                                lineend='round', linejoin='round')) +
+                  scale_size_manual(values=methSizes) +
+                  scale_colour_manual(values=methCols) +
+                  scale_linetype_manual(values=methLines) + 
+                  xlab("") + ylab("Rental Yield\n") +
+                  scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+                  scale_y_continuous(limits=c(.030, .050),
+                                     breaks=seq(.030, .050, .002), 
+                                     labels=paste0(format(100 * (
+                                       seq(.030, .050, .002)),
                                             nsmall=1), "%")) +
-                   facet_wrap(~method) +
-                   theme_prr
-
+                  facet_wrap(~use) +
+                  theme_prr
+  
+ ## Metro Diff: All
+  
+  # By Appreciation
+  metroDiffPlot_A <- ggplot(metroData$mix$diff, aes(x=pIndex, y=dif)) + 
+                     geom_point(colour='black', size=2) + 
+                     geom_smooth(method=lm) +
+                     xlab("Home Price Movement in Qtr") +
+                     ylab("Difference in Rental Yield Estimate\n") +
+                     scale_x_continuous(limits=c(-.03, .06),
+                                        breaks=seq(-.02, .06, .02), 
+                                        labels=paste0(format(100 *
+                                                      (seq(-.02, .06, .02)),
+                                                       nsmall=1), "%")) +
+                     scale_y_continuous(limits=c(0, .011),
+                                        breaks=seq(0, .01, .002), 
+                                        labels=paste0(format(100 * 
+                                                      (seq(0, .01, .002)),
+                                                       nsmall=1), "%")) +
+                     facet_wrap(~method) +
+                     theme_prr
+  
+  # By Time
+  metroDiffPlot_T <- ggplot(metroData$mix$diff, aes(x=timeName, y=dif)) + 
+                            geom_point(colour='black', size=2) + 
+                     geom_smooth(method=lm) +
+                     xlab("") +
+                     ylab("Difference in Rental Yield Estimate\n") +
+                     scale_x_continuous(breaks=seq(2, 18, 4), 
+                                        labels=2011:2015) +
+                     scale_y_continuous(limits=c(0, .011),
+                                        breaks=seq(0, .01, .002), 
+                                        labels=paste0(format(100 * 
+                                                     (seq(0, .01, .002)),
+                                                      nsmall=1), "%")) +
+                     facet_wrap(~method) +
+                     theme_prr
+  
+ ## Metro Diff: Use Weighted
+  
+  # By Appreciation
+  metroDiffUWPlot_A <- ggplot(metroData$useWgt$diff, aes(x=pIndex, y=dif)) + 
+                       geom_point(colour='black', size=2) + 
+                       geom_smooth(method=lm) +
+                       xlab("Home Price Movement in Qtr") +
+                       ylab("Difference in Rental Yield Estimate\n") +
+                       scale_x_continuous(limits=c(-.03, .06),
+                                          breaks=seq(-.02, .06, .02), 
+                                          labels=paste0(format(100 *
+                                                       (seq(-.02, .06, .02)),
+                                                        nsmall=1), "%")) +
+                       scale_y_continuous(limits=c(0, .011),
+                                          breaks=seq(0, .01, .002), 
+                                          labels=paste0(format(100 * 
+                                                       (seq(0, .01, .002)),
+                                                        nsmall=1), "%")) +
+                       facet_wrap(~method) +
+                       theme_prr
+  
+  # By Time
+  metroDiffUWPlot_T <- ggplot(metroData$useWgt$diff, aes(x=timeName, y=dif)) + 
+                       geom_point(colour='black', size=2) + 
+                       geom_smooth(method=lm) +
+                       xlab("") +
+                       ylab("Difference in Rental Yield Estimate\n") +
+                       scale_x_continuous(breaks=seq(2, 18, 4), 
+                                          labels=2011:2015) +
+                       scale_y_continuous(limits=c(0, .011),
+                                          breaks=seq(0, .01, .002), 
+                                          labels=paste0(format(100 * 
+                                                       (seq(0, .01, .002)),
+                                                        nsmall=1), "%")) +
+                       facet_wrap(~method) +
+                       theme_prr
+  
+ ## Metro Diff: Use
+  
+  # By Appreciation
+  metroDiffUPlot_A <- ggplot(metroData$use$diff, aes(x=pIndex, y=dif)) + 
+    geom_point(colour='black', size=2) + 
+    geom_smooth(method=lm) +
+    xlab("Home Price Movement in Qtr") +
+    ylab("Difference in Rental Yield Estimate\n") +
+    scale_x_continuous(limits=c(-.03, .07),
+                       breaks=seq(-.02, .06, .02), 
+                       labels=paste0(format(100 *
+                                              (seq(-.02, .06, .02)),
+                                            nsmall=1), "%")) +
+    scale_y_continuous(limits=c(0, .0092),
+                       breaks=seq(0, .008, .002), 
+                       labels=paste0(format(100 * 
+                                              (seq(0, .008, .002)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~use+method) +
+    theme_prr
+  
+  # By Time
+  metroDiffUPlot_T <- ggplot(metroData$use$diff, aes(x=timeName, y=dif)) + 
+    geom_point(colour='black', size=2) + 
+    geom_smooth(method=lm) +
+    xlab("") +
+    ylab("Difference in Rental Yield Estimate\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), 
+                       labels=2011:2015) +
+    scale_y_continuous(limits=c(-.001, .011),
+                       breaks=seq(0, .01, .002), 
+                       labels=paste0(format(100 * 
+                                              (seq(0, .01, .002)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~use+method) +
+    theme_prr
+  
+  
 ### Break into house and unit --------------------------------------------------
   
  ## Build Data

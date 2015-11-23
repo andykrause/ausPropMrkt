@@ -326,7 +326,6 @@
                              matchField='AddressID', saleField='transValue',
                              rentField='transValue', timeField='transQtr')
   
-  
  ## All Metro  
   dmMetro <- spaceTimeShard(stsData = dmData,
                             metric=c('saleYield'),

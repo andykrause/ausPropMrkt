@@ -1,0 +1,43 @@
+---
+title: "prmcReadME"
+author: "Andy Krause"
+date: "25 November 2015"
+output: html_document
+---
+
+
+### Data Preparation
+
+The **prmcDataPrep.R** file handles the data preparation phase of this analysis.  In this context, data preparation refers to the conversion of the raw data (from the source) into the prepared data that is ready for analysis.  
+
+#### Preliminary Commands
+
+The process begin by loading the necessary libraries.
+
+    library(plyr)
+    library(dplyr)
+    library(ggplot2)
+    library(reshape2)
+    library(stringr)
+    library(maptools)
+    library(sp)
+    library(rgeos)
+
+Next, we source a file containing a set of functions that are used throughout the analysis, **prrFunctions.R**.  This file is sources from it's Github location.  Details of the individual functions contained in this file can be found in the *"Custom Functions"* section at the end of this document. 
+
+     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                   'master/prrFunctions.R'))
+                   
+The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded.  This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space sytnax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries. 
+
+    dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+    saleFile <- 'sales10_15.csv'
+    rentFile <- 'rents10_15.csv'
+    ssFile <- 'allSS.csv'
+    subGeoFile <- 'Vic_Suburbs.shp'
+    lgaGeoFile <- 'Vic_LGAs.shp'
+    sla1GeoFile <- 'Vic_SLA1.shp'
+    postGeoFile <- 'Vic_PostCodes.shp'
+    
+    
+    

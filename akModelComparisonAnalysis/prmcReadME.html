@@ -84,8 +84,34 @@ library(sp)
 library(rgeos)</code></pre>
 <p>Next, we source a file containing a set of functions that are used throughout the analysis, <strong>prrFunctions.R</strong>. This file is sources from it’s Github location. Details of the individual functions contained in this file can be found in the <em>“Custom Functions”</em> section at the end of this document.</p>
 <pre><code> source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-               'master/prrFunctions.R'))</code></pre>
+               'master/prrFunctions.R'))
+               </code></pre>
+<p>The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded. This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space syntax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries.</p>
+<pre><code>dataPath &lt;- &quot;C:/Dropbox/Australia Data/ausPropData/melData/&quot;
+saleFile &lt;- 'sales10_15.csv'
+rentFile &lt;- 'rents10_15.csv'
+ssFile &lt;- 'allSS.csv'
+subGeoFile &lt;- 'Vic_Suburbs.shp'
+lgaGeoFile &lt;- 'Vic_LGAs.shp'
+sla1GeoFile &lt;- 'Vic_SLA1.shp'
+postGeoFile &lt;- 'Vic_PostCodes.shp'</code></pre>
 </div>
+</div>
+<div id="read-in-data" class="section level3">
+<h3>Read in Data</h3>
+<p>The data is then read into memory using the data path and file names specified above.</p>
+<pre><code> rawSales &lt;- read.csv(paste0(dataPath, saleFile), stringsAsFactors = FALSE)
+ rawRents &lt;- read.csv(paste0(dataPath, rentFile), stringsAsFactors = FALSE)
+ ssData &lt;- read.csv(paste0(dataPath, ssFile), stringsAsFactors = FALSE)
+ subShp &lt;- readShapePoly(paste0(dataPath, subGeoFile))
+ lgaShp &lt;- readShapePoly(paste0(dataPath, lgaGeoFile))
+ sla1Shp &lt;- readShapePoly(paste0(dataPath, sla1GeoFile))
+ postCodeShp &lt;- readShapePoly(paste0(dataPath, postGeoFile))
+ </code></pre>
+</div>
+<div id="data-management" class="section level3">
+<h3>Data management</h3>
+<p>The next step is data management. In this context data management involvees the fixing of data errors and formats, the combination of information from other table and sources, the removal of duplicate observations and the removal of non-essential fields. No observations are removed at this step as these procedures are saved for the <em>“Data Cleaning”</em> section that follows.</p>
 </div>
 
 

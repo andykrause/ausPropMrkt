@@ -28,7 +28,7 @@ Next, we source a file containing a set of functions that are used throughout th
      source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                    'master/prrFunctions.R'))
                    
-The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded.  This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space sytnax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries. 
+The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded.  This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space syntax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries. 
 
     dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
     saleFile <- 'sales10_15.csv'
@@ -39,5 +39,45 @@ The final set of preliminary commands set the path to the data as well as the na
     sla1GeoFile <- 'Vic_SLA1.shp'
     postGeoFile <- 'Vic_PostCodes.shp'
     
-    
-    
+### Read in Data
+
+The data is then read into memory using the data path and file names specified above.
+
+     rawSales <- read.csv(paste0(dataPath, saleFile), stringsAsFactors = FALSE)
+     rawRents <- read.csv(paste0(dataPath, rentFile), stringsAsFactors = FALSE)
+     ssData <- read.csv(paste0(dataPath, ssFile), stringsAsFactors = FALSE)
+     subShp <- readShapePoly(paste0(dataPath, subGeoFile))
+     lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
+     sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
+     postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
+     
+### Data management
+
+The next step is data management.  In this context data management involvees the fixing of data errors and formats, the combination of information from other table and sources, the removal of duplicate observations and the removal of non-essential fields. No observations are removed at this step as these procedures are saved for the *"Data Cleaning"* section that follows.
+
+#### Create unique identifiers
+
+We begin by creating a unique identification number for each sale and rental observation
+
+    rawSales$UID <- paste0('sale', 1:nrow(rawSales))
+    rawRents$UID <- paste0('rental', 1:nrow(rawRents))
+
+#### Fix and add fields
+
+Date formats throughout the data are not consistent.  Here we employ the **fixAPMDates()* custom function to standardize all of the data formats.  Again, see the end of the document for explanation of the custom functions.
+
+     rawSales$transDate <- fixAPMDates(rawSales$FinalResultEventDate)
+     rawRents$transDate <- fixAPMDates(rawRents$EventDate)
+
+
+
+  # Build new column for transaction Value
+  rawSales$transValue <- as.numeric(rawSales$FinalResultEventPrice)
+  rawRents$transValue <- as.numeric(rawRents$EventPrice)
+
+  # Set transaction Type   
+  rawSales$transType <- 'sale'  
+  rawRents$transType <- 'rent'
+
+
+

@@ -266,4 +266,31 @@ Finally, we split the sales and rentals, apply each transaction value filter and
 Again, we clean up the memory
 
     rm(xSales); rm(xRentals); gc()
+    
+#### Trim shapefiles to extent of sales
+
+Each of the raw shapefiles for the four geographic aggregations contains all areas for the State of Victoria.  In this step we use the sales and rental observations to limit the shapefiles to the areas covered by the transactional observations. 
+
+First with trim the suburbs
+
+    studySuburbs <- subShp[(which(subShp@data$NAME_2006 %in% 
+                             names(table(allTrans$suburb)))), ]
+  
+Then the post codes
+
+    studyPostCodes <- postCodeShp[(which(postCodeShp@data$POA_2006 %in% 
+                                   names(table(allTrans$postCode)))), ]
+  
+Then the SLA1s
+
+    studySLA1s <- sla1Shp[(which(sla1Shp@data$SLA_NAME11 %in% 
+                                  names(table(allTrans$sla1)))), ]
+  
+And finally the LGAs
+
+    studyLGAs <- lgaShp[(which(lgaShp@data$LGA_NAME11 %in% 
+                                  names(table(allTrans$lga)))), ]
+  
+#### Set space-time limits to geographies
+
   

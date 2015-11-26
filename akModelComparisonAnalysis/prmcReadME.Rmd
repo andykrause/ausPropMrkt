@@ -66,18 +66,204 @@ We begin by creating a unique identification number for each sale and rental obs
 
 Date formats throughout the data are not consistent.  Here we employ the **fixAPMDates()* custom function to standardize all of the data formats.  Again, see the end of the document for explanation of the custom functions.
 
-     rawSales$transDate <- fixAPMDates(rawSales$FinalResultEventDate)
-     rawRents$transDate <- fixAPMDates(rawRents$EventDate)
+    rawSales$transDate <- fixAPMDates(rawSales$FinalResultEventDate)
+    rawRents$transDate <- fixAPMDates(rawRents$EventDate)
 
+Transaction values for rentals and sales are held in different fields in the raw data. Here they are tranformed into a single, identically names field. 
 
+    rawSales$transValue <- as.numeric(rawSales$FinalResultEventPrice)
+    rawRents$transValue <- as.numeric(rawRents$EventPrice)
 
-  # Build new column for transaction Value
-  rawSales$transValue <- as.numeric(rawSales$FinalResultEventPrice)
-  rawRents$transValue <- as.numeric(rawRents$EventPrice)
+We then add an identifier as to the type of transaction (prior to combining the two datasets.)
 
-  # Set transaction Type   
-  rawSales$transType <- 'sale'  
-  rawRents$transType <- 'rent'
+    rawSales$transType <- 'sale'  
+    rawRents$transType <- 'rent'
 
+#### Fix latitude and longitude fields
 
+Two separate sets of latitude and longitude values are given, one set for the property itslef and another for the centroid of the street that it fronts.  In a small number of cases no property specific lat/long values are available but street centroid lat/longs are.  To avoid having to filter out the transaction with the missing lat/long values we apply the street centroid value in this small number of cases. 
 
+    sXY <- which(is.na(rawSales$Property_Latitude) | is.na(rawSales$Property_Longitude))
+    rXY <- which(is.na(rawRents$Property_Latitude) | is.na(rawRents$Property_Longitude))
+    rawSales$Property_Latitude[sXY] <- rawSales$Street_Centroid_Latitude[sXY]
+    rawSales$Property_Longitude[sXY] <- rawSales$Street_Centroid_Longitude[sXY]
+    rawRents$Property_Latitude[rXY] <- rawRents$Street_Centroid_Latitude[rXY]
+    rawRents$Property_Longitude[rXY] <- rawRents$Street_Centroid_Longitude[rXY]
+
+#### Trim fields and combine datasets
+
+Next we remove unnecessary data fields and combine the sales and rental datasets into the **allTrans** object. 
+
+    columnList <- c('UID', 'GeographicalID', 'EventID', 'AddressID', 'FlatNumber', 
+                    'transDate', 'transValue', 'transType',
+                    'PropertyType', 'Property_Latitude', 'Property_Longitude',
+                    'AreaSize', 'Bedrooms', 'Baths', 'Parking','HasFireplace',
+                    'HasPool', 'HasGarage', 'HasAirConditioning')
+    allTrans <- rbind(rawSales[ ,columnList], rawRents[ ,columnList])
+
+#### Build time specific fields
+
+Here we add a variety of fields dealing with the time of the transaction. First we add the sales year.
+
+    allTrans$transYear <- as.numeric(substr(allTrans$transDate, 1, 4))
+
+Then the month of sale, where June 2010 is equal to month 1
+
+    allTrans$transMonth <- ((12 * (allTrans$transYear - 2010)) + 
+                              as.numeric(substr(allTrans$transDate, 6, 7))) - 5
+    
+Next days, where June 1st 2010 is equal to day 1
+
+    allTrans$transDays <- (as.numeric(allTrans$transDate - as.Date('2010-05-31')))
+
+And, finally, quarter where the third quarter of 2010 is equal to 1 (plus the month of June)
+
+    allTrans$transQtr <- ((allTrans$transMonth - 1) %/% 3) + 1
+
+#### Fix NA in optional fields
+
+For some fields, such as presence of pool or garage, an NA is an acceptable value in that it signifies the lack of the presence of the particular characteristic.  This NA, however, is troublesome in the later analytical steps.  Here we turn these NAs into 0s. 
+
+    naFields <- list('HasPool', 'HasGarage', 'HasAirConditioning', 'HasFireplace')
+    for(naF in 1:length(naFields)){
+      naX <- which(is.na(allTrans[ ,naFields[[naF]]]))
+      allTrans[naX, naFields[[naF]]] <- 0
+    }
+  
+####  Remove duplicates
+
+We check to see if there are duplicate observations, identified here as a property transacting more than once on the same day for the same type of transaction (sale or rental). We create a new field aggregating those three features, remove all observations that are duplicated in that field and then remove the field itself.  
+
+    allTrans$dUID <- paste0(allTrans$AddressID,"..", allTrans$transDate, "..", allTrans$transType)
+    allTrans <- subset(allTrans, !duplicated(dUID))
+    allTrans$dUID <- NULL  
+
+#### Apply spatial information
+
+Here we apply spatial aggregation information to each observations.  More specifically, using the ``rgeos`` libraries spatial analysis capabilities, we spatially join the LGA, SLA1, Suburb and Postcode location to each observation.  
+
+First we must remove all observations that are missing a latitude and longitude.  Normally an operations requiring the removal of observations (rows) would appear in the data cleaning section that follows, however, due to the necessity of this step prior to assigning spatial information it is undertaken here.
+
+    allTrans <- subset(allTrans, !is.na(Property_Latitude) & !is.na(Property_Longitude))
+  
+Then we convert to a `SpatialPointsDataFrame`.
+
+    allSP <- SpatialPointsDataFrame(coords=cbind(allTrans$Property_Longitude,
+                                               allTrans$Property_Latitude),
+                                    data=allTrans)
+  
+Using the ``over()`` command we then add the postcode designation from the postcode shapefile to the observations.
+
+    spJoin <- over(allSP, postCodeShp)
+    allSP@data$postCode <- as.character(spJoin$POA_2006)
+
+Then the suburb, also removing a number of the trailing '- BAL' designations that are found in the shapefile.
+
+    spJoin <- over(allSP, subShp)
+    allSP@data$suburb <- as.character(spJoin$NAME_2006)
+    allSP@data$suburb <- gsub(' - Bal', '', allSP@data$suburb)
+  
+Then the SLA1...
+
+    spJoin <- over(allSP, sla1Shp)
+    allSP@data$sla1 <- as.character(spJoin$SLA_NAME11)
+  
+And, finally, the LGA.
+
+    spJoin <- over(allSP, lgaShp)
+    allSP@data$lga <- as.character(spJoin$LGA_NAME11)
+    
+We finish by converting the data back to a non-spatal data frame.    
+
+    allTrans <- allSP@data
+    
+#### Add space syntax fields
+
+In this step we add the space syntax measurements to the data.  These are measurements of the locations street configurations and overall integration in the larger street network.  Essentially measures of both centrality as well as local network availability.  These metrics are calculated outside of this session in a geographic information system.
+
+The first process here involves trimming out the many possible space syntax metric to one of choice (at the 2500m level) and one of integration (at the 25000m level).
+
+    ssTrim <- ssData[, c('AddressID', 'L_choice_2500', 
+                           'T64_Integration_Segment_Length_Wgt_R25000_metric')]
+    names(ssTrim)[2:3] <- c('ssChoice', 'ssInteg')
+
+We then attach these value to the transaction observations.
+
+    allTrans$ssChoice <- ssTrim$ssChoice[match(allTrans$AddressID, ssTrim$AddressID)]
+    allTrans$ssInteg <- ssTrim$ssInteg[match(allTrans$AddressID, ssTrim$AddressID)]
+
+As temporary objects are large, we clean a number of them from working memory at this juncture.
+
+    rm(rawRents); rm(rawSales); rm(spJoin)
+    rm(ssData, ssTrim); gc()
+
+### Data Cleaning
+
+This section deals with the removal of observations from the dataset based on the value in one or more of the field from either the raw data or created/appended above.  
+
+#### Filter by property type
+
+We begin by removing all observation that are not designated as a house or unit (apartment).  This includes terraces, townhomes, villas and duplexes.
+
+    allTrans <- subset(allTrans, PropertyType == 'House' | PropertyType == 'Unit')
+
+#### Missing values
+
+We start by removing all observations with a missing or 0-value in a required field.  Transaction value (sale price or rental amount) is first. 
+
+    allTrans <- subset(allTrans, !is.na(transValue))
+    allTrans <- subset(allTrans, transValue  != 0)
+
+Then those observations missing critical home characteristics such as lot size, bedroom or bathroom counts. 
+
+    allTrans <- subset(allTrans, !is.na(AreaSize))
+    allTrans <- subset(allTrans, !is.na(Bedrooms))
+    allTrans <- subset(allTrans, !is.na(Baths))
+
+And, finally, those missing space syntax values.
+
+    allTrans <- subset(allTrans, !is.na(ssChoice))
+    allTrans <- subset(allTrans, !is.na(ssInteg))
+  
+#### Remove suspect values/outliers
+  
+In this we remove observation with field values that are either unlikely to be proper values and/or relate to homes that are either extremely small/poor or large/opulent.  These homes do not represent the mass market, trends for which we are interested in estimating.  It is true that these cutoff points are somewhat subjective, however, they have been selected after manually examining the data and choosing points that appropriate either in terms of real world reality (no bathrooms) or natural breaks (such as 8 bedrooms). Note that for bedrooms we have two lower limits.  The first, 0, applies to apartment which could be a studio.  The second, 1, is applied to houses. Also note that there are separate sets of transaction value limits for rentals and sales. Finally, note that rents are quoted by the week (though paid by the month) in Melbourne.   
+  
+First we set the upper and lower limits. 
+
+    areaLimits <- c(40, 25000)
+    bathLimits <- c(1, 8)
+    bedLimits <- c(0, 1, 8) 
+    rentLimits <- c(125, 2500)
+    saleLimits <- c(150000, 4000000)
+
+Then we remove by those limits that apply to all observations (lot size and bathrooms)
+
+    allTrans <- subset(allTrans, AreaSize >= areaLimits[1] & 
+                       AreaSize <= areaLimits[2])
+    allTrans <- subset(allTrans, Baths >= bathLimits[1] & 
+                       Baths <= bathLimits[2])
+
+Next, we remove those units and house that don't meet their respective limits. 
+
+    allTrans <- subset(allTrans, Bedrooms <= bedLimits[3])
+    allTransU <- subset(allTrans, PropertyType == 'Unit' & 
+                        Bedrooms >= bedLimits[1])
+    allTransH <- subset(allTrans, PropertyType == 'House' & 
+                        Bedrooms >= bedLimits[2])
+    allTrans <- rbind(allTransH, allTransU)
+
+Finally, we split the sales and rentals, apply each transaction value filter and then recombine.
+
+    xSales <- subset(allTrans, transType == 'sale')
+    xRentals <- subset(allTrans, transType == 'rent')
+    xSales <- subset(xSales, transValue >= saleLimits[1] & 
+                       transValue <= saleLimits[2])
+    xRentals <- subset(xRentals, transValue >= rentLimits[1] & 
+                       transValue <= rentLimits[2])
+    allTrans <- rbind(xSales, xRentals)
+
+Again, we clean up the memory
+
+    rm(xSales); rm(xRentals); gc()
+  

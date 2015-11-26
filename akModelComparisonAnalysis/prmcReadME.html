@@ -112,6 +112,139 @@ postGeoFile &lt;- 'Vic_PostCodes.shp'</code></pre>
 <div id="data-management" class="section level3">
 <h3>Data management</h3>
 <p>The next step is data management. In this context data management involvees the fixing of data errors and formats, the combination of information from other table and sources, the removal of duplicate observations and the removal of non-essential fields. No observations are removed at this step as these procedures are saved for the <em>“Data Cleaning”</em> section that follows.</p>
+<div id="create-unique-identifiers" class="section level4">
+<h4>Create unique identifiers</h4>
+<p>We begin by creating a unique identification number for each sale and rental observation</p>
+<pre><code>rawSales$UID &lt;- paste0('sale', 1:nrow(rawSales))
+rawRents$UID &lt;- paste0('rental', 1:nrow(rawRents))</code></pre>
+</div>
+<div id="fix-and-add-fields" class="section level4">
+<h4>Fix and add fields</h4>
+<p>Date formats throughout the data are not consistent. Here we employ the **fixAPMDates()* custom function to standardize all of the data formats. Again, see the end of the document for explanation of the custom functions.</p>
+<pre><code>rawSales$transDate &lt;- fixAPMDates(rawSales$FinalResultEventDate)
+rawRents$transDate &lt;- fixAPMDates(rawRents$EventDate)</code></pre>
+<p>Transaction values for rentals and sales are held in different fields in the raw data. Here they are tranformed into a single, identically names field.</p>
+<pre><code>rawSales$transValue &lt;- as.numeric(rawSales$FinalResultEventPrice)
+rawRents$transValue &lt;- as.numeric(rawRents$EventPrice)</code></pre>
+<p>We then add an identifier as to the type of transaction (prior to combining the two datasets.)</p>
+<pre><code>rawSales$transType &lt;- 'sale'  
+rawRents$transType &lt;- 'rent'</code></pre>
+</div>
+<div id="fix-latitude-and-longitude-fields" class="section level4">
+<h4>Fix latitude and longitude fields</h4>
+<p>Two separate sets of latitude and longitude values are given, one set for the property itslef and another for the centroid of the street that it fronts. In a small number of cases no property specific lat/long values are available but street centroid lat/longs are. To avoid having to filter out the transaction with the missing lat/long values we apply the street centroid value in this small number of cases.</p>
+<pre><code>sXY &lt;- which(is.na(rawSales$Property_Latitude) | is.na(rawSales$Property_Longitude))
+rXY &lt;- which(is.na(rawRents$Property_Latitude) | is.na(rawRents$Property_Longitude))
+rawSales$Property_Latitude[sXY] &lt;- rawSales$Street_Centroid_Latitude[sXY]
+rawSales$Property_Longitude[sXY] &lt;- rawSales$Street_Centroid_Longitude[sXY]
+rawRents$Property_Latitude[rXY] &lt;- rawRents$Street_Centroid_Latitude[rXY]
+rawRents$Property_Longitude[rXY] &lt;- rawRents$Street_Centroid_Longitude[rXY]</code></pre>
+</div>
+<div id="trim-fields-and-combine-datasets" class="section level4">
+<h4>Trim fields and combine datasets</h4>
+<p>Next we remove unnecessary data fields and combine the sales and rental datasets into the <strong>allTrans</strong> object.</p>
+<pre><code>columnList &lt;- c('UID', 'GeographicalID', 'EventID', 'AddressID', 'FlatNumber', 
+                'transDate', 'transValue', 'transType',
+                'PropertyType', 'Property_Latitude', 'Property_Longitude',
+                'AreaSize', 'Bedrooms', 'Baths', 'Parking','HasFireplace',
+                'HasPool', 'HasGarage', 'HasAirConditioning')
+allTrans &lt;- rbind(rawSales[ ,columnList], rawRents[ ,columnList])</code></pre>
+</div>
+<div id="build-time-specific-fields" class="section level4">
+<h4>Build time specific fields</h4>
+<p>Here we add a variety of fields dealing with the time of the transaction. First we add the sales year.</p>
+<pre><code>allTrans$transYear &lt;- as.numeric(substr(allTrans$transDate, 1, 4))</code></pre>
+<p>Then the month of sale, where June 2010 is equal to month 1</p>
+<pre><code>allTrans$transMonth &lt;- ((12 * (allTrans$transYear - 2010)) + 
+                          as.numeric(substr(allTrans$transDate, 6, 7))) - 5</code></pre>
+<p>Next days, where June 1st 2010 is equal to day 1</p>
+<pre><code>allTrans$transDays &lt;- (as.numeric(allTrans$transDate - as.Date('2010-05-31')))</code></pre>
+<p>And, finally, quarter where the third quarter of 2010 is equal to 1 (plus the month of June)</p>
+<pre><code>allTrans$transQtr &lt;- ((allTrans$transMonth - 1) %/% 3) + 1</code></pre>
+</div>
+<div id="fix-na-in-optional-fields" class="section level4">
+<h4>Fix NA in optional fields</h4>
+<p>For some fields, such as presence of pool or garage, an NA is an acceptable value in that it signifies the lack of the presence of the particular characteristic. This NA, however, is troublesome in the later analytical steps. Here we turn these NAs into 0s.</p>
+<pre><code>naFields &lt;- list('HasPool', 'HasGarage', 'HasAirConditioning', 'HasFireplace')
+for(naF in 1:length(naFields)){
+  naX &lt;- which(is.na(allTrans[ ,naFields[[naF]]]))
+  allTrans[naX, naFields[[naF]]] &lt;- 0
+}</code></pre>
+</div>
+<div id="remove-duplicates" class="section level4">
+<h4>Remove duplicates</h4>
+<p>We check to see if there are duplicate observations, identified here as a property transacting more than once on the same day for the same type of transaction (sale or rental). We create a new field aggregating those three features, remove all observations that are duplicated in that field and then remove the field itself.</p>
+<pre><code>allTrans$dUID &lt;- paste0(allTrans$AddressID,&quot;..&quot;, allTrans$transDate, &quot;..&quot;, allTrans$transType)
+allTrans &lt;- subset(allTrans, !duplicated(dUID))
+allTrans$dUID &lt;- NULL  </code></pre>
+</div>
+<div id="apply-spatial-information" class="section level4">
+<h4>Apply spatial information</h4>
+<p>Here we apply spatial aggregation information to each observations. More specifically, using the <code>rgeos</code> libraries spatial analysis capabilities, we spatially join the LGA, SLA1, Suburb and Postcode location to each observation.</p>
+<p>First we must remove all observations that are missing a latitude and longitude. Normally an operations requiring the removal of observations (rows) would appear in the data cleaning section that follows, however, due to the necessity of this step prior to assigning spatial information it is undertaken here.</p>
+<pre><code>allTrans &lt;- subset(allTrans, !is.na(Property_Latitude) &amp; !is.na(Property_Longitude))</code></pre>
+<p>Then we convert to a <code>SpatialPointsDataFrame</code>.</p>
+<pre><code>allSP &lt;- SpatialPointsDataFrame(coords=cbind(allTrans$Property_Longitude,
+                                           allTrans$Property_Latitude),
+                                data=allTrans)</code></pre>
+<p>Using the <code>over()</code> command we then add the postcode designation from the postcode shapefile to the observations.</p>
+<pre><code>spJoin &lt;- over(allSP, postCodeShp)
+allSP@data$postCode &lt;- as.character(spJoin$POA_2006)</code></pre>
+<p>Then the suburb, also removing a number of the trailing ‘- BAL’ designations that are found in the shapefile.</p>
+<pre><code>spJoin &lt;- over(allSP, subShp)
+allSP@data$suburb &lt;- as.character(spJoin$NAME_2006)
+allSP@data$suburb &lt;- gsub(' - Bal', '', allSP@data$suburb)</code></pre>
+<p>Then the SLA1…</p>
+<pre><code>spJoin &lt;- over(allSP, sla1Shp)
+allSP@data$sla1 &lt;- as.character(spJoin$SLA_NAME11)</code></pre>
+<p>And, finally, the LGA.</p>
+<pre><code>spJoin &lt;- over(allSP, lgaShp)
+allSP@data$lga &lt;- as.character(spJoin$LGA_NAME11)</code></pre>
+<p>We finish by converting the data back to a non-spatal data frame.</p>
+<pre><code>allTrans &lt;- allSP@data</code></pre>
+</div>
+<div id="add-space-syntax-fields" class="section level4">
+<h4>Add space syntax fields</h4>
+<p>In this step we add the space syntax measurements to the data. These are measurements of the locations street configurations and overall integration in the larger street network. Essentially measures of both centrality as well as local network availability. These metrics are calculated outside of this session in a geographic information system.</p>
+<p>The first process here involves trimming out the many possible space syntax metric to one of choice (at the 2500m level) and one of integration (at the 25000m level).</p>
+<pre><code>ssTrim &lt;- ssData[, c('AddressID', 'L_choice_2500', 
+                       'T64_Integration_Segment_Length_Wgt_R25000_metric')]
+names(ssTrim)[2:3] &lt;- c('ssChoice', 'ssInteg')</code></pre>
+<p>We then attach these value to the transaction observations.</p>
+<pre><code>allTrans$ssChoice &lt;- ssTrim$ssChoice[match(allTrans$AddressID, ssTrim$AddressID)]
+allTrans$ssInteg &lt;- ssTrim$ssInteg[match(allTrans$AddressID, ssTrim$AddressID)]</code></pre>
+<p>As temporary objects are large, we clean a number of them from working memory at this juncture.</p>
+<pre><code>rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); 
+rm(ssData, ssTrim); gc()</code></pre>
+</div>
+</div>
+<div id="data-cleaning" class="section level3">
+<h3>Data Cleaning</h3>
+<p>This section deals with the removal of observations from the dataset based on the value in one or more of the field from either the raw data or created/appended above.</p>
+<div id="missing-values" class="section level4">
+<h4>Missing values</h4>
+<p>We start by removing all observations with a missing or 0-value in a required field. Transaction value (sale price or rental amount) is first.</p>
+<pre><code>allTrans &lt;- subset(allTrans, !is.na(transValue))
+allTrans &lt;- subset(allTrans, transValue  != 0)</code></pre>
+<p>Then those observations missing critical home characteristics such as lot size, bedroom or bathroom counts.</p>
+<pre><code>allTrans &lt;- subset(allTrans, !is.na(AreaSize))
+allTrans &lt;- subset(allTrans, !is.na(Bedrooms))
+allTrans &lt;- subset(allTrans, !is.na(Baths))</code></pre>
+<p>And, finally, those missing space syntax values.</p>
+<pre><code>allTrans &lt;- subset(allTrans, !is.na(ssChoice))
+allTrans &lt;- subset(allTrans, !is.na(ssInteg))</code></pre>
+</div>
+<div id="remove-suspect-valuesoutliers" class="section level4">
+<h4>Remove suspect values/outliers</h4>
+<p>In this we remove observation with field values that are either unlikely to be proper values and/or relate to homes that are either extremely small/poor or large/opulent. These homes do not represent the mass market, trends for which we are interested in estimating. It is true that these cutoff points are somewhat subjective, however, they have been selected after manually examining the data and choosing points that appropriate either in terms of real world reality (no bathrooms) or natural breaks (such as 8 bedrooms). Note that for bedrooms we have two lower limits. The first, 0, applies to apartment which could be a studio. The second, 1, is applied to houses. Also note that there are separate sets of transaction value limits for rentals and sales. Finally, note that rents are quoted by the week (though paid by the month) in Melbourne.</p>
+<p>First we set the upper and lower limits.</p>
+<pre><code>areaLimits &lt;- c(40, 25000)
+bathLimits &lt;- c(1, 8)
+bedLimits &lt;- c(0, 1, 8) 
+rentLimits &lt;- c(125, 2500)
+saleLimits &lt;- c(150000, 4000000)</code></pre>
+<p>Then we r<br /> # Remove by characteristic allTrans &lt;- subset(allTrans, AreaSize &gt;= areaLimits[1] &amp; AreaSize &lt;= areaLimits[2]) allTrans &lt;- subset(allTrans, Bedrooms &gt;= bedLimits[1] &amp; Bedrooms &lt;= bedLimits[2]) allTrans &lt;- subset(allTrans, Baths &gt;= bathLimits[1] &amp; Baths &lt;= bathLimits[2])</p>
+</div>
 </div>
 
 

@@ -214,13 +214,18 @@ names(ssTrim)[2:3] &lt;- c('ssChoice', 'ssInteg')</code></pre>
 <pre><code>allTrans$ssChoice &lt;- ssTrim$ssChoice[match(allTrans$AddressID, ssTrim$AddressID)]
 allTrans$ssInteg &lt;- ssTrim$ssInteg[match(allTrans$AddressID, ssTrim$AddressID)]</code></pre>
 <p>As temporary objects are large, we clean a number of them from working memory at this juncture.</p>
-<pre><code>rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); 
+<pre><code>rm(rawRents); rm(rawSales); rm(spJoin)
 rm(ssData, ssTrim); gc()</code></pre>
 </div>
 </div>
 <div id="data-cleaning" class="section level3">
 <h3>Data Cleaning</h3>
 <p>This section deals with the removal of observations from the dataset based on the value in one or more of the field from either the raw data or created/appended above.</p>
+<div id="filter-by-property-type" class="section level4">
+<h4>Filter by property type</h4>
+<p>We begin by removing all observation that are not designated as a house or unit (apartment). This includes terraces, townhomes, villas and duplexes.</p>
+<pre><code>allTrans &lt;- subset(allTrans, PropertyType == 'House' | PropertyType == 'Unit')</code></pre>
+</div>
 <div id="missing-values" class="section level4">
 <h4>Missing values</h4>
 <p>We start by removing all observations with a missing or 0-value in a required field. Transaction value (sale price or rental amount) is first.</p>
@@ -243,7 +248,75 @@ bathLimits &lt;- c(1, 8)
 bedLimits &lt;- c(0, 1, 8) 
 rentLimits &lt;- c(125, 2500)
 saleLimits &lt;- c(150000, 4000000)</code></pre>
-<p>Then we r<br /> # Remove by characteristic allTrans &lt;- subset(allTrans, AreaSize &gt;= areaLimits[1] &amp; AreaSize &lt;= areaLimits[2]) allTrans &lt;- subset(allTrans, Bedrooms &gt;= bedLimits[1] &amp; Bedrooms &lt;= bedLimits[2]) allTrans &lt;- subset(allTrans, Baths &gt;= bathLimits[1] &amp; Baths &lt;= bathLimits[2])</p>
+<p>Then we remove by those limits that apply to all observations (lot size and bathrooms)</p>
+<pre><code>allTrans &lt;- subset(allTrans, AreaSize &gt;= areaLimits[1] &amp; 
+                   AreaSize &lt;= areaLimits[2])
+allTrans &lt;- subset(allTrans, Baths &gt;= bathLimits[1] &amp; 
+                   Baths &lt;= bathLimits[2])</code></pre>
+<p>Next, we remove those units and house that don’t meet their respective limits.</p>
+<pre><code>allTrans &lt;- subset(allTrans, Bedrooms &lt;= bedLimits[3])
+allTransU &lt;- subset(allTrans, PropertyType == 'Unit' &amp; 
+                    Bedrooms &gt;= bedLimits[1])
+allTransH &lt;- subset(allTrans, PropertyType == 'House' &amp; 
+                    Bedrooms &gt;= bedLimits[2])
+allTrans &lt;- rbind(allTransH, allTransU)</code></pre>
+<p>Finally, we split the sales and rentals, apply each transaction value filter and then recombine.</p>
+<pre><code>xSales &lt;- subset(allTrans, transType == 'sale')
+xRentals &lt;- subset(allTrans, transType == 'rent')
+xSales &lt;- subset(xSales, transValue &gt;= saleLimits[1] &amp; 
+                   transValue &lt;= saleLimits[2])
+xRentals &lt;- subset(xRentals, transValue &gt;= rentLimits[1] &amp; 
+                   transValue &lt;= rentLimits[2])
+allTrans &lt;- rbind(xSales, xRentals)</code></pre>
+<p>Again, we clean up the memory</p>
+<pre><code>rm(xSales); rm(xRentals); gc()</code></pre>
+</div>
+<div id="trim-shapefiles-to-extent-of-sales" class="section level4">
+<h4>Trim shapefiles to extent of sales</h4>
+<p>Each of the raw shapefiles for the four geographic aggregations contains all areas for the State of Victoria. In this step we use the sales and rental observations to limit the shapefiles to the areas covered by the transactional observations.</p>
+<p>First with trim the suburbs</p>
+<pre><code>studySuburbs &lt;- subShp[(which(subShp@data$NAME_2006 %in% 
+                         names(table(allTrans$suburb)))), ]</code></pre>
+<p>Then the post codes</p>
+<pre><code>studyPostCodes &lt;- postCodeShp[(which(postCodeShp@data$POA_2006 %in% 
+                               names(table(allTrans$postCode)))), ]</code></pre>
+<p>Then the SLA1s</p>
+<pre><code>studySLA1s &lt;- sla1Shp[(which(sla1Shp@data$SLA_NAME11 %in% 
+                              names(table(allTrans$sla1)))), ]</code></pre>
+<p>And finally the LGAs</p>
+<pre><code>studyLGAs &lt;- lgaShp[(which(lgaShp@data$LGA_NAME11 %in% 
+                              names(table(allTrans$lga)))), ]</code></pre>
+</div>
+<div id="set-space-time-limits-to-geographies" class="section level4">
+<h4>Set space-time limits to geographies</h4>
+<p>Across all of the future methods used to analyze this data, it is important that sample sizes in each space-time unit of analysis are large enough to limit outlying observations. In other words, if we are analyzing the median rental yield in a given suburb quarterly that each suburb have at least X number of observation per quarter. We have done this analysis ahead of time and have labeled the transaction such that a field will indicate whether each transaction is valid for each space-time breakdown. Examples of space-time breakdowns include postcode by year, suburb by quarter, etc. A custom function, <strong>prrGeoLimit()</strong> is used to make the calculations.</p>
+<p>We begin by making the calculations for all geographies at the year time period</p>
+<pre><code>yearThres &lt;- mapply(prrGeoLimit, 
+                    locField=c('postCode', 'sla1', 'suburb', 'lga'), 
+                    MoreArgs=list(timeField='transYear',
+                                  transData=allTrans,
+                                  geoTempLimit=3))</code></pre>
+<p>And then add names to the fields</p>
+<pre><code>names(yearThres) &lt;- paste0(rep(&quot;YT_&quot;),
+                           rep(c('both', 'house', 'unit', 'either'), 4),
+                           rep(&quot;_&quot;, 16),
+                           c(rep('postCode',4), rep('sla1',4),
+                             rep('suburb',4), rep('lga', 4)))</code></pre>
+<p>We then do the same for all geographies quarterly</p>
+<pre><code>qtrThres &lt;- mapply(prrGeoLimit, 
+                   locField=c('postCode', 'sla1', 'suburb', 'lga'), 
+                   MoreArgs=list(timeField='transQtr',
+                                 transData=allTrans,
+                                 geoTempLimit=3))</code></pre>
+<p>And adding the names</p>
+<pre><code>names(qtrThres) &lt;- paste0(rep(&quot;QT_&quot;),
+                          rep(c('both', 'house', 'unit', 'either'), 4),
+                          rep(&quot;_&quot;, 16),
+                          c(rep('postCode',4), rep('sla1',4),
+                          rep('suburb',4), rep('lga', 4))) 
+                          
+                          
+                          </code></pre>
 </div>
 </div>
 

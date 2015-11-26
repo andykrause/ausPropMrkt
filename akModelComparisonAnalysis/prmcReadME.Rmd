@@ -293,4 +293,47 @@ And finally the LGAs
   
 #### Set space-time limits to geographies
 
+Across all of the future methods used to analyze this data, it is important that sample sizes in each space-time unit of analysis are large enough to limit outlying observations.  In other words, if we are analyzing the median rental yield in a given suburb quarterly that each suburb have at least X number of observation per quarter. These breakdowns also cover the different use-type analyses we intend to do (both uses, house only, unit only and either) We have done this analysis ahead of time and have labeled the transaction such that a field will indicate whether each transaction is valid for each space-time breakdown.  Examples of space-time breakdowns include postcode by year all, suburb by quarter unit only, etc.  A custom function, **prrGeoLimit()** is used to make the calculations.
+
+We begin by making the calculations for all geographies at the year time period
+
+    yearThres <- mapply(prrGeoLimit, 
+                        locField=c('postCode', 'sla1', 'suburb', 'lga'), 
+                        MoreArgs=list(timeField='transYear',
+                                      transData=allTrans,
+                                      geoTempLimit=3))
+And then add names to the fields
+
+    names(yearThres) <- paste0(rep("YT_"),
+                               rep(c('both', 'house', 'unit', 'either'), 4),
+                               rep("_", 16),
+                               c(rep('postCode',4), rep('sla1',4),
+                                 rep('suburb',4), rep('lga', 4)))
   
+We then do the same for all geographies quarterly  
+
+    qtrThres <- mapply(prrGeoLimit, 
+                       locField=c('postCode', 'sla1', 'suburb', 'lga'), 
+                       MoreArgs=list(timeField='transQtr',
+                                     transData=allTrans,
+                                     geoTempLimit=3))
+  
+And adding the names
+
+    names(qtrThres) <- paste0(rep("QT_"),
+                              rep(c('both', 'house', 'unit', 'either'), 4),
+                              rep("_", 16),
+                              c(rep('postCode',4), rep('sla1',4),
+                              rep('suburb',4), rep('lga', 4))) 
+                              
+Following this, we use the custom function, **applyThres()** to append the designations to each of the observations.
+
+    allTrans <- applyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
+    allTrans <- applyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
+    allTrans <- applyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
+    allTrans <- applyThres(yearThres[13:16], allTrans, 'YT', 'lga')
+    allTrans <- applyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
+    allTrans <- applyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
+    allTrans <- applyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
+    allTrans <- applyThres(qtrThres[13:16], allTrans, 'QT', 'lga')                             
+                              

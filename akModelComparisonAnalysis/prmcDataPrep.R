@@ -102,17 +102,11 @@
                             as.numeric(substr(allTrans$transDate, 6, 7))) - 5
     
   # Add a days count
-  allTrans$transDays <- (as.numeric(allTrans$transDate - 
-                                      (min(allTrans$transDate) - 1)))
+  allTrans$transDays <- (as.numeric(allTrans$transDate - as.Date('2010-05-31')))
 
   # Add a quarter count
-  allTrans$transQtr <- (allTrans$transDays %/% 91.25) + 1
-  allTrans$transQtr[allTrans$transQtr == 21] <- 20
+  allTrans$transQtr <- ((allTrans$transMonth - 1) %/% 3) + 1
 
-  # Remove Missing lat/long
-  allTrans <- subset(allTrans, !is.na(Property_Latitude) & 
-                       !is.na(Property_Longitude))
-  
  ## Fix NA Fields
   naFields <- list('HasPool', 'HasGarage', 'HasAirConditioning', 'HasFireplace')
   for(naF in 1:length(naFields)){
@@ -133,6 +127,10 @@
   allTrans$dUID <- NULL
   
  ## Add Spatial Information
+
+  # Remove Missing lat/long
+  allTrans <- subset(allTrans, !is.na(Property_Latitude) & 
+                       !is.na(Property_Longitude))
   
   # Create a spatial points data frame
   allSP <- SpatialPointsDataFrame(coords=cbind(allTrans$Property_Longitude,
@@ -176,10 +174,15 @@
                                            ssTrim$AddressID)]
 
  ## Clean up memory
-  rm(rawRents); rm(rawSales); rm(spJoin); rm(allSP); 
+  rm(rawRents); rm(rawSales); rm(spJoin); 
   rm(ssData, ssTrim); gc()
 
 ### DATA CLEANING --------------------------------------------------------------  
+  
+ ## Remove all non house and units
+  
+  allTrans <- subset(allTrans, PropertyType == 'House' |
+                       PropertyType == 'Unit')
   
  ## Removing missing values  
 
@@ -200,18 +203,24 @@
   
   # Set limits
   areaLimits <- c(40, 25000)
-  bedLimits <- c(1, 8)
   bathLimits <- c(1, 8)
+  bedLimits <- c(0, 1, 8)  # apt limit, then home limit, then all limit
   rentLimits <- c(125, 2500)
   saleLimits <- c(150000, 4000000)
   
   # Remove by characteristic
   allTrans <- subset(allTrans, AreaSize >= areaLimits[1] & 
                        AreaSize <= areaLimits[2])
-  allTrans <- subset(allTrans, Bedrooms >= bedLimits[1] & 
-                       Bedrooms <= bedLimits[2])
   allTrans <- subset(allTrans, Baths >= bathLimits[1] & 
                        Baths <= bathLimits[2])
+  
+  allTrans <- subset(allTrans, Bedrooms <= bedLimits[3])
+  allTransU <- subset(allTrans, PropertyType == 'Unit' & 
+                        Bedrooms >= bedLimits[1])
+  allTransH <- subset(allTrans, PropertyType == 'House' & 
+                        Bedrooms >= bedLimits[2])
+  allTrans <- rbind(allTransH, allTransU)
+  
   
   # Split back out
   xSales <- subset(allTrans, transType == 'sale')

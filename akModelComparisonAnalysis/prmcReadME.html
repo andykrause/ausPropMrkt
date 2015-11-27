@@ -289,7 +289,7 @@ allTrans &lt;- rbind(xSales, xRentals)</code></pre>
 </div>
 <div id="set-space-time-limits-to-geographies" class="section level4">
 <h4>Set space-time limits to geographies</h4>
-<p>Across all of the future methods used to analyze this data, it is important that sample sizes in each space-time unit of analysis are large enough to limit outlying observations. In other words, if we are analyzing the median rental yield in a given suburb quarterly that each suburb have at least X number of observation per quarter. We have done this analysis ahead of time and have labeled the transaction such that a field will indicate whether each transaction is valid for each space-time breakdown. Examples of space-time breakdowns include postcode by year, suburb by quarter, etc. A custom function, <strong>prrGeoLimit()</strong> is used to make the calculations.</p>
+<p>Across all of the future methods used to analyze this data, it is important that sample sizes in each space-time unit of analysis are large enough to limit outlying observations. In other words, if we are analyzing the median rental yield in a given suburb quarterly that each suburb have at least X number of observation per quarter. These breakdowns also cover the different use-type analyses we intend to do (both uses, house only, unit only and either) We have done this analysis ahead of time and have labeled the transaction such that a field will indicate whether each transaction is valid for each space-time breakdown. Examples of space-time breakdowns include postcode by year all, suburb by quarter unit only, etc. A custom function, <strong>prrGeoLimit()</strong> is used to make the calculations.</p>
 <p>We begin by making the calculations for all geographies at the year time period</p>
 <pre><code>yearThres &lt;- mapply(prrGeoLimit, 
                     locField=c('postCode', 'sla1', 'suburb', 'lga'), 
@@ -314,9 +314,19 @@ allTrans &lt;- rbind(xSales, xRentals)</code></pre>
                           rep(&quot;_&quot;, 16),
                           c(rep('postCode',4), rep('sla1',4),
                           rep('suburb',4), rep('lga', 4))) 
-                          
-                          
                           </code></pre>
+<p>Following this, we use the custom function, <strong>applyThres()</strong> to append the designations to each of the observations.</p>
+<pre><code>allTrans &lt;- applyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
+allTrans &lt;- applyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
+allTrans &lt;- applyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
+allTrans &lt;- applyThres(yearThres[13:16], allTrans, 'YT', 'lga')
+allTrans &lt;- applyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
+allTrans &lt;- applyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
+allTrans &lt;- applyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
+allTrans &lt;- applyThres(qtrThres[13:16], allTrans, 'QT', 'lga')      </code></pre>
+<p>Then we write the data out as a .csv and the entire working environment as an R workspace.</p>
+<pre><code>save.image(paste0(dataPath, 'cleanData.RData'))
+write.csv(allTrans, paste0(dataPath, 'cleanData.csv'), row.names=F)</code></pre>
 </div>
 </div>
 

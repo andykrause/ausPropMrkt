@@ -238,7 +238,7 @@
                                          labels=paste0(format(100 *
                                                       (seq(-.02, .06, .02)),
                                                        nsmall=1), "%")) +
-                      scale_y_continuous(limits=c(0, .0092),
+                      scale_y_continuous(limits=c(0, .0098),
                                          breaks=seq(0, .008, .002), 
                                          labels=paste0(format(100 * 
                                                       (seq(0, .008, .002)),

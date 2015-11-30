@@ -25,8 +25,8 @@
 
  ## Set the path to the raw data
 
-  #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
-  dataPath <- "D:/data/research/priceRentMethComp/"
+  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  #dataPath <- "D:/data/research/priceRentMethComp/"
   saleFile <- 'sales10_15.csv'
   rentFile <- 'rents10_15.csv'
   ssFile <- 'allSS.csv'

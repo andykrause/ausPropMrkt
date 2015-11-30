@@ -1366,3 +1366,181 @@ aryWeightUses <- function(hDataW,       # House wgt data from aryAggrMethData
               diff=difData))    
 }
 
+
+prrGetYields <- function(prrObj){
+  
+  mixYields <- prrObj$mix$comp
+  
+  mix <- list(median=subset(mixYields, method=='Median'),
+              impute=subset(mixYields, method=='Impute'),
+              match=subset(mixYields, method=='Match'))
+  
+  houseYields <- subset(prrObj$use$comp, use=='House')
+  
+  house <- list(median=subset(houseYields, method=='Median'),
+                impute=subset(houseYields, method=='Impute'),
+                match=subset(houseYields, method=='Match'))
+  
+  unitYields <- subset(prrObj$use$comp, use=='Unit')
+  
+  unit <- list(median=subset(unitYields, method=='Median'),
+               impute=subset(unitYields, method=='Impute'),
+               match=subset(unitYields, method=='Match'))
+  
+  return(list(mix=mix,
+              house=house,
+              unit=unit))
+  
+}
+
+
+
+ebmWrap <- function(dmData, yieldData, byUse=FALSE, byGeog=FALSE, geoField=NULL){
+  
+  # Small helper function
+  geoCount <- function(x){nrow(rbind.fill(x))}
+  
+  
+  
+  if(byGeog & is.null(geoField)) return(cat('Must specify geoField'))
+  
+  if(byUse){
+    
+    hData <- subset(dmData, PropertyType == 'House')
+    uData <- subset(dmData, PropertyType == 'Unit')
+    
+    
+    if(byGeog){
+      
+      geoListH <- levels(yieldData$house$median$spaceName)
+      geoDataH <- lapply(geoListH, extractGeoData, xData=hData, 
+                         geoField=geoField)
+      
+      hCount <- unlist(lapply(geoDataH, nrow))
+      idH <- which(hCount > 0)
+      
+      geoYieldsH <- lapply(geoListH, extractGeoYields, yieldData=yieldData$house)
+      idYH <- lapply(geoYieldsH, geoCount)
+      idYH <- which(idYH > 0)
+      
+      geoDataH <- geoDataH[idH]
+      geoYieldsH <- geoYieldsH[idH]
+      geoH <- mapply(errorByMethod, mData=geoDataH, yieldData=geoYieldsH)
+      hResults <- rbind.fill(geoH)
+      hResults$use <- 'house'
+      hResults$geog <- geoField
+      
+      geoListU <- levels(yieldData$unit$median$spaceName)
+      geoDataU <- lapply(geoListU, extractGeoData, xData=uData, 
+                         geoField=geoField)
+      uCount <- unlist(lapply(geoDataU, nrow))
+      idU <- which(uCount > 0)
+      geoYieldsU <- lapply(geoListU, extractGeoYields, yieldData=yieldData$unit)
+      idYU <- lapply(geoYieldsU, geoCount)
+      idYU <- which(idYU > 0)
+      
+      idU <- intersect(idU, idYU)
+      
+      geoDataU <- geoDataU[idU]
+      geoYieldsU <- geoYieldsU[idU]
+      geoU <- mapply(errorByMethod, mData=geoDataU, yieldData=geoYieldsU)
+      uResults <- rbind.fill(geoU)
+      uResults$use <- 'unit'
+      uResults$geog <- geoField
+      
+      xResults <- rbind(hResults, uResults)
+      
+    } else {
+      
+      hResults <- errorByMethod(hData, yieldData$house)
+      hResults <- rbind.fill(hResults)
+      hResults$use <- 'house'
+      
+      uResults <- errorByMethod(uData, yieldData$unit)
+      uResults <- rbind.fill(uResults)
+      uResults$use <- 'unit'
+      
+      xResults <- rbind(hResults, uResults)
+      xResults$geog <- 'all'
+    }
+  } else {
+    if(byGeog){
+      geoList <- levels(yieldData$mix$median$spaceName)
+      geoData <- lapply(geoList, extractGeoData, xData=dmData, 
+                        geoField=geoField)
+      geoYields <- lapply(geoList, extractGeoYields, yieldData=yieldData$mix)
+      
+      geo <- mapply(errorByMethod, mData=geoData, yieldData=geoYields)
+      xResults <- rbind.fill(geo)
+      xResults$geog <- geoField
+      
+    } else {
+      xResults <- errorByMethod(dmData, yieldData$mix)
+      xResults <- rbind.fill(xResults)
+      xResults$geog <- 'all'
+    }
+    xResults$use <- 'mix'
+  }
+  
+  return(list(median=subset(xResults, method=='median'),
+              impute=subset(xResults, method=='impute'),
+              match=subset(xResults, method=='match')))  
+}
+
+extractGeoData <- function(geoName, xData, geoField){
+  
+  gData <- xData[,geoField]
+  idx <- which(gData==geoName)
+  return(xData[idx,])
+  
+}
+
+extractGeoYields <- function(geoName, yieldData){
+  
+  gMedian <- subset(yieldData$median, spaceName==geoName)
+  gImpute <- subset(yieldData$impute, spaceName==geoName)
+  gMatch <- subset(yieldData$match, spaceName==geoName)
+  
+  return(list(median=gMedian,
+              impute=gImpute,
+              match=gMatch))
+  
+}
+
+errorByMethod <- function(mData, yieldData){
+  
+  medianError <- calcError(mData, yieldData$median)
+  medianError$method='median'
+  imputeError <- calcError(mData, yieldData$impute)
+  imputeError$method='impute'
+  matchError <- calcError(mData, yieldData$match)
+  matchError$method='match'
+  
+  return(list(median=medianError,
+              impute=imputeError,
+              match=matchError))
+  
+}
+
+
+calcError <- function(mData, yData){
+  
+  sData <- subset(mData, saleTime <= rentTime)
+  rData <- subset(mData, saleTime > rentTime)
+  sData$tType <- 'sale'
+  rData$tType <- 'rent'
+  
+  sData$pYield <- yData$yield[match(sData$saleTime, yData$timeName)]  
+  rData$pYield <- yData$yield[match(rData$saleTime, yData$timeName)]  
+  
+  sData$pValue <- (sData$saleValue * sData$pYield) / 52
+  sData$error <- (sData$rentValue - sData$pValue) / sData$rentValue
+  
+  rData$pValue <- (rData$rentValue * 52) / rData$pYield
+  rData$error <- (rData$saleValue - rData$pValue) / rData$saleValue
+  
+  xData <- rbind(sData[,c('uID', 'tType', 'error')],
+                 rData[,c('uID', 'tType', 'error')])
+  
+  return(xData)
+}

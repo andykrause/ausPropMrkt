@@ -30,7 +30,8 @@
 
  ## Set the path to the data
 
-  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  dataPath <- "D:/Data/Research/priceRentMethComp/"
   subGeoFile <- 'Vic_Suburbs.shp'
   lgaGeoFile <- 'Vic_LGAs.shp'
   sla1GeoFile <- 'Vic_SLA1.shp'

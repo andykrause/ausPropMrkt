@@ -33,8 +33,8 @@
 
  ## Set the path to the data
 
-  #dataPath <- "D:/Data/Research/priceRentMethComp/"
-  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  dataPath <- "D:/Data/Research/priceRentMethComp/"
+  #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
   
 ### Read in and prepare data ---------------------------------------------------------------
   

@@ -106,7 +106,7 @@ dmData$sImpU <- suburbResU$impute$error[match(dmData$uID, suburbResU$impute$uID)
 dmData$sMat <- suburbRes$match$error[match(dmData$uID, suburbRes$match$uID)]
 dmData$sMatU <- suburbResU$match$error[match(dmData$uID, suburbResU$match$uID)]
 
-xRes <- lapply(dmData[,19:36], abs)
+xRes <- lapply(dmData[,18:35], abs)
 
 xMed <- lapply(xRes, median, na.rm=TRUE)
 xxMed <- as.matrix(unlist(xMed))

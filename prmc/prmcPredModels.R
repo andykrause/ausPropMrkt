@@ -6,38 +6,34 @@
 
 ### Preliminary Commands -------------------------------------------------------
 
-## Load Libraries
+ ## Load Libraries
 
-library(plyr)
-library(dplyr)
-library(ggplot2)
-library(reshape2)
-library(stringr)
-library(maptools)
-library(sp)
-library(rgeos)
-library(grid)
+  library(plyr)
+  library(dplyr)
+  library(ggplot2)
+  library(reshape2)
+  library(stringr)
+  library(maptools)
+  library(sp)
+  library(rgeos)
+  library(grid)
 
-## Source Files
+ ## Source Files
 
-# File containing function for working with prr and APM data
-source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-              'master/prrFunctions.R'))
-
-# File containing function for analyzing data
-source(paste0('https://raw.githubusercontent.com/andykrause/',
-              'dataAnalysisTools/master/stShardFunctions.R'))
-
-
+  # File containing function for working with prr and APM data
+  source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                'master/prrFunctions.R'))
+  
 ### Load Data ------------------------------------------------------------------  
 
  ## Set the path to the data
 
-  dataPath <- "D:/Data/Research/priceRentMethComp/"
+  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  #dataPath <- "D:/data/research/priceRentMethComp/"
 
  ## Load in saved workspace
-
-  load(paste0(dataPath, 'vizResults.RData'))
+  
+  load(paste0(dataPath, 'analysisResults.RData'))
 
 ### Create and extract necessary data ------------------------------------------
   
@@ -125,7 +121,7 @@ source(paste0('https://raw.githubusercontent.com/andykrause/',
 
 ### Save workspace -------------------------------------------------------------
 
-  save.image(paste0(dataPath, 'predModelResults.RData'))
+  save(dmData, yMed, yHR, file=paste0(dataPath, 'predModelResults.RData'))
   
 
 

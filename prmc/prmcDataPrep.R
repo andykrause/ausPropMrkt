@@ -288,16 +288,16 @@
  ## Add designators to transactions
   
   # Yearly thresholds
-  allTrans <- applyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
-  allTrans <- applyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
-  allTrans <- applyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
-  allTrans <- applyThres(yearThres[13:16], allTrans, 'YT', 'lga')
+  allTrans <- prrApplyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
+  allTrans <- prrApplyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
+  allTrans <- prrApplyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
+  allTrans <- prrApplyThres(yearThres[13:16], allTrans, 'YT', 'lga')
   
   # Quarterly thresholds
-  allTrans <- applyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
-  allTrans <- applyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
-  allTrans <- applyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
-  allTrans <- applyThres(qtrThres[13:16], allTrans, 'QT', 'lga')
+  allTrans <- prrApplyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
+  allTrans <- prrApplyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
+  allTrans <- prrApplyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
+  allTrans <- prrApplyThres(qtrThres[13:16], allTrans, 'QT', 'lga')
   
  ## TODO:  Save for combining neighboring localities potential
 

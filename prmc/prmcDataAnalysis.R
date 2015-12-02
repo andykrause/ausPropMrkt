@@ -56,20 +56,20 @@
  ## Metro Analysis
 
   # Metro 
-  mmMetro <- aryStsGeoWrap(stsData = allTrans,
+  mmMetro <- prrStsGeoWrap(stsData = allTrans,
                            metric=c('transValue', 'transValue'),
                            spaceField='all', timeField='transQtr',
                            defDim='time', stsLimit=3, 
                            calcs=list(median='median'))
   
   # Metro by Use
-  mmMetroH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House',],
+  mmMetroH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House',],
                             metric=c('transValue', 'transValue'),
                             spaceField='all', timeField='transQtr',
                             defDim='time', stsLimit=3, 
                             calcs=list(median='median'))
   
-  mmMetroU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit',],
+  mmMetroU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit',],
                             metric=c('transValue', 'transValue'),
                             spaceField='all', timeField='transQtr',
                             defDim='time', stsLimit=3, 
@@ -78,20 +78,20 @@
  ## At LGA Level
   
   # All Uses
-  mmLga<- aryStsGeoWrap(stsData = allTrans,
+  mmLga<- prrStsGeoWrap(stsData = allTrans,
                         metric=c('transValue', 'transValue'),
                         spaceField='lga', timeField='transQtr',
                         defDim='time', stsLimit=3, 
                         calcs=list(median='median'))
   
   # By Use
-  mmLgaH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+  mmLgaH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
                           metric=c('transValue', 'transValue'),
                           spaceField='lga', timeField='transQtr',
                           defDim='time', stsLimit=3, 
                           calcs=list(median='median'))
   
-  mmLgaU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+  mmLgaU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
                           metric=c('transValue', 'transValue'),
                           spaceField='lga', timeField='transQtr',
                           defDim='time', stsLimit=3, 
@@ -100,20 +100,20 @@
  ## At SLA1 Level
   
   # All Uses  
-  mmSla <- aryStsGeoWrap(stsData = allTrans,
+  mmSla <- prrStsGeoWrap(stsData = allTrans,
                          metric=c('transValue', 'transValue'),
                          spaceField='sla1', timeField='transQtr',
                          defDim='time', stsLimit=3, 
                          calcs=list(median='median'))
   
   # By Use
-  mmSlaH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+  mmSlaH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
                           metric=c('transValue', 'transValue'),
                           spaceField='sla1', timeField='transQtr',
                           defDim='time', stsLimit=3, 
                           calcs=list(median='median'))
   
-  mmSlaU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+  mmSlaU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
                           metric=c('transValue', 'transValue'),
                           spaceField='sla1', timeField='transQtr',
                           defDim='time', stsLimit=3, 
@@ -122,20 +122,20 @@
  ## At Suburb Level
   
   # All Uses  
-  mmSuburb <- aryStsGeoWrap(stsData = allTrans,
+  mmSuburb <- prrStsGeoWrap(stsData = allTrans,
                             metric=c('transValue', 'transValue'),
                             spaceField='suburb', timeField='transQtr',
                             defDim='time', stsLimit=3, 
                             calcs=list(median='median'))
   
   # By Use
-  mmSuburbH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+  mmSuburbH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
                              metric=c('transValue', 'transValue'),
                              spaceField='suburb', timeField='transQtr',
                              defDim='time', stsLimit=3, 
                              calcs=list(median='median'))
 
-  mmSuburbU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+  mmSuburbU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
                              metric=c('transValue', 'transValue'),
                              spaceField='suburb', timeField='transQtr',
                              defDim='time', stsLimit=3, 
@@ -144,20 +144,20 @@
   ## At PostCode Level
   
   # All Uses   
-  mmPostcode <- aryStsGeoWrap(stsData = allTrans,
+  mmPostcode <- prrStsGeoWrap(stsData = allTrans,
                               metric=c('transValue', 'transValue'),
                               spaceField='postCode', timeField='transQtr',
                               defDim='time', stsLimit=3, 
                               calcs=list(median='median'))
   
   # by Use   
-  mmPostcodeH <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+  mmPostcodeH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
                                metric=c('transValue', 'transValue'),
                                spaceField='postCode', timeField='transQtr',
                                defDim='time', stsLimit=3, 
                                calcs=list(median='median'))
   # All Uses   
-  mmPostcodeU <- aryStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+  mmPostcodeU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
                                metric=c('transValue', 'transValue'),
                                spaceField='postCode', timeField='transQtr',
                                defDim='time', stsLimit=3, 
@@ -322,7 +322,7 @@
   
  ## Create data
   
-  dmData <- arySaleRentMatch(sales=allTrans[allTrans$transType=='sale',], 
+  dmData <- prrSaleRentMatch(sales=allTrans[allTrans$transType=='sale',], 
                              rentals=allTrans[allTrans$transType=='rent',],
                              matchField='AddressID', saleField='transValue',
                              rentField='transValue', timeField='transQtr')
@@ -471,7 +471,7 @@
                     ir=list(all=irMetro, house=irMetroH, unit=irMetroU),
                     dm=list(all=dmMetro, house=dmMetroH, unit=dmMetroU))
 
-  metroData <- aryAggrGeoData(metroList, indexList)
+  metroData <- prrAggrGeoData(metroList, indexList)
   
  ## LGA  
   
@@ -479,7 +479,7 @@
                   ir=list(all=irLga, house=irLgaH, unit=irLgaU),
                   dm=list(all=dmLga, house=dmLgaH, unit=dmLgaU))
   
-  lgaData <- aryAggrGeoData(lgaList, indexList, geoSplit=TRUE)
+  lgaData <- prrAggrGeoData(lgaList, indexList, geoSplit=TRUE)
   
  ## SLA
   
@@ -487,7 +487,7 @@
                   ir=list(all=irSla, house=irSlaH, unit=irSlaU),
                   dm=list(all=dmSla, house=dmSlaH, unit=dmSlaU))
   
-  slaData <- aryAggrGeoData(slaList, indexList, geoSplit=TRUE)
+  slaData <- prrAggrGeoData(slaList, indexList, geoSplit=TRUE)
   
  ## Postcode  
   
@@ -495,7 +495,7 @@
                   ir=list(all=irPostcode, house=irPostcodeH, unit=irPostcodeU),
                   dm=list(all=dmPostcode, house=dmPostcodeH, unit=dmPostcodeU))
   
-  postcodeData <- aryAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
+  postcodeData <- prrAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
   
  ## Suburb  
   
@@ -503,7 +503,7 @@
                   ir=list(all=irSuburb, house=irSuburbH, unit=irSuburbU),
                   dm=list(all=dmSuburb, house=dmSuburbH, unit=dmSuburbU))
   
-  suburbData <- aryAggrGeoData(suburbList, indexList, geoSplit=TRUE)
+  suburbData <- prrAggrGeoData(suburbList, indexList, geoSplit=TRUE)
   
 ### Clean up workspace and save ------------------------------------------------
   

@@ -198,6 +198,13 @@ if(F){
 prrStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
                           defDim, stsLimit, calcs){
   
+  ## Source stshard functions if not already done
+  if(!exists('spaceTimeShard')) {
+    source(paste0('https://raw.githubusercontent.com/andykrause/',
+                  'dataAnalysisTools/master/stShardFunctions.R'))
+  }
+  
+  
   ## Calculate prices and rents
   
   xPrice <- spaceTimeShard(stsData[stsData$transType == 'sale', ],

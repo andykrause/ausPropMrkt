@@ -138,11 +138,11 @@ prrGeoLimit <- function(transData,               # Dataframe of trans data
 
 ### Apply the threshold designations across all transactions -----------------------------
 
-applyThres <- function(thresData,       # Threshold data object from prrGeoLimit
-                       transData,       # Set of transaction data
-                       timePrefix='YT', # Which time was used YT or QT
-                       geo="postCode"   # Which geo to use (one at a time)
-                       ){
+prrApplyThres <- function(thresData,       # Threshold data object from prrGeoLimit
+                          transData,       # Set of transaction data
+                          timePrefix='YT', # Which time was used YT or QT
+                          geo="postCode"   # Which geo to use (one at a time)
+                          ){
   
   # Pull out single designations
   both <- ifelse(transData[,geo] %in% thresData[[1]],1,0)
@@ -195,7 +195,7 @@ if(F){
 ##########################################################################################
 ### New Australia Rent Yield Functions (works with stShard operations) -------------------
 
-aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
+prrStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
                           defDim, stsLimit, calcs){
   
   ## Calculate prices and rents
@@ -247,7 +247,7 @@ aryStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
 
 ### Function to compare price and rent on only matched properties ------------------------
 
-arySaleRentMatch <- function(sales,               # Data.frame of sales
+prrSaleRentMatch <- function(sales,               # Data.frame of sales
                              rentals,             # Data.frame of rentals
                              matchField = 'ID',   # Field containing matching ID
                              saleField = 'Price', # Field containing sale price
@@ -324,7 +324,7 @@ arySaleRentMatch <- function(sales,               # Data.frame of sales
 
 ## Function to aggregate data by geography -----------------------------------------------
 
-aryAggrGeoData <- function(geoList,
+prrAggrGeoData <- function(geoList,
                            indexList,
                            geoSplit=FALSE
 ){
@@ -332,7 +332,7 @@ aryAggrGeoData <- function(geoList,
   
   ## Build Mixed unweighted
     
-  mixData <- aryAggrMethData(mmObj=geoList$mm$all,
+  mixData <- prrAggrMethData(mmObj=geoList$mm$all,
                              irObj=geoList$ir$all,
                              dmObj=geoList$dm$all,
                              pIndex=indexList$all,
@@ -346,7 +346,7 @@ aryAggrGeoData <- function(geoList,
     
   } else {
     
-    mixDataWgt <- aryAggrMethData(mmObj=geoList$mm$all,
+    mixDataWgt <- prrAggrMethData(mmObj=geoList$mm$all,
                                   irObj=geoList$ir$all,
                                   dmObj=geoList$dm$all,
                                   pIndex=indexList$all,
@@ -357,12 +357,12 @@ aryAggrGeoData <- function(geoList,
   ## Build Unit specific
   
   # Calculate separate dataset for house and units
-  houseData <- aryAggrMethData(mmObj=geoList$mm$house,
+  houseData <- prrAggrMethData(mmObj=geoList$mm$house,
                                irObj=geoList$ir$house,
                                dmObj=geoList$dm$house,
                                pIndex=indexList$house,
                                geoSplit=geoSplit)
-  unitData <- aryAggrMethData(mmObj=geoList$mm$unit,
+  unitData <- prrAggrMethData(mmObj=geoList$mm$unit,
                               irObj=geoList$ir$unit,
                               dmObj=geoList$dm$unit,
                               pIndex=indexList$unit,
@@ -384,20 +384,20 @@ aryAggrGeoData <- function(geoList,
   
   if(!geoSplit){
     
-    useWgt <- aryWeightUses(houseData, unitData, geoList, 
+    useWgt <- prrWeightUses(houseData, unitData, geoList, 
                             pIndex=indexList$all, 
                             geoSplit=geoSplit) 
   } else {
     
    
    # Calculate separate dataset for house and units
-  houseDataW <- aryAggrMethData(mmObj=geoList$mm$house,
+  houseDataW <- prrAggrMethData(mmObj=geoList$mm$house,
                                 irObj=geoList$ir$house,
                                 dmObj=geoList$dm$house,
                                 pIndex=indexList$house,
                                 geoSplit=geoSplit,
                                 wgt=TRUE)
-  unitDataW <- aryAggrMethData(mmObj=geoList$mm$unit,
+  unitDataW <- prrAggrMethData(mmObj=geoList$mm$unit,
                                irObj=geoList$ir$unit,
                                dmObj=geoList$dm$unit,
                                pIndex=indexList$unit,
@@ -411,7 +411,7 @@ aryAggrGeoData <- function(geoList,
   unitDataW$diff$use <- 'Unit'
   
   # Calculate use specific data
-  useWgt <- aryWeightUses(houseDataW, unitDataW, geoList, 
+  useWgt <- prrWeightUses(houseDataW, unitDataW, geoList, 
                           pIndex=indexList$all, geoSplit=TRUE)  
   }
   
@@ -424,7 +424,7 @@ aryAggrGeoData <- function(geoList,
 
 ## Function to aggregate different method's data -----------------------------------------
 
-aryAggrMethData <- function(mmObj,          # Med Meth obj from aryStsGeoWrap
+prrAggrMethData <- function(mmObj,          # Med Meth obj from prrStsGeoWrap
                             irObj,          # Cross Reg obj from spaceTimeShard()
                             dmObj,          # Match obj from spaceTimeShard()
                             pIndex,         # A price index at the time scale
@@ -477,9 +477,9 @@ aryAggrMethData <- function(mmObj,          # Med Meth obj from aryStsGeoWrap
     # Weights Tables
     mmPrice <- mmObj$priceStsTable[rownames(mmObj$priceStsTable) %in% allGeo,]
     mmRent <- mmObj$rentStsTable[rownames(mmObj$rentStsTable) %in% allGeo,]
-    mmWgts <- aryConvStsTables(mmPrice + mmRent, allGeo)$wgts
-    irWgts <- aryConvStsTables(irObj$stTable, allGeo)$wgts
-    dmWgts <- aryConvStsTables(dmObj$stTable, allGeo)$wgts
+    mmWgts <- prrConvStsTables(mmPrice + mmRent, allGeo)$wgts
+    irWgts <- prrConvStsTables(irObj$stTable, allGeo)$wgts
+    dmWgts <- prrConvStsTables(dmObj$stTable, allGeo)$wgts
     
     # Add weights to DF 
     mmDF$wgt <- mmWgts[match(mmDF$spaceName, names(mmWgts))]  
@@ -539,7 +539,7 @@ aryAggrMethData <- function(mmObj,          # Med Meth obj from aryStsGeoWrap
 
 ### Function that calculates locations count weights -------------------------------------
 
-aryConvStsTables <- function(stTable,       # stsTable from stsSharder
+prrConvStsTables <- function(stTable,       # stsTable from stsSharder
                              allGeo         # List of OK geographies
 ){
   
@@ -557,9 +557,9 @@ aryConvStsTables <- function(stTable,       # stsTable from stsSharder
 
 ### Function that combines and weights house and unit results ----------------------------
 
-aryWeightUses <- function(hDataW,       # House wgt data from aryAggrMethData
-                          uDataW,       # unit wgt data from aryAggrMethData
-                          geoList,      # Full geolist from  aryAggrGeoData
+prrWeightUses <- function(hDataW,       # House wgt data from prrAggrMethData
+                          uDataW,       # unit wgt data from prrAggrMethData
+                          geoList,      # Full geolist from  prrAggrGeoData
                           pIndex,       # Price time index
                           geoSplit=F    # is not all areas?
                                
@@ -671,7 +671,7 @@ aryWeightUses <- function(hDataW,       # House wgt data from aryAggrMethData
 
 ### Extract yields from a prrObject ------------------------------------------------------
 
-prrGetYields <- function(prrObj     # Object from the aryAggrGeoData()
+prrGetYields <- function(prrObj     # Object from the prrAggrGeoData()
                          ){
   # Extract mixed yields
   mixYields <- prrObj$mix$comp
@@ -706,12 +706,12 @@ prrGetYields <- function(prrObj     # Object from the aryAggrGeoData()
 
 ### Wrapper to calculate the predictive accuracty of various yield trends ----------------
 
-ebmWrap <- function(dmData,              # matched dataset
-                    yieldData,           # yield data from prrGetYields()
-                    byUse=FALSE,         # Calculate by use?
-                    byGeog=FALSE,        # Calculate by Geography
-                    geoField=NULL        # Which field is the geog name in?
-                    ){
+prrPredModelWrap <- function(dmData,              # matched dataset
+                             yieldData,           # yield data from prrGetYields()
+                             byUse=FALSE,         # Calculate by use?
+                             byGeog=FALSE,        # Calculate by Geography
+                             geoField=NULL        # Which field is the geog name in?
+                             ){
   
   # Small helper function to count number of observations
   geoCount <- function(x){nrow(rbind.fill(x))}
@@ -734,7 +734,7 @@ ebmWrap <- function(dmData,              # matched dataset
       
       # Get geography names and extract necessary data
       geoListH <- levels(yieldData$house$median$spaceName)
-      geoDataH <- lapply(geoListH, extractGeoData, xData=hData, 
+      geoDataH <- lapply(geoListH, prrExtractGeoData, xData=hData, 
                          geoField=geoField)
       
       # Identify non-empty dataset (by geog)
@@ -742,18 +742,21 @@ ebmWrap <- function(dmData,              # matched dataset
       idH <- which(hCount > 0)
       
       # Extract necessary geographic yield information
-      geoYieldsH <- lapply(geoListH, extractGeoYields, yieldData=yieldData$house)
+      geoYieldsH <- lapply(geoListH, prrExtractGeoYields, yieldData=yieldData$house)
       
       # Identify non-empty dataset (by geog)
       idYH <- lapply(geoYieldsH, geoCount)
       idYH <- which(idYH > 0)
+      
+      # Select those that meet both criteria
+      idH <- intersect(idH, idYH)
       
       # Trim data to those that are not empty
       geoDataH <- geoDataH[idH]
       geoYieldsH <- geoYieldsH[idH]
       
       # Estimate the prediction error  
-      geoH <- mapply(errorByMethod, mData=geoDataH, yieldData=geoYieldsH)
+      geoH <- mapply(prrErrorByMethod, mData=geoDataH, yieldData=geoYieldsH)
       
       # Combine and rename results
       hResults <- rbind.fill(geoH)
@@ -764,7 +767,7 @@ ebmWrap <- function(dmData,              # matched dataset
       
       # Geo geography names and extract necessary data
       geoListU <- levels(yieldData$unit$median$spaceName)
-      geoDataU <- lapply(geoListU, extractGeoData, xData=uData, 
+      geoDataU <- lapply(geoListU, prrExtractGeoData, xData=uData, 
                          geoField=geoField)
       
       # Identify non-empty datasets (by geog)
@@ -772,7 +775,7 @@ ebmWrap <- function(dmData,              # matched dataset
       idU <- which(uCount > 0)
       
       # Extract necessary geographic yield information
-      geoYieldsU <- lapply(geoListU, extractGeoYields, yieldData=yieldData$unit)
+      geoYieldsU <- lapply(geoListU, prrExtractGeoYields, yieldData=yieldData$unit)
       
       # Identify non-empty dataset (by geog)
       idYU <- lapply(geoYieldsU, geoCount)
@@ -786,7 +789,7 @@ ebmWrap <- function(dmData,              # matched dataset
       geoYieldsU <- geoYieldsU[idU]
       
       # Estimate the prediction error  
-      geoU <- mapply(errorByMethod, mData=geoDataU, yieldData=geoYieldsU)
+      geoU <- mapply(prrErrorByMethod, mData=geoDataU, yieldData=geoYieldsU)
       
       # Combine and rename results
       uResults <- rbind.fill(geoU)
@@ -802,12 +805,12 @@ ebmWrap <- function(dmData,              # matched dataset
      ## if by Use by not geog  
       
       # Calculate errors for houses
-      hResults <- errorByMethod(hData, yieldData$house)
+      hResults <- prrErrorByMethod(hData, yieldData$house)
       hResults <- rbind.fill(hResults)
       hResults$use <- 'house'
       
       # Calculate errors for units
-      uResults <- errorByMethod(uData, yieldData$unit)
+      uResults <- prrErrorByMethod(uData, yieldData$unit)
       uResults <- rbind.fill(uResults)
       uResults$use <- 'unit'
       
@@ -825,14 +828,14 @@ ebmWrap <- function(dmData,              # matched dataset
       geoList <- levels(yieldData$mix$median$spaceName)
       
       # Extract geographic base data
-      geoData <- lapply(geoList, extractGeoData, xData=dmData, 
+      geoData <- lapply(geoList, prrExtractGeoData, xData=dmData, 
                         geoField=geoField)
       
       # Extract yield trends
-      geoYields <- lapply(geoList, extractGeoYields, yieldData=yieldData$mix)
+      geoYields <- lapply(geoList, prrExtractGeoYields, yieldData=yieldData$mix)
       
       # Calculate all errors
-      geo <- mapply(errorByMethod, mData=geoData, yieldData=geoYields)
+      geo <- mapply(prrErrorByMethod, mData=geoData, yieldData=geoYields)
       xResults <- rbind.fill(geo)
       xResults$geog <- geoField
       
@@ -841,7 +844,7 @@ ebmWrap <- function(dmData,              # matched dataset
   ## If not by use and not by Geography
       
       # Calculate error results
-      xResults <- errorByMethod(dmData, yieldData$mix)
+      xResults <- prrErrorByMethod(dmData, yieldData$mix)
       xResults <- rbind.fill(xResults)
       xResults$geog <- 'all'
     }
@@ -857,10 +860,10 @@ ebmWrap <- function(dmData,              # matched dataset
 
 ### Helper function to extract geographic from a given dataset ---------------------------
 
-extractGeoData <- function(geoName,      # Specific geographic name
-                           xData,        # dataset 
-                           geoField      # Field containing geographic names
-                           ){
+prrExtractGeoData <- function(geoName,      # Specific geographic name
+                              xData,        # dataset 
+                              geoField      # Field containing geographic names
+                              ){
   
   # ID and extract field
   gData <- xData[ ,geoField]
@@ -875,9 +878,9 @@ extractGeoData <- function(geoName,      # Specific geographic name
 
 ### Helper function to extract the three yield types for a given geography ---------------
 
-extractGeoYields <- function(geoName,      # A specific geographic name 
-                             yieldData     # yield data from prrGetYields()$mix
-                             ){
+prrExtractGeoYields <- function(geoName,      # A specific geographic name 
+                                yieldData     # yield data from prrGetYields()$mix
+                                ){
   
   # Extract yields
   gMedian <- subset(yieldData$median, spaceName==geoName)
@@ -893,20 +896,20 @@ extractGeoYields <- function(geoName,      # A specific geographic name
 
 ### Wrapper to spread the error calcs over all three methods -----------------------------
 
-errorByMethod <- function(mData,       # Matched dataset
-                          yieldData    # List of yield data from prrGetYields
-                          ){
+prrErrorByMethod <- function(mData,       # Matched dataset
+                             yieldData    # List of yield data from prrGetYields
+                             ){
   
   # Calc error for median method
-  medianError <- calcError(mData, yieldData$median)
+  medianError <- prrCalcPredError(mData, yieldData$median)
   medianError$method='median'
   
   # Calc error for imputation method
-  imputeError <- calcError(mData, yieldData$impute)
+  imputeError <- prrCalcPredError(mData, yieldData$impute)
   imputeError$method='impute'
   
   # calc error for matching method
-  matchError <- calcError(mData, yieldData$match)
+  matchError <- prrCalcPredError(mData, yieldData$match)
   matchError$method='match'
   
   # Return Values
@@ -918,9 +921,9 @@ errorByMethod <- function(mData,       # Matched dataset
 
 ### calculate the predictive error -------------------------------------------------------
 
-calcError <- function(mData,     # Dataset of matched sales and rentals 
-                      yData      # Timeseries of yield estimates
-                      ){
+prrCalcPredError <- function(mData,     # Dataset of matched sales and rentals 
+                             yData      # Timeseries of yield estimates
+                             ){
   
   # Subset into sales and rentals based on which observation is first
   sData <- subset(mData, saleTime <= rentTime)

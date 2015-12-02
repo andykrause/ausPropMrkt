@@ -305,8 +305,9 @@
   
  ## Write workspace
 
-  save.image(paste0(dataPath, 'cleanData.RData'))
-             
+  save.image(paste0(dataPath, 'dataPrepWrkspc.RData'))
+  save(allTrans, file=paste0(dataPath, 'cleanData.RData'))
+  
  ## Write .csv
  
   write.csv(allTrans, paste0(dataPath, 'cleanData.csv'), row.names=F)

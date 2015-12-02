@@ -939,15 +939,15 @@ prrCalcPredError <- function(mData,     # Dataset of matched sales and rentals
   rData$tType <- 'rent'
   
   # Add the yield information at the time of the first transaction
-  sData$pYield <- yData$yield[match(sData$saleTime, yData$timeName)]  
+  sData$pYield <- yData$yield[match(sData$rentTime, yData$timeName)]  
   rData$pYield <- yData$yield[match(rData$saleTime, yData$timeName)]  
   
   # Predict rental value of sales and the error
-  sData$pValue <- (sData$saleValue * sData$pYield) / 52
+  sData$pValue <- ((sData$adjSale * sData$pYield) / 52) 
   sData$error <- (sData$rentValue - sData$pValue) / sData$rentValue
 
   # Precict sale value of rentals and the error    
-  rData$pValue <- (rData$rentValue * 52) / rData$pYield
+  rData$pValue <- (rData$adjRent * 52) / rData$pYield
   rData$error <- (rData$saleValue - rData$pValue) / rData$saleValue
 
 ## TODO:  Make time adjustments  

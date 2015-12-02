@@ -18,17 +18,7 @@
   library(rgeos)
   library(grid)
 
- ## Source Files
-
-  # File containing function for working with prr and APM data
-  source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                'master/prrFunctions.R'))
-
-  # File containing function for analyzing data
-  source(paste0('https://raw.githubusercontent.com/andykrause/',
-                'dataAnalysisTools/master/stShardFunctions.R'))
-
- ## Set the path to the data
+ ## Set the path to the data and map files (FUTURE USE)
 
   #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
   dataPath <- "D:/Data/Research/priceRentMethComp/"

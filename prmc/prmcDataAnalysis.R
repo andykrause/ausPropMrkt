@@ -508,7 +508,7 @@
 ### Clean up workspace and save ------------------------------------------------
   
   save(metroList, metroData, lgaList, lgaData, slaList, slaData,
-       postcodeList, postcodeData, suburbList, suburbData,
+       postcodeList, postcodeData, suburbList, suburbData, dmData,
        file=paste0(dataPath, 'analysisResults.RData'))
 
   

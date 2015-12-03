@@ -12,6 +12,7 @@ Basic order of files:
 
 (if use raw data from AURIN then data must be built first)
 
+[Diagram](prmcWorkflow.png)
 
 ### Data Preparation
 
@@ -333,16 +334,16 @@ And adding the names
                               c(rep('postCode',4), rep('sla1',4),
                               rep('suburb',4), rep('lga', 4))) 
                               
-Following this, we use the custom function, **applyThres()** to append the designations to each of the observations.
+Following this, we use the custom function, **prrApplyThres()** to append the designations to each of the observations.
 
-    allTrans <- applyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
-    allTrans <- applyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
-    allTrans <- applyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
-    allTrans <- applyThres(yearThres[13:16], allTrans, 'YT', 'lga')
-    allTrans <- applyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
-    allTrans <- applyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
-    allTrans <- applyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
-    allTrans <- applyThres(qtrThres[13:16], allTrans, 'QT', 'lga')      
+    allTrans <- prrApplyThres(yearThres[1:4], allTrans, 'YT', 'postCode')
+    allTrans <- prrApplyThres(yearThres[5:8], allTrans, 'YT', 'sla1')
+    allTrans <- prrApplyThres(yearThres[9:12], allTrans, 'YT', 'suburb')
+    allTrans <- prrApplyThres(yearThres[13:16], allTrans, 'YT', 'lga')
+    allTrans <- prrApplyThres(qtrThres[1:4], allTrans, 'QT', 'postCode')
+    allTrans <- prrApplyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
+    allTrans <- prrApplyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
+    allTrans <- prrApplyThres(qtrThres[13:16], allTrans, 'QT', 'lga')      
     
 Then we write the data out as a .csv and the entire working environment as an R workspace.
 

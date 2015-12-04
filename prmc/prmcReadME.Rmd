@@ -1,20 +1,29 @@
----
-title: "prmcReadME"
-author: "Andy Krause"
-date: "25 November 2015"
-output: html_document
----
+# Comparison of Price-Rent Ratio Calculation Method
 
-Basic order of files:
-1. *prmcDataPrep*
-2. *prmcDataAnalysis*
-3. *prmcDataViz*
+This analysis compares number of methods used to calculate price to rent ratios using a large dataset from Melbourne, Australia.  Unfortunately, our currently licensing on the data does not permit it to be shared.  All code below explained below and held in this repository is free to use, provided you give recognition for doing so. 
 
-(if use raw data from AURIN then data must be built first)
+The basic order of analysis is to prepared the data, analyze the data, visualize the results and then, finally, assess the predictive quality of the models themselves.  In terms of scripts, the order is as follows:
+ 
+  1. **prmcDataPrep.R**
+  2. **prmcDataAnalysis.R**
+  3. **prmcDataViz.R**
+  4. **prmcPredModels.R**
+
+*(If using raw data from AURIN then data must be built first using the buildAPMData.R file in the root repository)*
+
+\  
+&nbsp;
+
+#### Analytical Workflow Diagram
+
+The following diagram shows more details regarding data and overall analytical workflow.
 
 [Diagram](prmcWorkflow.png)
 
-### Data Preparation
+\  
+&nbsp;
+
+## Data Preparation
 
 The **prmcDataPrep.R** file handles the data preparation phase of this analysis.  In this context, data preparation refers to the conversion of the raw data (from the source) into the prepared data that is ready for analysis.  
 
@@ -24,7 +33,6 @@ The process begin by loading the necessary libraries.
 
     library(plyr)
     library(dplyr)
-    library(ggplot2)
     library(reshape2)
     library(stringr)
     library(maptools)
@@ -38,9 +46,9 @@ Next, we source a file containing a set of functions that are used throughout th
                    
 The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded.  This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space syntax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries. 
 
-    dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
-    saleFile <- 'sales10_15.csv'
-    rentFile <- 'rents10_15.csv'
+    dataPath <- "C:/.../rawData/"
+    saleFile <- 'allSales.csv'
+    rentFile <- 'allRents.csv'
     ssFile <- 'allSS.csv'
     subGeoFile <- 'Vic_Suburbs.shp'
     lgaGeoFile <- 'Vic_LGAs.shp'
@@ -350,4 +358,43 @@ Then we write the data out as a .csv and the entire working environment as an R 
     save.image(paste0(dataPath, 'cleanData.RData'))
     write.csv(allTrans, paste0(dataPath, 'cleanData.csv'), row.names=F)
 
-                              
+
+\  
+&nbsp;
+
+
+
+## Data Analysis
+
+The **prmcDataAnalysis.R** file handles the data analysis phase of this analysis.  
+
+#### Preliminary Commands
+
+The process begins by setting a parameter that indicates whether or not to rebuild the data (re-run the **prmcDataPrep.R** file or not)
+
+    reBuildData <- FALSE     
+
+Then we load the necessary libraries.
+
+    library(plyr)
+    library(dplyr)
+    library(reshape2)
+    library(stringr)
+    library(maptools)
+    library(sp)
+    library(rgeos)
+
+Next, we source a file containing a set of functions that are used throughout the analysis, **prrFunctions.R**.  This file is sources from it's Github location.  Details of the individual functions contained in this file can be found in the *"Custom Functions"* section at the end of this document. 
+
+     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                   'master/prrFunctions.R'))
+                   
+We also source an exterior set of function that assist in the data analysis tasks. 
+
+     source(paste0('https://raw.githubusercontent.com/andykrause/',
+                   'dataAnalysisTools/master/stShardFunctions.R'))
+
+
+Finally, we set the path to the data
+
+     dataPath <- "C:/.../rawData/"

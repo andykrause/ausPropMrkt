@@ -1499,8 +1499,185 @@ Finally we save the workspace.
 
 ## Custom Functions ----------------------------------------------------------------------
 
-Here we describe in detail the functionality of all of the custom functions used in this analysis. the code for these functions is found in the **prrFunctions.R** file
+Here we describe in detail the functionality of all of the custom functions used in this analysis. the code for these functions is found in the **prrFunctions.R** file.
 
+### fixAPMDates()
 
+This function converts the various date formats in the APM data to the standard R format.
 
+This function takes 1 argument:
 
+1. **xDates**: A vector of incorrectly formatted date objects from APM
+
+Declare the function
+
+    fixAPMDates <- function(xDates){
+  
+Load required libraries
+
+    require(stringr)
+
+Remove any time stamps from the dates
+
+    xDates <- gsub(" 0:00", "", xDates)
+
+Find the character location of the date separators (slashes)
+  
+    sLoc <- matrix(unlist(str_locate_all(xDates, '/')), ncol=4, byrow=TRUE)[,1:2]
+  
+Extract and correct the days component (if it is missing a leading 0)
+
+    days <- as.numeric(substr(xDates, 1, sLoc[ ,1] - 1))
+    days <- ifelse(days < 10, paste0('0', days), as.character(days))
+    
+Extract and correct the months component (if it is missing a leading 0)
+
+    months <- as.numeric(substr(xDates, sLoc[ ,1] + 1, sLoc[ ,2] - 1))
+    months <- ifelse(months < 10, paste0('0', months), as.character(months))
+  
+Extract and correct the years component (if it is missing a leading 20)
+
+    years <- as.numeric(substr(xDates, sLoc[ ,2] + 1, 50))
+    years <- ifelse(years < 2000, paste0('20', years), as.character(years))
+
+Recombine the three components into the R date format
+
+    newDates <- as.Date(paste0(days, '/' , months, '/', years), "%d/%m/%Y")
+
+Return value to the function call
+
+    return(newDates)
+    }
+
+\  
+&nbsp;
+
+### prrImputeReg()
+
+This function uses linear regression to create imputed rent and sales values.
+
+This function takes 4 arguments:
+
+1. **formula**: The linear regression formula used to create rent and price estimates
+2. **saleData**: A data frame of sales observations
+3. **rentData**: A data frame of rental observations
+4. **verbose**: (FALSE)  Should progress be reported to the console?
+
+Declare the function
+
+    prrImputeReg <- function(formula, saleData, rentData, verbose = FALSE){
+  
+Fit the sale and rent models
+
+    if(verbose) cat('Estimating sale and rent models\n')
+    saleModel <- lm(formula, data=saleData)
+    rentModel <- lm(formula, data=rentData)
+
+Use model to predict rents for sale observations and vice versa
+
+    if(verbose) cat('Imputing values\n')
+    impPrice <- exp(predict(saleModel, newdata=rentData))
+    impRent <- exp(predict(rentModel, newdata=saleData))
+  
+Add the imputed values to the original data frames
+
+    if(verbose) cat('Stacking observed and imputed values\n')
+    saleData$Price <- saleData$transValue
+    rentData$Price <- impPrice
+    saleData$Rent <- impRent
+    rentData$Rent <- rentData$transValue
+  
+Merge the sales and rent data into a single data frame
+
+    if(verbose) cat('Merging data\n')
+    allData <- rbind(saleData, rentData)
+
+Extract the model coefficient, diagnostics and residuals.  Place in a list object for the rent and the sales model.
+
+    saleModelInfo <- list(coef=summary(saleModel)$coefficients,
+                        r2=summary(saleModel)$r.squared,
+                        sigma=summary(saleModel)$r.squared,
+                        resid=summary(saleModel)$residuals)
+    rentModelInfo <- list(coef=summary(rentModel)$coefficients,
+                        r2=summary(rentModel)$r.squared,
+                        sigma=summary(rentModel)$r.squared,
+                        resid=summary(rentModel)$residuals)
+  
+Return the results in a list object.  First the observation ID with Price and Rent, then the two list of model information.  
+  
+    return(list(results = allData[ ,c('UID', 'Price', 'Rent')],
+                saleModel = saleModelInfo,
+                rentModel = rentModelInfo))
+         
+    }
+
+\  
+&nbsp;
+
+### prrGeoLimit()
+
+This function takes a set of transactional data and a geographic field and determines which geographic areas have enough observations in them per the selected time breakdown.
+
+This function takes 4 arguments:
+
+1. **transData**: The data frame of the transactions
+2. **locField**: ('locName') The name of the field with the location in it. 
+3. **timeField**: ('transYear') The name of the field with the temporal indicator in it
+4. **geoTempLimit**: (3) How many observations are required in each location at each time
+
+Declare the function
+
+    prrGeoLimit <- function(transData, locField = 'locName', timeField = 'transYear', 
+                            geoTempLimit = 3){  
+  
+Split the transaction by use and by transaction type
+
+    houseSales <- subset(transData, PropertyType == 'House' &
+                           transType == 'sale')
+    unitSales <- subset(transData, PropertyType == 'Unit' & 
+                          transType == 'sale')
+    houseRentals <- subset(transData, PropertyType == 'House' & 
+                             transType == 'rent')
+    unitRentals <- subset(transData, PropertyType == 'Unit' & 
+                            transType == 'rent')
+  
+Determine which areas meet the criteria for each of the use/transaction type permutations.  This process creates a list of geographic indicators that meet the criteria in the **xxGeo** objects.
+
+House Sales
+
+    saleHTable <- table(houseSales[,locField], houseSales[,timeField])
+    shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
+    shGeo <- rownames(saleHTable[shKeep, ])
+
+Unit Sales
+
+    saleUTable <- table(unitSales[,locField], unitSales[,timeField])
+    suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
+    suGeo <- rownames(saleUTable[suKeep, ])
+
+House Rentals
+
+    rentHTable <- table(houseRentals[,locField], houseRentals[,timeField])
+    rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
+    rhGeo <- rownames(rentHTable[rhKeep, ])
+
+Unit Rentals
+
+    rentUTable <- table(unitRentals[,locField], unitRentals[,timeField])
+    ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
+    ruGeo <- rownames(rentUTable[ruKeep, ])
+  
+Intersect all accepatable lists of geographies to find those that meet the criteria in all four cases, as well as for just houses and units (and either)
+
+    bothGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
+    houseGeo <- intersect(shGeo,rhGeo)
+    unitGeo <- intersect(suGeo, ruGeo)
+    eitherGeo <- union(houseGeo, unitGeo)
+
+Return a list of acceptable geographies in all four situations.
+
+    return(list(bothGeo = bothGeo,
+                houseGeo = houseGeo,
+                unitGeo = unitGeo,
+                eitherGeo = eitherGeo))  
+    }

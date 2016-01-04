@@ -1357,7 +1357,135 @@ rownames(hrTable) &lt;- c('Median', 'Median by Use', 'Impute', 'Impute by Use',
 </div>
 <div id="custom-functions--" class="section level2">
 <h2>Custom Functions ———————————————————————-</h2>
-<p>Here we describe in detail the functionality of all of the custom functions used in this analysis.</p>
+<p>Here we describe in detail the functionality of all of the custom functions used in this analysis. the code for these functions is found in the <strong>prrFunctions.R</strong> file.</p>
+<div id="fixapmdates" class="section level3">
+<h3>fixAPMDates()</h3>
+<p>This function converts the various date formats in the APM data to the standard R format.</p>
+<p>This function takes 1 argument:</p>
+<ol style="list-style-type: decimal">
+<li><strong>xDates</strong>: A vector of incorrectly formatted date objects from APM</li>
+</ol>
+<p>Declare the function</p>
+<pre><code>fixAPMDates &lt;- function(xDates){</code></pre>
+<p>Load required libraries</p>
+<pre><code>require(stringr)</code></pre>
+<p>Remove any time stamps from the dates</p>
+<pre><code>xDates &lt;- gsub(&quot; 0:00&quot;, &quot;&quot;, xDates)</code></pre>
+<p>Find the character location of the date separators (slashes)</p>
+<pre><code>sLoc &lt;- matrix(unlist(str_locate_all(xDates, '/')), ncol=4, byrow=TRUE)[,1:2]</code></pre>
+<p>Extract and correct the days component (if it is missing a leading 0)</p>
+<pre><code>days &lt;- as.numeric(substr(xDates, 1, sLoc[ ,1] - 1))
+days &lt;- ifelse(days &lt; 10, paste0('0', days), as.character(days))</code></pre>
+<p>Extract and correct the months component (if it is missing a leading 0)</p>
+<pre><code>months &lt;- as.numeric(substr(xDates, sLoc[ ,1] + 1, sLoc[ ,2] - 1))
+months &lt;- ifelse(months &lt; 10, paste0('0', months), as.character(months))</code></pre>
+<p>Extract and correct the years component (if it is missing a leading 20)</p>
+<pre><code>years &lt;- as.numeric(substr(xDates, sLoc[ ,2] + 1, 50))
+years &lt;- ifelse(years &lt; 2000, paste0('20', years), as.character(years))</code></pre>
+<p>Recombine the three components into the R date format</p>
+<pre><code>newDates &lt;- as.Date(paste0(days, '/' , months, '/', years), &quot;%d/%m/%Y&quot;)</code></pre>
+<p>Return value to the function call</p>
+<pre><code>return(newDates)
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrimputereg" class="section level3">
+<h3>prrImputeReg()</h3>
+<p>This function uses linear regression to create imputed rent and sales values.</p>
+<p>This function takes 4 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>formula</strong>: The linear regression formula used to create rent and price estimates</li>
+<li><strong>saleData</strong>: A data frame of sales observations</li>
+<li><strong>rentData</strong>: A data frame of rental observations</li>
+<li><strong>verbose</strong>: (FALSE) Should progress be reported to the console?</li>
+</ol>
+<p>Declare the function</p>
+<pre><code>prrImputeReg &lt;- function(formula, saleData, rentData, verbose = FALSE){</code></pre>
+<p>Fit the sale and rent models</p>
+<pre><code>if(verbose) cat('Estimating sale and rent models\n')
+saleModel &lt;- lm(formula, data=saleData)
+rentModel &lt;- lm(formula, data=rentData)</code></pre>
+<p>Use model to predict rents for sale observations and vice versa</p>
+<pre><code>if(verbose) cat('Imputing values\n')
+impPrice &lt;- exp(predict(saleModel, newdata=rentData))
+impRent &lt;- exp(predict(rentModel, newdata=saleData))</code></pre>
+<p>Add the imputed values to the original data frames</p>
+<pre><code>if(verbose) cat('Stacking observed and imputed values\n')
+saleData$Price &lt;- saleData$transValue
+rentData$Price &lt;- impPrice
+saleData$Rent &lt;- impRent
+rentData$Rent &lt;- rentData$transValue</code></pre>
+<p>Merge the sales and rent data into a single data frame</p>
+<pre><code>if(verbose) cat('Merging data\n')
+allData &lt;- rbind(saleData, rentData)</code></pre>
+<p>Extract the model coefficient, diagnostics and residuals. Place in a list object for the rent and the sales model.</p>
+<pre><code>saleModelInfo &lt;- list(coef=summary(saleModel)$coefficients,
+                    r2=summary(saleModel)$r.squared,
+                    sigma=summary(saleModel)$r.squared,
+                    resid=summary(saleModel)$residuals)
+rentModelInfo &lt;- list(coef=summary(rentModel)$coefficients,
+                    r2=summary(rentModel)$r.squared,
+                    sigma=summary(rentModel)$r.squared,
+                    resid=summary(rentModel)$residuals)</code></pre>
+<p>Return the results in a list object. First the observation ID with Price and Rent, then the two list of model information.</p>
+<pre><code>return(list(results = allData[ ,c('UID', 'Price', 'Rent')],
+            saleModel = saleModelInfo,
+            rentModel = rentModelInfo))
+     
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrgeolimit" class="section level3">
+<h3>prrGeoLimit()</h3>
+<p>This function takes a set of transactional data and a geographic field and determines which geographic areas have enough observations in them per the selected time breakdown.</p>
+<p>This function takes 4 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>transData</strong>: The data frame of the transactions</li>
+<li><strong>locField</strong>: (‘locName’) The name of the field with the location in it.</li>
+<li><strong>timeField</strong>: (‘transYear’) The name of the field with the temporal indicator in it</li>
+<li><strong>geoTempLimit</strong>: (3) How many observations are required in each location at each time</li>
+</ol>
+<p>Declare the function</p>
+<pre><code>prrGeoLimit &lt;- function(transData, locField = 'locName', timeField = 'transYear', 
+                        geoTempLimit = 3){  </code></pre>
+<p>Split the transaction by use and by transaction type</p>
+<pre><code>houseSales &lt;- subset(transData, PropertyType == 'House' &amp;
+                       transType == 'sale')
+unitSales &lt;- subset(transData, PropertyType == 'Unit' &amp; 
+                      transType == 'sale')
+houseRentals &lt;- subset(transData, PropertyType == 'House' &amp; 
+                         transType == 'rent')
+unitRentals &lt;- subset(transData, PropertyType == 'Unit' &amp; 
+                        transType == 'rent')</code></pre>
+<p>Determine which areas meet the criteria for each of the use/transaction type permutations. This process creates a list of geographic indicators that meet the criteria in the <strong>xxGeo</strong> objects.</p>
+<p>House Sales</p>
+<pre><code>saleHTable &lt;- table(houseSales[,locField], houseSales[,timeField])
+shKeep &lt;- which(apply(saleHTable, 1, min) &gt;= geoTempLimit)
+shGeo &lt;- rownames(saleHTable[shKeep, ])</code></pre>
+<p>Unit Sales</p>
+<pre><code>saleUTable &lt;- table(unitSales[,locField], unitSales[,timeField])
+suKeep &lt;- which(apply(saleUTable, 1, min) &gt;= geoTempLimit)
+suGeo &lt;- rownames(saleUTable[suKeep, ])</code></pre>
+<p>House Rentals</p>
+<pre><code>rentHTable &lt;- table(houseRentals[,locField], houseRentals[,timeField])
+rhKeep &lt;- which(apply(rentHTable, 1, min) &gt;= geoTempLimit)
+rhGeo &lt;- rownames(rentHTable[rhKeep, ])</code></pre>
+<p>Unit Rentals</p>
+<pre><code>rentUTable &lt;- table(unitRentals[,locField], unitRentals[,timeField])
+ruKeep &lt;- which(apply(rentUTable, 1, min) &gt;= geoTempLimit)
+ruGeo &lt;- rownames(rentUTable[ruKeep, ])</code></pre>
+<p>Intersect all accepatable lists of geographies to find those that meet the criteria in all four cases, as well as for just houses and units (and either)</p>
+<pre><code>bothGeo &lt;- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
+houseGeo &lt;- intersect(shGeo,rhGeo)
+unitGeo &lt;- intersect(suGeo, ruGeo)
+eitherGeo &lt;- union(houseGeo, unitGeo)</code></pre>
+<p>Return a list of acceptable geographies in all four situations.</p>
+<pre><code>return(list(bothGeo = bothGeo,
+            houseGeo = houseGeo,
+            unitGeo = unitGeo,
+            eitherGeo = eitherGeo))  
+}</code></pre>
+</div>
 </div>
 </div>
 

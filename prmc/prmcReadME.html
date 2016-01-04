@@ -1198,7 +1198,7 @@ scale_y_continuous(limits=c(-.001, .011),
                                         nsmall=1), &quot;%&quot;)) +
 facet_wrap(~method) +
 theme_prr</code></pre>
-<p>Finally, we plot all differnces against quarterly appreciation for the metro, LGA and suburb analyses.</p>
+<p>Finally, we plot all differences against quarterly appreciation for the metro, LGA and suburb analyses.</p>
 <pre><code>allDiffComp_A &lt;- ggplot(lgaData$mix$diff, aes(x=pIndex, y=dif, 
                                             group=spaceName)) + 
 geom_point(colour='black', size=0) + 
@@ -1234,8 +1234,130 @@ scale_y_continuous(limits=c(0, .0105),
                                             nsmall=1), &quot;%&quot;)) +
 facet_wrap(~method) +
 theme_prr</code></pre>
+<p>   </p>
 </div>
 </div>
+</div>
+<div id="predictive-modeling" class="section level2">
+<h2>Predictive Modeling</h2>
+<p>The <strong>prmcPredModels.R</strong> file contains code where we test the predictive ability of the three methods across the five different spatial aggregation levels.</p>
+<div id="preliminary-commands-3" class="section level4">
+<h4>Preliminary Commands</h4>
+<p>Per the usual, we begin by loading the necessary libraries.</p>
+<pre><code>library(plyr)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(stringr)
+library(maptools)
+library(sp)
+library(rgeos)
+library(grid)</code></pre>
+<p>We then source the necessary custom functions (directly from Github)</p>
+<pre><code>source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+              'master/prrFunctions.R'))</code></pre>
+</div>
+<div id="load-data-1" class="section level4">
+<h4>Load Data</h4>
+<p>Next we load the R objects from the data analysis phase. First we set the path to the data.</p>
+<pre><code>dataPath &lt;- &quot;C:/.../rawData/&quot;</code></pre>
+<p>Then load the objects.</p>
+<pre><code>load(paste0(dataPath, 'analysisResults.RData'))</code></pre>
+</div>
+<div id="extract-necessary-data" class="section level4">
+<h4>Extract necessary data</h4>
+<p>Next we convert the analytical data objects into data objects that are useful for predictive modeling. To do so, we use the <strong>prrGetYields()</strong> custom function.</p>
+<pre><code>metroYields &lt;- prrGetYields(metroData)
+lgaYields &lt;- prrGetYields(lgaData)
+slaYields &lt;- prrGetYields(slaData)
+postcodeYields &lt;- prrGetYields(postcodeData)
+suburbYields &lt;- prrGetYields(suburbData)</code></pre>
+<p>We also add a unique identifier to the direct match data at this step</p>
+<pre><code>dmData$uID &lt;- 1:nrow(dmData)</code></pre>
+</div>
+<div id="estimate-prediction-errors" class="section level4">
+<h4>Estimate prediction errors</h4>
+<p>We begin by estimating the raw prediction errors, where prediction error is the difference between the actual price to rent ratio for each of the matched observations versus that predicted by the three estimation methods. We use the custom function <strong>prrPredModelWrap</strong> to complete this operation.</p>
+<p>Starting with the metro level, combined and use separated (<em>byUse=TRUE</em>)</p>
+<pre><code>metroRes &lt;- prrPredModelWrap(dmData, metroYields)
+metroResU &lt;- prrPredModelWrap(dmData, metroYields, byUse=TRUE)</code></pre>
+<p>Then at the LGA level</p>
+<pre><code>lgaRes &lt;- prrPredModelWrap(dmData, lgaYields, byGeog=TRUE, geoField='lga')
+lgaResU &lt;- prrPredModelWrap(dmData, lgaYields, byGeog=TRUE, 
+                            geoField='lga', byUse=TRUE)</code></pre>
+<p>And, then at the suburb level</p>
+<pre><code>suburbRes &lt;- prrPredModelWrap(dmData, suburbYields, byGeog=TRUE, 
+                              geoField='suburb')
+suburbResU &lt;- prrPredModelWrap(dmData, suburbYields, byGeog=TRUE, 
+                               geoField='suburb', byUse=TRUE)</code></pre>
+</div>
+<div id="attached-prediction-errors" class="section level4">
+<h4>Attached Prediction Errors</h4>
+<p>Next, we attach the individual prediction errors from each of the three methods and the two use categories to the individual observations in the matched dataset. This is done for all three levels of analysis.</p>
+<p>At the metro level</p>
+<pre><code>dmData$mMed &lt;- metroRes$median$error[match(dmData$uID, metroRes$median$uID)]
+dmData$mMedU &lt;- metroResU$median$error[match(dmData$uID, metroResU$median$uID)]
+dmData$mImp &lt;- metroRes$impute$error[match(dmData$uID, metroRes$impute$uID)]
+dmData$mImpU &lt;- metroResU$impute$error[match(dmData$uID, metroResU$impute$uID)]
+dmData$mMat &lt;- metroRes$match$error[match(dmData$uID, metroRes$match$uID)]
+dmData$mMatU &lt;- metroResU$match$error[match(dmData$uID, metroResU$match$uID)]</code></pre>
+<p>The LGA level</p>
+<pre><code>dmData$lMed &lt;- lgaRes$median$error[match(dmData$uID, lgaRes$median$uID)]
+dmData$lMedU &lt;- lgaResU$median$error[match(dmData$uID, lgaResU$median$uID)]
+dmData$lImp &lt;- lgaRes$impute$error[match(dmData$uID, lgaRes$impute$uID)]
+dmData$lImpU &lt;- lgaResU$impute$error[match(dmData$uID, lgaResU$impute$uID)]
+dmData$lMat &lt;- lgaRes$match$error[match(dmData$uID, lgaRes$match$uID)]
+dmData$lMatU &lt;- lgaResU$match$error[match(dmData$uID, lgaResU$match$uID)]</code></pre>
+<p>The suburb level</p>
+<pre><code>dmData$sMed &lt;- suburbRes$median$error[match(dmData$uID, suburbRes$median$uID)]
+dmData$sMedU &lt;- suburbResU$median$error[match(dmData$uID, suburbResU$median$uID)]
+dmData$sImp &lt;- suburbRes$impute$error[match(dmData$uID, suburbRes$impute$uID)]
+dmData$sImpU &lt;- suburbResU$impute$error[match(dmData$uID, suburbResU$impute$uID)]
+dmData$sMat &lt;- suburbRes$match$error[match(dmData$uID, suburbRes$match$uID)]
+dmData$sMatU &lt;- suburbResU$match$error[match(dmData$uID, suburbResU$match$uID)]</code></pre>
+</div>
+<div id="calculate-prediction-error" class="section level4">
+<h4>Calculate Prediction Error</h4>
+<p>Before calculation, we first create an object contain the absolute value of the individual prediction errors.</p>
+<pre><code>absPredResults &lt;- lapply(dmData[ ,(which(colnames(dmData) == 'mMed'):
+                                    which(colnames(dmData) == 'sMatU'))], abs)</code></pre>
+<p>We then calculate the median of each of the 18 predictions (3 methods x 2 use types x 3 geographic levels)</p>
+<pre><code>absPredMed &lt;- lapply(absPredResults, median, na.rm=TRUE)</code></pre>
+<p>The results are then placed in a 6 x 3 table.</p>
+<pre><code>absPredMed &lt;- as.matrix(unlist(absPredMed))
+predTable &lt;- data.frame(metro=absPredMed[1:6],
+                        lga=absPredMed[7:12],
+                        suburb=absPredMed[13:18])
+rownames(predTable) &lt;- c('Median', 'Median by Use', 'Impute', 'Impute by Use',
+                         'Match', 'Match by Use')</code></pre>
+</div>
+<div id="calculate-hit-rate" class="section level4">
+<h4>Calculate Hit Rate</h4>
+<p>We also calculate the hit rate, or the percentage of total observations that each methods is able to give a predicted value on.</p>
+<p>First we build a simple function to count the number of non-predicted observations in each method.</p>
+<pre><code>countNA &lt;- function(x){length(which(is.na(x)))/length(x)}</code></pre>
+<p>We then calculate the hit rate for each of the 18 predictions</p>
+<pre><code>hitRate &lt;- lapply(absPredResults, countNA)</code></pre>
+<p>The results are then placed in a 6 x 3 table</p>
+<pre><code>hitRate &lt;- 1 - as.matrix(unlist(hitRate))
+hrTable &lt;- data.frame(metro=hitRate[1:6],
+                      lga=hitRate[7:12],
+                      suburb=hitRate[13:18])
+rownames(hrTable) &lt;- c('Median', 'Median by Use', 'Impute', 'Impute by Use',
+                       'Match', 'Match by Use')</code></pre>
+</div>
+<div id="save-workspace" class="section level4">
+<h4>Save workspace</h4>
+<p>Finally we save the workspace.</p>
+<pre><code>save(dmData, predTable, hrTable, 
+     file=paste0(dataPath, 'predModelResults.RData'))
+     </code></pre>
+<p>               </p>
+</div>
+</div>
+<div id="custom-functions--" class="section level2">
+<h2>Custom Functions ———————————————————————-</h2>
+<p>Here we describe in detail the functionality of all of the custom functions used in this analysis.</p>
 </div>
 </div>
 

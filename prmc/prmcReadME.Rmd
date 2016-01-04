@@ -1297,7 +1297,7 @@ Finally, we plot all differnces against time for the metro, LGA and suburb analy
     facet_wrap(~method) +
     theme_prr
  
-Finally, we plot all differnces against quarterly appreciation for the metro, LGA and suburb analyses.
+Finally, we plot all differences against quarterly appreciation for the metro, LGA and suburb analyses.
 
     allDiffComp_A <- ggplot(lgaData$mix$diff, aes(x=pIndex, y=dif, 
                                                 group=spaceName)) + 
@@ -1334,3 +1334,173 @@ Finally, we plot all differnces against quarterly appreciation for the metro, LG
                                                 nsmall=1), "%")) +
     facet_wrap(~method) +
     theme_prr
+    
+\  
+&nbsp;
+
+## Predictive Modeling
+
+The **prmcPredModels.R** file contains code where we test the predictive ability of the three methods across the five different spatial aggregation levels.
+
+#### Preliminary Commands 
+
+Per the usual, we begin by loading the necessary libraries.
+
+    library(plyr)
+    library(dplyr)
+    library(ggplot2)
+    library(reshape2)
+    library(stringr)
+    library(maptools)
+    library(sp)
+    library(rgeos)
+    library(grid)
+
+We then source the necessary custom functions (directly from Github)
+
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/prrFunctions.R'))
+  
+#### Load Data   
+
+Next we load the R objects from the data analysis phase.  First we set the path to the data.
+
+    dataPath <- "C:/.../rawData/"
+
+Then load the objects.
+
+    load(paste0(dataPath, 'analysisResults.RData'))
+    
+#### Extract necessary data 
+  
+Next we convert the analytical data objects into data objects that are useful for predictive modeling.  To do so, we use the **prrGetYields()** custom function.
+
+    metroYields <- prrGetYields(metroData)
+    lgaYields <- prrGetYields(lgaData)
+    slaYields <- prrGetYields(slaData)
+    postcodeYields <- prrGetYields(postcodeData)
+    suburbYields <- prrGetYields(suburbData)
+
+We also add a unique identifier to the direct match data at this step
+
+    dmData$uID <- 1:nrow(dmData)
+
+#### Estimate prediction errors 
+  
+We begin by estimating the raw prediction errors, where prediction error is the difference between the actual price to rent ratio for each of the matched observations versus that predicted by the three estimation methods.  We use the custom function **prrPredModelWrap** to complete this operation.
+
+Starting with the metro level, combined and use separated (*byUse=TRUE*)
+
+    metroRes <- prrPredModelWrap(dmData, metroYields)
+    metroResU <- prrPredModelWrap(dmData, metroYields, byUse=TRUE)
+  
+Then at the LGA level
+
+    lgaRes <- prrPredModelWrap(dmData, lgaYields, byGeog=TRUE, geoField='lga')
+    lgaResU <- prrPredModelWrap(dmData, lgaYields, byGeog=TRUE, 
+                                geoField='lga', byUse=TRUE)
+  
+And, then at the suburb level
+
+    suburbRes <- prrPredModelWrap(dmData, suburbYields, byGeog=TRUE, 
+                                  geoField='suburb')
+    suburbResU <- prrPredModelWrap(dmData, suburbYields, byGeog=TRUE, 
+                                   geoField='suburb', byUse=TRUE)
+
+
+#### Attached Prediction Errors
+                                   
+Next, we attach the individual prediction errors from each of the three methods and the two use categories to the individual observations in the matched dataset.  This is done for all three levels of analysis.
+
+At the metro level
+
+    dmData$mMed <- metroRes$median$error[match(dmData$uID, metroRes$median$uID)]
+    dmData$mMedU <- metroResU$median$error[match(dmData$uID, metroResU$median$uID)]
+    dmData$mImp <- metroRes$impute$error[match(dmData$uID, metroRes$impute$uID)]
+    dmData$mImpU <- metroResU$impute$error[match(dmData$uID, metroResU$impute$uID)]
+    dmData$mMat <- metroRes$match$error[match(dmData$uID, metroRes$match$uID)]
+    dmData$mMatU <- metroResU$match$error[match(dmData$uID, metroResU$match$uID)]
+
+The LGA level
+
+    dmData$lMed <- lgaRes$median$error[match(dmData$uID, lgaRes$median$uID)]
+    dmData$lMedU <- lgaResU$median$error[match(dmData$uID, lgaResU$median$uID)]
+    dmData$lImp <- lgaRes$impute$error[match(dmData$uID, lgaRes$impute$uID)]
+    dmData$lImpU <- lgaResU$impute$error[match(dmData$uID, lgaResU$impute$uID)]
+    dmData$lMat <- lgaRes$match$error[match(dmData$uID, lgaRes$match$uID)]
+    dmData$lMatU <- lgaResU$match$error[match(dmData$uID, lgaResU$match$uID)]
+
+The suburb level
+
+    dmData$sMed <- suburbRes$median$error[match(dmData$uID, suburbRes$median$uID)]
+    dmData$sMedU <- suburbResU$median$error[match(dmData$uID, suburbResU$median$uID)]
+    dmData$sImp <- suburbRes$impute$error[match(dmData$uID, suburbRes$impute$uID)]
+    dmData$sImpU <- suburbResU$impute$error[match(dmData$uID, suburbResU$impute$uID)]
+    dmData$sMat <- suburbRes$match$error[match(dmData$uID, suburbRes$match$uID)]
+    dmData$sMatU <- suburbResU$match$error[match(dmData$uID, suburbResU$match$uID)]
+
+#### Calculate Prediction Error
+
+Before calculation, we first create an object contain the absolute value of the individual prediction errors.
+
+    absPredResults <- lapply(dmData[ ,(which(colnames(dmData) == 'mMed'):
+                                        which(colnames(dmData) == 'sMatU'))], abs)
+
+We then calculate the median of each of the 18 predictions (3 methods x 2 use types x 3 geographic levels)
+
+    absPredMed <- lapply(absPredResults, median, na.rm=TRUE)
+
+The results are then placed in a 6 x 3 table.
+
+    absPredMed <- as.matrix(unlist(absPredMed))
+    predTable <- data.frame(metro=absPredMed[1:6],
+                            lga=absPredMed[7:12],
+                            suburb=absPredMed[13:18])
+    rownames(predTable) <- c('Median', 'Median by Use', 'Impute', 'Impute by Use',
+                             'Match', 'Match by Use')
+
+#### Calculate Hit Rate
+
+We also calculate the hit rate, or the percentage of total observations that each methods is able to give a predicted value on.  
+
+First we build a simple function to count the number of non-predicted observations in each method.
+
+    countNA <- function(x){length(which(is.na(x)))/length(x)}
+
+We then calculate the hit rate for each of the 18 predictions
+
+    hitRate <- lapply(absPredResults, countNA)
+
+The results are then placed in a 6 x 3 table
+
+    hitRate <- 1 - as.matrix(unlist(hitRate))
+    hrTable <- data.frame(metro=hitRate[1:6],
+                          lga=hitRate[7:12],
+                          suburb=hitRate[13:18])
+    rownames(hrTable) <- c('Median', 'Median by Use', 'Impute', 'Impute by Use',
+                           'Match', 'Match by Use')
+
+#### Save workspace 
+
+Finally we save the workspace.
+
+    save(dmData, predTable, hrTable, 
+         file=paste0(dataPath, 'predModelResults.RData'))
+         
+    
+\  
+&nbsp;
+\  
+&nbsp;
+\  
+&nbsp;
+\  
+&nbsp;
+
+## Custom Functions ----------------------------------------------------------------------
+
+Here we describe in detail the functionality of all of the custom functions used in this analysis. the code for these functions is found in the **prrFunctions.R** file
+
+
+
+

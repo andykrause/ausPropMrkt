@@ -398,3 +398,939 @@ We also source an exterior set of function that assist in the data analysis task
 Finally, we set the path to the data
 
      dataPath <- "C:/.../rawData/"
+     
+#### Read in and prepare data
+
+If the **reBuildData** parameter is set to TRUE, then we source the **prmcDataPrep.R** file described above.  If not, then the cleaned data object is loaded into memory.
+
+    if(reBuildData){
+       source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                     'master/akModelComparisonAnalysis/prmcDataPrep.R'))
+    } else {
+       load(paste0(dataPath, 'cleanData.RData'))
+    }
+  
+### Calculate yield values
+
+In the remainder of this file we calculate the actual yield values for all three methods: 1) Median; 2) Imputation; and 3) Matching.  For the median method, only aggregate values are calculated, for Imputation and Matching first the individual values are computed, then they are aggregated.
+
+#### Median Method
+
+Below we calculate the rental yield values using the median method.  This is accomplished using the **prrStsGeoWrap()** function which is a specialized wrapper function for the more general **spaceTimeShard()** function.  The calculation are done at all five levels and with combined uses and uses (house and unit) separated.
+
+##### Metro Level
+
+    mmMetro <- prrStsGeoWrap(stsData = allTrans,
+                             metric=c('transValue', 'transValue'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+                              
+    mmMetroH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House',],
+                              metric=c('transValue', 'transValue'),
+                              spaceField='all', timeField='transQtr',
+                              defDim='time', stsLimit=3, 
+                              calcs=list(median='median'))
+                      
+    mmMetroU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit',],
+                              metric=c('transValue', 'transValue'),
+                              spaceField='all', timeField='transQtr',
+                              defDim='time', stsLimit=3, 
+                              calcs=list(median='median'))
+  
+##### LGA Level
+  
+    mmLga<- prrStsGeoWrap(stsData = allTrans,
+                          metric=c('transValue', 'transValue'),
+                          spaceField='lga', timeField='transQtr',
+                          defDim='time', stsLimit=3, 
+                          calcs=list(median='median'))
+  
+    mmLgaH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                            metric=c('transValue', 'transValue'),
+                            spaceField='lga', timeField='transQtr',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+    mmLgaU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                            metric=c('transValue', 'transValue'),
+                            spaceField='lga', timeField='transQtr',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+##### SLA1 Level
+  
+    mmSla <- prrStsGeoWrap(stsData = allTrans,
+                           metric=c('transValue', 'transValue'),
+                           spaceField='sla1', timeField='transQtr',
+                           defDim='time', stsLimit=3, 
+                           calcs=list(median='median'))
+  
+    mmSlaH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                            metric=c('transValue', 'transValue'),
+                            spaceField='sla1', timeField='transQtr',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+    mmSlaU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                            metric=c('transValue', 'transValue'),
+                            spaceField='sla1', timeField='transQtr',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+##### Suburb Level
+  
+    mmSuburb <- prrStsGeoWrap(stsData = allTrans,
+                              metric=c('transValue', 'transValue'),
+                              spaceField='suburb', timeField='transQtr',
+                              defDim='time', stsLimit=3, 
+                              calcs=list(median='median'))
+  
+    mmSuburbH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='suburb', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+
+    mmSuburbU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                               metric=c('transValue', 'transValue'),
+                               spaceField='suburb', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+##### PostCode Level
+  
+    mmPostcode <- prrStsGeoWrap(stsData = allTrans,
+                                metric=c('transValue', 'transValue'),
+                                spaceField='postCode', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+    mmPostcodeH <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'House', ],
+                                 metric=c('transValue', 'transValue'),
+                                 spaceField='postCode', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+    mmPostcodeU <- prrStsGeoWrap(allTrans[allTrans$PropertyType == 'Unit', ],
+                                 metric=c('transValue', 'transValue'),
+                                 spaceField='postCode', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+#### Imputation Method
+
+Next we calculate the rental yield values using the imputation method.  First we specify imputation models for both sales price and rental values.  
+
+    regSpecH <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+                   log(AreaSize) +Bedrooms + Baths + ssInteg + ssChoice
+  
+    regSpecU <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+                   Bedrooms + Baths + ssInteg + ssChoice
+
+We then impute the values using the **prrImputeReg()** function.  This function uses the sales model to impute sales prices for the rental observations and vice versa. Results are calculated separately for houses and units.
+
+    houseResults <- prrImputeReg(regSpecH, 
+                            subset(allTrans, transType == 'sale' &
+                                             PropertyType == 'House' & 
+                                             QT_house_postCode == 1),
+                            subset(allTrans, transType == 'rent' &
+                                             PropertyType == 'House' & 
+                                             QT_house_postCode == 1),
+                            verbose=TRUE)
+  
+    unitResults <- prrImputeReg(regSpecU, 
+                           subset(allTrans, transType == 'sale' &
+                                    PropertyType == 'Unit' & 
+                                    QT_unit_postCode == 1),
+                           subset(allTrans, transType == 'rent' &
+                                    PropertyType == 'Unit' & 
+                                    QT_unit_postCode == 1),
+                           verbose=TRUE)
+
+We then extract the imputed and observed values and calculated the rental yield
+
+    irValues <- rbind(houseResults$results, unitResults$results)
+
+    irValues$yield <- (irValues$Rent * 52) / irValues$Price
+
+Finally, we add the yield estimates to the original dataset, removing all those for which a yield could not be calculated
+
+    allTrans$yield <- irValues$yield[match(allTrans$UID, irValues$UID)]
+    xTrans <- subset(allTrans, !is.na(yield)) 
+
+The calculations are done at all five levels and with combined uses and uses (house and unit) separated.  The generic **spaceTimeShard()** function is used to calculate the median yield value for each quarter.
+
+##### Metro
+  
+    irMetro <- spaceTimeShard(stsData = xTrans,
+                             metric=c('yield'),
+                             spaceField='all', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+    irMetroH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                               metric=c('yield'),
+                               spaceField='all', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+
+    irMetroU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                               metric=c('yield'),
+                               spaceField='all', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+
+##### LGA
+  
+    irLga <- spaceTimeShard(stsData = xTrans,
+                            metric=c('yield'),
+                            spaceField='lga', timeField='transQtr',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+    irLgaH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                             metric=c('yield'),
+                             spaceField='lga', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+    irLgaU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                             metric=c('yield'),
+                             spaceField='lga', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median')) 
+
+##### SLA1
+  
+    irSla <- spaceTimeShard(stsData = xTrans,
+                            metric=c('yield'),
+                            spaceField='sla1', timeField='transQtr',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+    irSlaH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                             metric=c('yield'),
+                             spaceField='sla1', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+    irSlaU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                             metric=c('yield'),
+                             spaceField='sla1', timeField='transQtr',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+
+##### Suburb
+  
+    irSuburb <- spaceTimeShard(stsData = xTrans,
+                               metric=c('yield'),
+                               spaceField='suburb', timeField='transQtr',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+    irSuburbH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                metric=c('yield'),
+                                spaceField='suburb', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+    irSuburbU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                metric=c('yield'),
+                                spaceField='suburb', timeField='transQtr',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+##### Post Code
+  
+    irPostcode <- spaceTimeShard(stsData = xTrans,
+                                 metric=c('yield'),
+                                 spaceField='postCode', timeField='transQtr',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+    irPostcodeH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+                                  metric=c('yield'),
+                                  spaceField='postCode', timeField='transQtr',
+                                  defDim='time', stsLimit=3, 
+                                  calcs=list(median='median'))
+  
+    irPostcodeU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+                                  metric=c('yield'),
+                                  spaceField='postCode', timeField='transQtr',
+                                  defDim='time', stsLimit=3, 
+                                  calcs=list(median='median'))
+  
+#### Matching Method
+
+Next we calculate the rental yield values using the matching method.  In the first step we extract all of the matching observations (properties that have both rented and sold) using the **prrSaleRentMatch()** function.
+
+     dmData <- prrSaleRentMatch(sales=allTrans[allTrans$transType=='sale',], 
+                                rentals=allTrans[allTrans$transType=='rent',],
+                                matchField='AddressID', saleField='transValue',
+                                rentField='transValue', timeField='transQtr')
+
+
+The calculations are then done at all five levels and with combined uses and uses (house and unit) separated.  The generic **spaceTimeShard()** function is used to calculate the median yield value for each quarter.
+
+##### Metro
+
+    dmMetro <- spaceTimeShard(stsData = dmData,
+                              metric=c('saleYield'),
+                              spaceField='all', timeField='saleTime',
+                              defDim='time', stsLimit=3, 
+                              calcs=list(median='median'))
+  
+    dmMetroH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                               metric=c('saleYield'),
+                               spaceField='all', timeField='saleTime',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+    dmMetroU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                               metric=c('saleYield'),
+                               spaceField='all', timeField='saleTime',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+##### LGA  
+  
+    dmLga <- spaceTimeShard(stsData = dmData,
+                            metric=c('saleYield'),
+                            spaceField='lga', timeField='saleTime',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+    dmLgaH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                             metric=c('saleYield'),
+                             spaceField='lga', timeField='saleTime',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+    dmLgaU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                             metric=c('saleYield'),
+                             spaceField='lga', timeField='saleTime',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+##### SLA1 
+  
+    dmSla <- spaceTimeShard(stsData = dmData,
+                            metric=c('saleYield'),
+                            spaceField='sla1', timeField='saleTime',
+                            defDim='time', stsLimit=3, 
+                            calcs=list(median='median'))
+  
+    dmSlaH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                             metric=c('saleYield'),
+                             spaceField='sla1', timeField='saleTime',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median'))
+  
+    dmSlaU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                             metric=c('saleYield'),
+                             spaceField='sla1', timeField='saleTime',
+                             defDim='time', stsLimit=3, 
+                             calcs=list(median='median')) 
+
+##### Suburb
+  
+    dmSuburb <- spaceTimeShard(stsData = dmData,
+                               metric=c('saleYield'),
+                               spaceField='suburb', timeField='saleTime',
+                               defDim='time', stsLimit=3, 
+                               calcs=list(median='median'))
+  
+    dmSuburbH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                metric=c('saleYield'),
+                                spaceField='suburb', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median'))
+  
+    dmSuburbU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                metric=c('saleYield'),
+                                spaceField='suburb', timeField='saleTime',
+                                defDim='time', stsLimit=3, 
+                                calcs=list(median='median')) 
+  
+##### PostCode 
+  
+    dmPostcode <- spaceTimeShard(stsData = dmData,
+                                 metric=c('saleYield'),
+                                 spaceField='postCode', timeField='saleTime',
+                                 defDim='time', stsLimit=3, 
+                                 calcs=list(median='median'))
+  
+    dmPostcodeH <- spaceTimeShard(dmData[dmData$PropertyType == 'House',],
+                                  metric=c('saleYield'),
+                                  spaceField='postCode', timeField='saleTime',
+                                  defDim='time', stsLimit=3, 
+                                  calcs=list(median='median'))
+  
+    dmPostcodeU <- spaceTimeShard(dmData[dmData$PropertyType == 'Unit',],
+                                  metric=c('saleYield'),
+                                  spaceField='postCode', timeField='saleTime',
+                                  defDim='time', stsLimit=3, 
+                                  calcs=list(median='median')) 
+                                  
+### Calculate sale price indices
+
+A number of the vizualizations and analyses that follow require a base price index. In this section we extract the coefficients from the hedonic price models to create use specific as well as a combined price index.
+                                  
+We begin by extracting the coefficients from the hedonic price models developed in the imputation method
+
+    houseModel <- as.data.frame(houseResults$saleModel$coef)
+    unitModel <- as.data.frame(unitResults$saleModel$coef)
+
+    houseTimeCoefs <- c(0, houseModel$Estimate[grep('transQtr', 
+                                                    rownames(houseModel))])
+    unitTimeCoefs <- c(0, unitModel$Estimate[grep('transQtr', 
+                                                    rownames(unitModel))])
+  
+We then convert these into an index of change, where the first period is the base.  This is done for houses and unit separately.
+  
+    houseIndex <- c(0, (houseTimeCoefs[-1] - 
+                          houseTimeCoefs[-length(houseTimeCoefs)]))
+    unitIndex <- c(0, (unitTimeCoefs[-1] - 
+                         unitTimeCoefs[-length(unitTimeCoefs)]))
+  
+We then create a combined index by averaging the two use-specific indices.  
+  
+    allIndex <- (houseIndex + unitIndex) / 2
+  
+Finally, we convert this into a list object for flexible use later.
+
+    indexList <- list(all = allIndex,
+                      house = houseIndex,
+                      unit = unitIndex)
+                                    
+### Combine results
+
+Before moving on to visualization of the result we first combine all results at the geographic level.  In addition to combining the results into a list object, we also create an aggregated set of results where all three method are combined into singular data.frame object for each of computation (using the **prrAggrGeoData()** function).  This includes the price indices developed above. 
+
+    metroList <- list(mm=list(all=mmMetro, house=mmMetroH, unit=mmMetroU),
+                      ir=list(all=irMetro, house=irMetroH, unit=irMetroU),
+                      dm=list(all=dmMetro, house=dmMetroH, unit=dmMetroU))
+    metroData <- prrAggrGeoData(metroList, indexList)
+
+
+    lgaList <- list(mm=list(all=mmLga, house=mmLgaH, unit=mmLgaU),
+                    ir=list(all=irLga, house=irLgaH, unit=irLgaU),
+                    dm=list(all=dmLga, house=dmLgaH, unit=dmLgaU))
+    lgaData <- prrAggrGeoData(lgaList, indexList, geoSplit=TRUE)
+
+
+    slaList <- list(mm=list(all=mmSla, house=mmSlaH, unit=mmSlaU),
+                    ir=list(all=irSla, house=irSlaH, unit=irSlaU),
+                    dm=list(all=dmSla, house=dmSlaH, unit=dmSlaU))
+    slaData <- prrAggrGeoData(slaList, indexList, geoSplit=TRUE)
+
+
+    postcodeList <- list(mm=list(all=mmPostcode, house=mmPostcodeH, unit=mmPostcodeU),
+                         ir=list(all=irPostcode, house=irPostcodeH, unit=irPostcodeU),
+                         dm=list(all=dmPostcode, house=dmPostcodeH, unit=dmPostcodeU))
+    postcodeData <- prrAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
+
+
+    suburbList <- list(mm=list(all=mmSuburb, house=mmSuburbH, unit=mmSuburbU),
+                       ir=list(all=irSuburb, house=irSuburbH, unit=irSuburbU),
+                       dm=list(all=dmSuburb, house=dmSuburbH, unit=dmSuburbU))
+      suburbData <- prrAggrGeoData(suburbList, indexList, geoSplit=TRUE)
+  
+Finally, we save only the necessary objects for use in subsequent analyses.
+
+    save(metroList, metroData, lgaList, lgaData, slaList, slaData,
+         postcodeList, postcodeData, suburbList, suburbData, dmData,
+         file=paste0(dataPath, 'analysisResults.RData'))
+         
+\  
+&nbsp;
+
+## Data Visualization
+
+The **prmcDataViz.R** file handles the visualization of the results.  
+
+#### Preliminary Commands
+
+We begin by loading the necessary libraries.
+
+    library(plyr)
+    library(dplyr)
+    library(ggplot2)
+    library(reshape2)
+    library(stringr)
+    library(maptools)
+    library(sp)
+    library(rgeos)
+    library(grid)
+    
+Next, we set the paths to the data analysis object and to a number of shapefiles for creating maps.  Shapefiles include boundary files for the four different geographic aggregations being analyzed -- suburb, LGA, SLA1 and post code.
+
+    dataPath <- "C:/.../rawData/"
+    subGeoFile <- 'Vic_Suburbs.shp'
+    lgaGeoFile <- 'Vic_LGAs.shp'
+    sla1GeoFile <- 'Vic_SLA1.shp'
+    postGeoFile <- 'Vic_PostCodes.shp'
+
+We then set two custom plotting theme for our ggplots; one with a black background for presentation and another with white for publication.
+
+     theme_black <- theme_grey() +
+      theme(text = element_text(size=9),
+          panel.background = element_rect(colour='black', fill='black'),
+          panel.grid.major=element_line(colour='gray20'),
+          panel.grid.minor=element_line(colour='gray20'),
+          plot.background=element_rect(fill='gray10'),
+          axis.title.y=element_text(colour='white'),
+          axis.text.y=element_text(hjust=1),
+          legend.position='bottom',
+          legend.background=element_rect(fill='gray10'),
+          legend.key=element_rect(fill='gray10', color='gray10'),
+          legend.text=element_text(color='white'),
+          legend.title=element_blank())
+  
+
+    theme_prr <- theme_grey() +
+      theme(text = element_text(size=11),
+          panel.background = element_rect(colour='gray95', fill='gray95'),
+          panel.grid.major=element_line(colour='white', size=.5),
+          panel.grid.minor=element_line(colour='white', size=.1),
+          plot.background=element_rect(fill='white'),
+          axis.title.y=element_text(colour='black'),
+          axis.text.y=element_text(hjust=1),
+          legend.position='bottom',
+          legend.background=element_rect(fill='white'),
+          legend.key=element_rect(fill='white', color='white'),
+          legend.text=element_text(color='black'),
+          legend.title=element_blank(),
+          legend.key.width=unit(2, "cm"),
+          strip.background = element_rect(fill = "orange", 
+                                          color = "orange", size = .1),
+          strip.text.x = element_text(face = "bold"),
+          strip.text.y = element_text(face = "bold"))
+          
+#### Load Data   
+
+In this section we load the necessary data for visualization.  We start by loading in the saved R objects from the data analysis stage.
+
+    load(paste0(dataPath, 'analysisResults.RData'))
+
+Next, the four shapefiles are loaded.
+
+    subShp <- readShapePoly(paste0(dataPath, subGeoFile))
+    lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
+    sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
+    postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
+         
+#### Data Visualization
+
+Here we begin the data visualization.  We start by setting the three colors (grayscale appropriate), sizes and line types that we'll use in the plotting of the three different methods.
+
+    methCols <- c('navy', 'royalblue2', 'skyblue')
+    methSizes <- c(.5, 1.25, 2)
+    methLines <- c(1, 1, 1)  
+
+##### Metro Scale
+
+We start with plots at the metro scale. Or, in other words, plots showing analysis of data for the aggregated metropolitan area.
+
+First, a comparison of the three methods with houses and units combined.
+
+    metroPlot <- ggplot(metroData$mix$comp,
+                      aes(x=timeName, y=yield, group=method)) + 
+               geom_line(aes(colour=method, size=method, linetype=method,
+                             lineend='round', linejoin='round')) +
+               scale_size_manual(values=methSizes) +
+               scale_colour_manual(values=methCols) +
+               scale_linetype_manual(values=methLines) + 
+               xlab("") + ylab("Rental Yield\n") +
+               scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+               scale_y_continuous(limits=c(.032, .048),
+                                  breaks=seq(.032, .048, .002), 
+                                  labels=paste0(format(100 * (seq(.032,
+                                                                  .048, .002)),
+                                          nsmall=1), "%")) +
+               theme_prr
+
+Next we plot the same, but with the results weighted by use
+
+    metroPlotUW <- ggplot(metroData$useWgt$comp, 
+                        aes(x=timeName, y=yield, group=method)) + 
+                 geom_line(aes(colour=method, size=method, linetype=method,
+                               lineend='round', linejoin='round')) +
+                 scale_size_manual(values=methSizes) +
+                 scale_colour_manual(values=methCols) +
+                 scale_linetype_manual(values=methLines) + 
+                 xlab("") + ylab("Rental Yield\n") +
+                 scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+                 scale_y_continuous(limits=c(.032, .048),
+                                    breaks=seq(.032, .048, .002), 
+                                    labels=paste0(format(100 * 
+                                                           (seq(.032, .048,
+                                                                .002)),
+                                            nsmall=1), "%")) +
+                 theme_prr
+  
+We then separate the analysis by use (house vs. unit).
+
+    metroPlotUse <- ggplot(metroData$use$comp,
+                         aes(x=timeName, y=yield, group=method)) + 
+                  geom_line(aes(colour=method, size=method, linetype=method,
+                                lineend='round', linejoin='round')) +
+                  scale_size_manual(values=methSizes) +
+                  scale_colour_manual(values=methCols) +
+                  scale_linetype_manual(values=methLines) + 
+                  xlab("") + ylab("Rental Yield\n") +
+                  scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+                  scale_y_continuous(limits=c(.030, .050),
+                                     breaks=seq(.030, .050, .002), 
+                                     labels=paste0(format(100 * (
+                                       seq(.030, .050, .002)),
+                                            nsmall=1), "%")) +
+                  facet_wrap(~use) +
+                  theme_prr
+  
+Next, a plot showing the differences between the three methods against the appreciation rate in the quarter.  This plot shows the differences between the combined house and unit analysis.
+
+    metroDiffPlot_A <- ggplot(metroData$mix$diff, aes(x=pIndex, y=dif)) + 
+                     geom_point(colour='black', size=2) + 
+                     geom_smooth(method=lm) +
+                     xlab("Home Price Movement in Qtr") +
+                     ylab("Difference in Rental Yield Estimate\n") +
+                     scale_x_continuous(limits=c(-.03, .06),
+                                        breaks=seq(-.02, .06, .02), 
+                                        labels=paste0(format(100 *
+                                                      (seq(-.02, .06, .02)),
+                                                       nsmall=1), "%")) +
+                     scale_y_continuous(limits=c(0, .011),
+                                        breaks=seq(0, .01, .002), 
+                                        labels=paste0(format(100 * 
+                                                      (seq(0, .01, .002)),
+                                                       nsmall=1), "%")) +
+                     facet_wrap(~method) +
+                     theme_prr
+
+Next, a plot showing the differences between the three methods against the time.  This plot shows the differences between the combined house and unit analysis.
+
+    metroDiffPlot_T <- ggplot(metroData$mix$diff, aes(x=timeName, y=dif)) + 
+                            geom_point(colour='black', size=2) + 
+                     geom_smooth(method=lm) +
+                     xlab("") +
+                     ylab("Difference in Rental Yield Estimate\n") +
+                     scale_x_continuous(breaks=seq(2, 18, 4), 
+                                        labels=2011:2015) +
+                     scale_y_continuous(limits=c(0, .011),
+                                        breaks=seq(0, .01, .002), 
+                                        labels=paste0(format(100 * 
+                                                     (seq(0, .01, .002)),
+                                                      nsmall=1), "%")) +
+                     facet_wrap(~method) +
+                     theme_prr
+  
+A plot showing the differences between the three methods against the appreciation rate in the quarter.  This plot shows the differences between the weigthed house and unit analysis.
+
+    metroDiffUWPlot_A <- ggplot(metroData$useWgt$diff, aes(x=pIndex, y=dif)) + 
+                       geom_point(colour='black', size=2) + 
+                       geom_smooth(method=lm) +
+                       xlab("Home Price Movement in Qtr") +
+                       ylab("Difference in Rental Yield Estimate\n") +
+                       scale_x_continuous(limits=c(-.03, .06),
+                                          breaks=seq(-.02, .06, .02), 
+                                          labels=paste0(format(100 *
+                                                       (seq(-.02, .06, .02)),
+                                                        nsmall=1), "%")) +
+                       scale_y_continuous(limits=c(0, .011),
+                                          breaks=seq(0, .01, .002), 
+                                          labels=paste0(format(100 * 
+                                                       (seq(0, .01, .002)),
+                                                        nsmall=1), "%")) +
+                       facet_wrap(~method) +
+                       theme_prr
+  
+A plot showing the differences between the three methods against time.  This plot shows the differences between the weighted house and unit analysis.
+
+    metroDiffUWPlot_T <- ggplot(metroData$useWgt$diff, aes(x=timeName, y=dif)) + 
+                       geom_point(colour='black', size=2) + 
+                       geom_smooth(method=lm) +
+                       xlab("") +
+                       ylab("Difference in Rental Yield Estimate\n") +
+                       scale_x_continuous(breaks=seq(2, 18, 4), 
+                                          labels=2011:2015) +
+                       scale_y_continuous(limits=c(0, .011),
+                                          breaks=seq(0, .01, .002), 
+                                          labels=paste0(format(100 * 
+                                                       (seq(0, .01, .002)),
+                                                        nsmall=1), "%")) +
+                       facet_wrap(~method) +
+                       theme_prr
+  
+A plot showing the differences between the three methods against the appreciation rate in the quarter.  This plot shows the differences between the separated house and unit analysis.
+
+    metroDiffUPlot_A <- ggplot(metroData$use$diff, aes(x=pIndex, y=dif)) + 
+                      geom_point(colour='black', size=2) + 
+                      geom_smooth(method=lm) +
+                      xlab("Home Price Movement in Qtr") +
+                      ylab("Difference in Rental Yield Estimate\n") +
+                      scale_x_continuous(limits=c(-.03, .07),
+                                         breaks=seq(-.02, .06, .02), 
+                                         labels=paste0(format(100 *
+                                                      (seq(-.02, .06, .02)),
+                                                       nsmall=1), "%")) +
+                      scale_y_continuous(limits=c(0, .0098),
+                                         breaks=seq(0, .008, .002), 
+                                         labels=paste0(format(100 * 
+                                                      (seq(0, .008, .002)),
+                                                       nsmall=1), "%")) +
+                      facet_wrap(~use+method) +
+                      theme_prr
+                      
+A plot showing the differences between the three methods against time.  This plot shows the differences between the separated house and unit analysis.
+
+    metroDiffUPlot_T <- ggplot(metroData$use$diff, aes(x=timeName, y=dif)) + 
+                      geom_point(colour='black', size=2) + 
+                      geom_smooth(method=lm) +
+                      xlab("") + 
+                      ylab("Difference in Rental Yield Estimate\n")  +
+                      scale_x_continuous(breaks=seq(2, 18, 4), 
+                                         labels=2011:2015) +
+                      scale_y_continuous(limits=c(-.001, .011),
+                                         breaks=seq(0, .01, .002), 
+                                         labels=paste0(format(100 * 
+                                                      (seq(0, .01, .002)),
+                                                       nsmall=1), "%")) +
+                      facet_wrap(~use+method) +
+                      theme_prr
+
+This plot is an aggregate comparison of all difference between the three methods -- combined, use weighted and use separated.
+
+     metroDiffComp <- ggplot(metroData$mix$diff, aes(x=timeName, y=dif)) + 
+                      geom_point(colour='black', size=0) + 
+                      geom_smooth(method=lm, se=FALSE, colour='black',
+                                  size=1) +
+                      geom_smooth(data=metroData$useWgt$diff,
+                                  aes(x=timeName, y=dif),
+                                  method=lm, se=FALSE,
+                                  colour='red', size=1) +
+                      geom_smooth(data=metroData$use$diff[1:60,],
+                                  aes(x=timeName, y=dif),
+                                  method=lm, se=FALSE,
+                                  colour='blue', size=1) +
+                      geom_smooth(data=metroData$use$diff[61:120,],
+                                  aes(x=timeName, y=dif),
+                                  method=lm, se=FALSE,
+                                  colour='navy', size=1) +
+                      xlab("") + 
+                      ylab("Difference in Rental Yield Estimate\n")  +
+                      scale_x_continuous(breaks=seq(2, 18, 4), 
+                                         labels=2011:2015) +
+                      scale_y_continuous(limits=c(-.001, .011),
+                                         breaks=seq(0, .01, .002), 
+                                         labels=paste0(format(100 * 
+                                                      (seq(0, .01, .002)),
+                                                       nsmall=1), "%")) +
+                      facet_wrap(~method) +
+                      theme_prr
+    
+We then build plot showing the differences between the methods at the LGA level.  This plot shows the comparisons of the combined house and unit analysis.
+
+    lgaPlot <- ggplot(lgaData$mix$comp, 
+                    aes(x=timeName, y=yield, group=spaceName)) + 
+    geom_line(colour='gray50', size= 0.1, lineend='round', linejoin='round') +
+    geom_line(data=lgaData$mixWgt$comp, 
+              aes(x=timeName, y=yield),
+              colour='black', size=1.5, lineend='round', linejoin='round') +
+    xlab("") + ylab("Rental Yield\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.015, .059),
+                       breaks=seq(.015, .059, .004), 
+                       labels=paste0(format(100 * (seq(.015, .059, .004)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~method)+
+    theme_prr
+  
+We then plot the differences versus time (again, combined house and unit analysis) at the LGA level.
+  
+    lgaDiffComp_T <- ggplot(lgaData$mix$diff, aes(x=timeName, y=dif, 
+                                              group=spaceName)) + 
+                 geom_point(colour='black', size=0) + 
+                 stat_smooth(data=lgaData$mix$diff,
+                             aes(x=timeName, y=dif, group=spaceName),
+                             method=loess, se=FALSE, colour='gray50') +
+    stat_smooth(data=lgaData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=TRUE,
+                colour='black', size=2) +
+    stat_smooth(data=lgaData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=TRUE,
+                colour='blue', size=2) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    facet_wrap(~method) +
+    theme_prr
+
+
+We then plot the differences versus quarterly appreciation (again, combined house and unit analysis) at the LGA level.
+
+    lgaDiffComp_A <- ggplot(lgaData$mix$diff, aes(x=pIndex, y=dif, 
+                                                group=spaceName)) + 
+    geom_point(colour='black', size=0) + 
+    stat_smooth(data=lgaData$mix$diff,
+                aes(x=pIndex, y=dif, group=spaceName),
+                method=loess, se=FALSE, colour='gray50') +
+    stat_smooth(data=lgaData$mixWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=TRUE,
+                colour='black', size=2) +
+    stat_smooth(data=lgaData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=TRUE,
+                colour='blue', size=2) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    facet_wrap(~method) +
+    theme_prr
+  
+We then build plot showing the differences between the methods at the suburb level.  This plot shows the comparisons of the combined house and unit analysis.
+
+    suburbPlot <- ggplot(suburbData$mix$comp, aes(x=timeName, y=yield, 
+                                          group=spaceName)) + 
+    geom_line(colour='gray50', size= 0.1, lineend='round', linejoin='round') +
+    geom_line(data=suburbData$mixWgt$comp, 
+              aes(x=timeName, y=yield),
+              colour='black', size=1.5, lineend='round', linejoin='round') +
+    xlab("") + ylab("Rental Yield\n") +
+    scale_x_continuous(breaks=seq(2, 18, 4), labels=2011:2015) +
+    scale_y_continuous(limits=c(.01, .079),
+                       breaks=seq(.015, .059, .004), 
+                       labels=paste0(format(100 * (seq(.015,
+                                                       .059, .004)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~method)+
+    theme_prr
+  
+We then plot the differences versus time (again, combined house and unit analysis) at the suburb level.
+
+    suburbDiffComp_T <- ggplot(suburbData$mix$diff, aes(x=timeName, y=dif, 
+                                              group=spaceName)) + 
+    geom_point(colour='black', size=0) + 
+    stat_smooth(data=suburbData$mix$diff,
+                aes(x=timeName, y=dif, group=spaceName),
+                method=loess, se=FALSE, colour='gray50') +
+    stat_smooth(data=suburbData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='black', size=2) +
+    stat_smooth(data=suburbData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='blue', size=2) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    scale_y_continuous(limits=c(-.001, .011),
+                       breaks=seq(0, .01, .002), 
+                       labels=paste0(format(100 * (seq(0, .01, .002)),
+                                                 nsmall=1), "%")) +
+    facet_wrap(~method) +
+    theme_prr
+  
+
+We then plot the differences versus quarterly appreciation (again, combined house and unit analysis) at the suburb level.
+
+     suburbDiffComp_A <- ggplot(suburbData$mix$diff, 
+                             aes(x=pIndex, y=dif, group=spaceName)) + 
+    geom_point(colour='black', size=0) + 
+    stat_smooth(data=suburbData$mix$diff,
+                aes(x=pIndex, y=dif, group=spaceName),
+                method=loess, se=FALSE, colour='gray50') +
+    stat_smooth(data=suburbData$mixWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='black', size=2) +
+    stat_smooth(data=suburbData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='blue', size=2) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    scale_y_continuous(limits=c(-.001, .011),
+                       breaks=seq(0, .01, .002), 
+                       labels=paste0(format(100 * (seq(0, .01, .002)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~method) +
+    theme_prr
+  
+Finally, we plot all differnces against time for the metro, LGA and suburb analyses.
+
+    allDiffComp_T <- ggplot(lgaData$mix$diff, aes(x=timeName, y=dif, 
+                                                    group=spaceName)) + 
+                 geom_point(colour='black', size=0) + 
+    stat_smooth(data=suburbData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='black', size=2, linetype=2) +
+    stat_smooth(data=lgaData$mixWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='black', size=2) +
+    stat_smooth(data=lgaData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='blue', size=2) +
+    stat_smooth(data=metroData$mix$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='red', size=2) +
+    stat_smooth(data=metroData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='red', size=2, linetype=2) +
+    stat_smooth(data=suburbData$useWgt$diff,
+                aes(x=timeName, y=dif),
+                method=loess, se=FALSE,
+                colour='blue', size=2, linetype=2) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    scale_y_continuous(limits=c(-.001, .011),
+                       breaks=seq(0, .01, .002), 
+                       labels=paste0(format(100 * 
+                                              (seq(0, .01, .002)),
+                                            nsmall=1), "%")) +
+    facet_wrap(~method) +
+    theme_prr
+ 
+Finally, we plot all differnces against quarterly appreciation for the metro, LGA and suburb analyses.
+
+    allDiffComp_A <- ggplot(lgaData$mix$diff, aes(x=pIndex, y=dif, 
+                                                group=spaceName)) + 
+    geom_point(colour='black', size=0) + 
+    stat_smooth(data=suburbData$mixWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='black', size=2) +
+    stat_smooth(data=lgaData$mixWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='black', size=2, linetype=2) +
+    stat_smooth(data=lgaData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='blue', size=2) +
+    stat_smooth(data=metroData$mix$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='red', size=2) +
+    stat_smooth(data=metroData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='red', size=2, linetype=2) +
+    stat_smooth(data=suburbData$useWgt$diff,
+                aes(x=pIndex, y=dif),
+                method=loess, se=FALSE,
+                colour='blue', size=2, linetype=2) +
+    xlab("") + 
+    ylab("Difference in Rental Yield Estimate\n")  +
+    scale_y_continuous(limits=c(0, .0105),
+                       breaks=seq(0, .008, .002), 
+                       labels=paste0(format(100 * (seq(0, .008, .002)),
+                                                nsmall=1), "%")) +
+    facet_wrap(~method) +
+    theme_prr

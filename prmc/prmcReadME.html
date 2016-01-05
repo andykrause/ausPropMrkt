@@ -1474,7 +1474,7 @@ rhGeo &lt;- rownames(rentHTable[rhKeep, ])</code></pre>
 <pre><code>rentUTable &lt;- table(unitRentals[,locField], unitRentals[,timeField])
 ruKeep &lt;- which(apply(rentUTable, 1, min) &gt;= geoTempLimit)
 ruGeo &lt;- rownames(rentUTable[ruKeep, ])</code></pre>
-<p>Intersect all accepatable lists of geographies to find those that meet the criteria in all four cases, as well as for just houses and units (and either)</p>
+<p>Intersect all acceptable lists of geographies to find those that meet the criteria in all four cases, as well as for just houses and units (and either)</p>
 <pre><code>bothGeo &lt;- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
 houseGeo &lt;- intersect(shGeo,rhGeo)
 unitGeo &lt;- intersect(suGeo, ruGeo)
@@ -1484,6 +1484,365 @@ eitherGeo &lt;- union(houseGeo, unitGeo)</code></pre>
             houseGeo = houseGeo,
             unitGeo = unitGeo,
             eitherGeo = eitherGeo))  
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrapplythres" class="section level3">
+<h3>prrApplyThres()</h3>
+<p>This function creates a variable in the observational data noting whether or not the particular observation is in a geographic area that meets the criteria noted in <strong>prrGeoLimit()</strong>.</p>
+<p>This function takes 4 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>thresData</strong>: Output from prrGeoLimit()</li>
+<li><strong>transData</strong>: The data frame of the transactions</li>
+<li><strong>timePrefix</strong>: (‘YT’) A prefix to denote the type of time field used.</li>
+<li><strong>geo</strong>: (‘postCode’) The geographic field used in the <strong>thresData</strong>.</li>
+</ol>
+<p>Declare the function</p>
+<pre><code>prrApplyThres &lt;- function(thresData, transData, timePrefix='YT', geo=&quot;postCode&quot;){</code></pre>
+<p>Create binary vectors indicating whether or not observation meets the 4 different thresholds</p>
+<pre><code>both &lt;- ifelse(transData[,geo] %in% thresData[[1]],1,0)
+house &lt;- ifelse(transData[,geo] %in% thresData[[2]],1,0)
+unit &lt;- ifelse(transData[,geo] %in% thresData[[3]],1,0)
+either &lt;- ifelse(transData[,geo] %in% thresData[[4]],1,0)</code></pre>
+<p>Combine 4 vectors into a data frame</p>
+<pre><code>all &lt;- as.data.frame(cbind(both, house, unit, either))</code></pre>
+<p>Give data frame the proper names (using the <strong>timePrefix</strong>)</p>
+<pre><code>names(all) &lt;- paste0(timePrefix, &quot;_&quot;, names(all), &quot;_&quot;,geo)</code></pre>
+<p>Return values to</p>
+<pre><code>return(cbind(transData, all))
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrstsgeowrap" class="section level3">
+<h3>prrStsGeoWrap()</h3>
+<p>Wrapper function that applies the <strong>spaceTimeShard()</strong> function across a set of geographies.</p>
+<p>This function takes 7 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>stsData</strong>: Basic transaction data</li>
+<li><strong>metrics</strong>: The field(s) to perform the calculation on</li>
+<li><strong>spaceField</strong>: Field indicating the space variable. (‘All’ if doing entire area)</li>
+<li><strong>timeField</strong>: Field indicating the time variable</li>
+<li><strong>defDim</strong>: (‘Time’ or ‘Space’) Which dimension is the constant</li>
+<li><strong>stsLimit</strong>: How many observations are required in each shard?</li>
+<li><strong>calcs</strong>: (list(median=‘median’)) List of calculations to make</li>
+</ol>
+<p>Declare the function</p>
+<pre><code>prrStsGeoWrap &lt;- function(stsData, metrics, spaceField, timeField,
+                          defDim, stsLimit, calcs){</code></pre>
+<p>Source the spaceTimeShard functions</p>
+<pre><code>if(!exists('spaceTimeShard')) {
+    source(paste0('https://raw.githubusercontent.com/andykrause/',
+                'dataAnalysisTools/master/stShardFunctions.R'))
+}</code></pre>
+<p>Calculate the sharded values for price</p>
+<pre><code>xPrice &lt;- spaceTimeShard(stsData[stsData$transType == 'sale', ],
+                         metric=metrics[1], spaceField=spaceField,
+                         timeField=timeField, defDim=defDim, 
+                         stsLimit=stsLimit, calcs=calcs)</code></pre>
+<p>Calculate the sharded values for rent</p>
+<pre><code>xRent &lt;- spaceTimeShard(stsData[stsData$transType == 'rent', ],
+                        metric=metrics[2], spaceField=spaceField,
+                        timeField=timeField, defDim=defDim, 
+                        stsLimit=stsLimit, calcs=calcs)</code></pre>
+<p>If calculation is to be done on geographic disaggregation then trim the results to only those geographies that meet the criteria.</p>
+<pre><code>if(spaceField != 'all'){</code></pre>
+<p>Combine names and select acceptable geographies</p>
+<pre><code>okNames &lt;- intersect(names(xPrice[[2]]), names(xRent[[2]]))
+geoPrices &lt;- xPrice[[4]]
+geoPrices &lt;- geoPrices[geoPrices$spaceName %in% okNames,]
+geoRents &lt;- xRent[[4]]
+geoRents &lt;- geoRents[geoRents$spaceName %in% okNames,]</code></pre>
+<p>Convert to an exportable table</p>
+<pre><code>geoTable &lt;- data.frame(timeName=geoPrices$timeName,
+                       spaceName=geoPrices$spaceName,
+                       price=geoPrices$median,
+                       rent=geoRents$median,
+                       yield=(geoRents$median * 52) / geoPrices$median)</code></pre>
+<p>If not splitting by geography then you can go straight to building the table</p>
+<pre><code>} else {
+geoTable &lt;- data.frame(timeName=xPrice$stsDF$timeName,
+                       spaceName='all',
+                       price=xPrice$stsDF$median,
+                       rent=xRent$stsDF$median,
+                       yield=((xRent$stsDF$median * 52) / 
+                         xPrice$stsDF$median))
+}</code></pre>
+<p>Return data to function. Returning a dataframe of the results table as well as the tables of the observation counts by geo and time (These are used later).</p>
+<pre><code>return(list(stsDF=geoTable,
+            priceStsTable=xPrice$stTable,
+            rentStsTable=xRent$stTable))
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrsalerentmatch" class="section level3">
+<h3>prrSaleRentMatch()</h3>
+<p>Function to compare price and rent on matched properties</p>
+<p>This function takes 6 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>sales</strong>: Data frame of sales observations</li>
+<li><strong>rentals</strong>: Data frame of rental observations</li>
+<li><strong>matchField</strong>: (‘ID’) Field indicating the variable to match sales and rents</li>
+<li><strong>saleField</strong>: (‘Price’) Field indicating sale price</li>
+<li><strong>rentField</strong>: (‘Rent’) Field indicating rental amount</li>
+<li><strong>timeField</strong>: Field indicating the time variable</li>
+</ol>
+<p>Declare the function</p>
+<pre><code>prrSaleRentMatch &lt;- function(sales, rentals, matchField = 'ID', saleField = 'Price',
+                             rentField = 'Rent', timeField = 'Year'){</code></pre>
+<p>Remove observations missing matching field</p>
+<pre><code>xSales &lt;- subset(sales, !is.na(sales[matchField]))
+xRentals &lt;- subset(rentals, !is.na(rentals[matchField]))</code></pre>
+<p>Sort by match field</p>
+<pre><code>xSales &lt;- xSales[order(xSales[,matchField]),]
+xRentals &lt;- xRentals[order(xRentals[,matchField]),]</code></pre>
+<p>Extract the matching field</p>
+<pre><code>sMatch &lt;- xSales[ ,matchField]
+rMatch &lt;- xRentals[ ,matchField]</code></pre>
+<p>Perform the cross matching identification</p>
+<pre><code>mSales &lt;- xSales[!is.na(match(sMatch, rMatch)), ]
+mRentals &lt;- xRentals[!is.na(match(rMatch, sMatch)), ]</code></pre>
+<p>Merge the two matched datasets together</p>
+<pre><code>mTrans &lt;- merge(mSales[, c(matchField, saleField, timeField)],
+                mRentals[, c(matchField, rentField, timeField)],
+                by=matchField)</code></pre>
+<p>Rename the matched fields</p>
+<pre><code>names(mTrans) &lt;- c(matchField, 'saleValue', 'saleTime', 'rentValue', 'rentTime')</code></pre>
+<p>Next we make the time adjustments to the values since rents and sales do not occur at the same time.</p>
+<p>Create the rent index</p>
+<pre><code>rentTrend &lt;- as.numeric(tapply(mTrans$rentValue, mTrans$rentTime, median))
+rentIndex &lt;- rentTrend / rentTrend[1]</code></pre>
+<p>Create the sale index</p>
+<pre><code>saleTrend &lt;- as.numeric(tapply(mTrans$saleValue, mTrans$saleTime, median))
+saleIndex &lt;- saleTrend / saleTrend[1]</code></pre>
+<p>Make adjustments to the rentals</p>
+<pre><code>rentAdj &lt;- (rentIndex[as.numeric(as.factor(mTrans$saleTime))] /
+            rentIndex[as.numeric(as.factor(mTrans$rentTime))])
+mTrans$adjRent &lt;- mTrans$rentValue * rentAdj</code></pre>
+<p>Make the adjustments to the sales</p>
+<pre><code>saleAdj &lt;- (saleIndex[as.numeric(as.factor(mTrans$rentTime))] /
+            saleIndex[as.numeric(as.factor(mTrans$saleTime))])
+mTrans$adjSale &lt;- mTrans$saleValue * saleAdj</code></pre>
+<p>Calculate the annual yield values</p>
+<pre><code>mTrans$saleYield &lt;- (mTrans$adjRent * 52) / mTrans$saleValue
+mTrans$rentYield &lt;- (mTrans$rentValue * 52) / mTrans$adjSale</code></pre>
+<p>Add the location variables (lat, long, property type and 4 geo aggregations) to the matched data.</p>
+<pre><code>mTrans$lga &lt;- xSales$lga[match(mTrans$AddressID, xSales$AddressID)]
+mTrans$sla1 &lt;- xSales$sla1[match(mTrans$AddressID, xSales$AddressID)]
+mTrans$suburb &lt;- xSales$suburb[match(mTrans$AddressID, xSales$AddressID)]
+mTrans$postCode &lt;- xSales$postCode[match(mTrans$AddressID, xSales$AddressID)]
+mTrans$latitude &lt;- xSales$Property_Latitude[match(mTrans$AddressID, 
+                                                  xSales$AddressID)]
+mTrans$longitude &lt;- xSales$Property_Longitude[match(mTrans$AddressID, 
+                                                    xSales$AddressID)]
+mTrans$PropertyType &lt;- xSales$PropertyType[match(mTrans$AddressID, 
+                                                 xSales$AddressID)]</code></pre>
+<p>Return the data frame of the matched values</p>
+<pre><code>return(mTrans)  
+}  </code></pre>
+<p>   </p>
+</div>
+<div id="prraggrgeodata" class="section level3">
+<h3>prrAggrGeoData()</h3>
+<p>Function to aggregate data by geography</p>
+<p>This function takes 6 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>geoList</strong>: A list of all sharded results (9 types) at a given geographic level</li>
+<li><strong>indexList</strong>: List of price index for all, house-only and unit-only</li>
+<li><strong>geoSplit</strong>: (FALSE) Is the geography split into smaller areas (i.e. not all area)</li>
+</ol>
+<p>This function uses two subsidiary custom function:</p>
+<ol style="list-style-type: decimal">
+<li><strong>prrAggrMethData()</strong></li>
+<li><strong>prrWeightsUses()</strong></li>
+</ol>
+<p>Declare the function</p>
+<pre><code>prrAggrGeoData &lt;- function(geoList, indexList, geoSplit=FALSE){</code></pre>
+<p>Build the dataset of all use combined (mixed) results</p>
+<pre><code>mixData &lt;- prrAggrMethData(mmObj=geoList$mm$all,
+                           irObj=geoList$ir$all,
+                           dmObj=geoList$dm$all,
+                           pIndex=indexList$all,
+                           geoSplit=geoSplit)</code></pre>
+<p>Build the dataset of all use combined and weighted (mixed weighted) results</p>
+<p>If working on the entire geographic area then results are the same</p>
+<pre><code>if(!geoSplit){
+  mixDataWgt &lt;- mixData
+} </code></pre>
+<p>If working on a small geographic scale then run **prrAggrMethData with the weighting function</p>
+<pre><code>else {
+  mixDataWgt &lt;- prrAggrMethData(mmObj=geoList$mm$all,
+                                irObj=geoList$ir$all,
+                                dmObj=geoList$dm$all,
+                                pIndex=indexList$all,
+                                geoSplit=geoSplit,
+                                wgt=TRUE)
+}</code></pre>
+<p>Separate and build the results for houses-only and units-only</p>
+<pre><code>houseData &lt;- prrAggrMethData(mmObj=geoList$mm$house,
+                             irObj=geoList$ir$house,
+                             dmObj=geoList$dm$house,
+                             pIndex=indexList$house,
+                             geoSplit=geoSplit)
+unitData &lt;- prrAggrMethData(mmObj=geoList$mm$unit,
+                            irObj=geoList$ir$unit,
+                            dmObj=geoList$dm$unit,
+                            pIndex=indexList$unit,
+                            geoSplit=geoSplit)</code></pre>
+<p>Add labels to the results</p>
+<pre><code>houseData$comp$use &lt;- 'House'
+houseData$diff$use &lt;- 'House'
+unitData$comp$use &lt;- 'Unit'
+unitData$diff$use &lt;- 'Unit'</code></pre>
+<p>Combine all into a single list</p>
+<pre><code>useData &lt;- list(comp=rbind(houseData$comp,
+                           unitData$comp),
+                diff=rbind(houseData$diff,
+                           unitData$diff))</code></pre>
+<p>Create results that are use specific (house vs unit) as well as weighted</p>
+<p>If working on the entire area, use the <strong>prrWeightuses()</strong> function to apply weights by use</p>
+<pre><code>if(!geoSplit){
+   useWgt &lt;- prrWeightUses(houseData, unitData, geoList, 
+                         pIndex=indexList$all, 
+                         geoSplit=geoSplit) 
+}</code></pre>
+<p>If working at a smaller geographic scale then calculate separately for houses and units at the given scale.</p>
+<pre><code>else {
+  houseDataW &lt;- prrAggrMethData(mmObj=geoList$mm$house,
+                              irObj=geoList$ir$house,
+                              dmObj=geoList$dm$house,
+                              pIndex=indexList$house,
+                              geoSplit=geoSplit,
+                              wgt=TRUE)
+  unitDataW &lt;- prrAggrMethData(mmObj=geoList$mm$unit,
+                             irObj=geoList$ir$unit,
+                             dmObj=geoList$dm$unit,
+                             pIndex=indexList$unit,
+                             geoSplit=geoSplit,
+                             wgt=TRUE)</code></pre>
+<p>Add labels to the results</p>
+<pre><code>houseDataW$comp$use &lt;- 'House'
+houseDataW$diff$use &lt;- 'House'
+unitDataW$comp$use &lt;- 'Unit'
+unitDataW$diff$use &lt;- 'Unit'</code></pre>
+<p>Cacluate the use specific weights</p>
+<pre><code>useWgt &lt;- prrWeightUses(houseDataW, unitDataW, geoList, 
+                        pIndex=indexList$all, geoSplit=TRUE)  
+}</code></pre>
+<p>Return four sets of results</p>
+<pre><code>return(list(mix=mixData,
+            mixWgt=mixDataWgt,
+            use=useData,
+            useWgt=useWgt))
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prraggrmethdata" class="section level3">
+<h3>prrAggrMethData()</h3>
+<p>Function to aggregate data by the different methods</p>
+<p>This function takes 6 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>mmObj</strong>: Med Meth obj from prrStsGeoWrap</li>
+<li><strong>irObj</strong>: Impute Reg obj from spaceTimeShard()</li>
+<li><strong>dmObj</strong>: Match obj from spaceTimeShard()</li>
+<li><strong>pIndex</strong>: A price index at the time scale</li>
+<li><strong>wgt</strong>: (FALSE) Weight based on the nbr of observation in each area/use?</li>
+<li><strong>geoSplit</strong>: (FALSE) Is the geography split into smaller areas (i.e. not all area)</li>
+</ol>
+<p>This function uses two subsidiary custom function:</p>
+<ol style="list-style-type: decimal">
+<li><strong>prrConvStsTables()</strong></li>
+<li><strong>prrWeightsUses()</strong></li>
+</ol>
+<p>Declare function</p>
+<pre><code>prrAggrMethData &lt;- function(mmObj, irObj, dmObj, pIndex, wgt=FALSE, geoSplit=FALSE){  </code></pre>
+<p>Isolate the correct data from each object</p>
+<p>If splitting by geography</p>
+<pre><code> if(geoSplit){
+    mmDF &lt;- mmObj$stsDF[,c('timeName', 'spaceName', 'yield')]
+ } </code></pre>
+<p>If working on the entire geographic area</p>
+<pre><code> else {
+   mmDF &lt;- mmObj$stsDF[ ,c('timeName', 'yield')]
+   mmDF$spaceName &lt;- 'all'
+ }</code></pre>
+<p>Extract the imputed and direct match data</p>
+<pre><code>irDF &lt;- irObj$stsDF
+dmDF &lt;- dmObj$stsDF</code></pre>
+<p>Rename ‘yield’ field</p>
+<pre><code>names(irDF)[2] &lt;- names(dmDF)[2] &lt;- 'yield'</code></pre>
+<p>Determine the spatial areas that exist in all objects. Start by extracting the names of the geographic areas from each of the objects</p>
+<pre><code>mmGeo &lt;- levels(mmDF$spaceName)
+irGeo &lt;- levels(as.factor(irDF$spaceName))
+dmGeo &lt;- levels(as.factor(dmDF$spaceName))</code></pre>
+<p>Intersect all three geographies to find the common set</p>
+<pre><code>allGeo &lt;- intersect(intersect(mmGeo, irGeo),dmGeo)</code></pre>
+<p>Limit each set to only those with the common set of geographies</p>
+<pre><code>mmDF &lt;- subset(mmDF, mmDF$spaceName %in% allGeo)
+irDF &lt;- subset(irDF, irDF$spaceName %in% allGeo)
+dmDF &lt;- subset(dmDF, dmDF$spaceName %in% allGeo)</code></pre>
+<p>Extract the number of geo areas and the number of time periods</p>
+<pre><code>oLng &lt;- nrow(mmDF)
+tLng &lt;- length(unique(mmDF$timeName))</code></pre>
+<p>Build the comparison data set</p>
+<p>If not weighting, combine all three DFs together then add a method label</p>
+<p>if(!wgt){</p>
+<pre><code>comData &lt;- rbind(mmDF, irDF, dmDF)
+comData$method &lt;- c(rep('Median', oLng), rep('Impute', oLng),
+                    rep('Match', oLng))</code></pre>
+<p>}</p>
+<p>If weighting</p>
+<p>else {</p>
+<p>Extract tables showing counts of each geography</p>
+<pre><code>mmPrice &lt;- mmObj$priceStsTable[rownames(mmObj$priceStsTable) %in% allGeo,]
+mmRent &lt;- mmObj$rentStsTable[rownames(mmObj$rentStsTable) %in% allGeo,]</code></pre>
+<p>Generate the weights with the custom function</p>
+<pre><code>mmWgts &lt;- prrConvStsTables(mmPrice + mmRent, allGeo)$wgts
+irWgts &lt;- prrConvStsTables(irObj$stTable, allGeo)$wgts
+dmWgts &lt;- prrConvStsTables(dmObj$stTable, allGeo)$wgts</code></pre>
+<p>Add the individual weights to the data frames of the three methods</p>
+<pre><code>mmDF$wgt &lt;- mmWgts[match(mmDF$spaceName, names(mmWgts))]  
+irDF$wgt &lt;- irWgts[match(irDF$spaceName, names(irWgts))]  
+dmDF$wgt &lt;- dmWgts[match(dmDF$spaceName, names(dmWgts))]  </code></pre>
+<p>Calculate the weighted yield components</p>
+<pre><code>mmDF$wYield &lt;- mmDF$yield * mmDF$wgt
+irDF$wYield &lt;- irDF$yield * irDF$wgt
+dmDF$wYield &lt;- dmDF$yield * dmDF$wgt</code></pre>
+<p>Sum to get the weighted total</p>
+<pre><code>mmYields &lt;- tapply(mmDF$wYield, mmDF$timeName, sum)
+irYields &lt;- tapply(irDF$wYield, irDF$timeName, sum)
+dmYields &lt;- tapply(dmDF$wYield, dmDF$timeName, sum)</code></pre>
+<p>Combine all three together, including the time labels and the space labels to make the comparison datasets.</p>
+<pre><code>comData &lt;- data.frame(timeName=rep(1:tLng, 3),
+                      spaceName=rep('all', 3*tLng),
+                      yield = c(mmYields, irYields, dmYields),
+                      method=c(rep('Median', tLng), rep('Impute', tLng),
+                               rep('Match', tLng)))</code></pre>
+<p>Create the data for analyzing the differences between the three methods. Begin by extract each from the comparison data and then setting the length to equal the number of time periods.</p>
+<pre><code>mmDF &lt;- comData[comData$method == 'Median', ]
+irDF &lt;- comData[comData$method == 'Impute', ]
+dmDF &lt;- comData[comData$method == 'Match', ]
+oLng &lt;- tLng
+}</code></pre>
+<p>Re-order the factor levels for better plotting and analysis later</p>
+<pre><code>comData$method &lt;- factor(comData$method,
+                         levels=c('Median', 'Impute', 'Match'))</code></pre>
+<p>Create the data for analyzing the differences between the three methods. Bind all three methods back together and add on the price index (<strong>pIndex</strong>), the methods and differences between the results.</p>
+<pre><code>difData &lt;- rbind(mmDF, irDF, dmDF)
+difData$pIndex &lt;- rep(pIndex, 3)
+difData$yield &lt;- NULL
+difData$method &lt;- c(rep('Impute - Median', oLng),
+                    rep('Match - Median', oLng),
+                    rep('Match - Impute', oLng))
+difData$dif &lt;- c(irDF$yield - mmDF$yield,
+                 dmDF$yield - mmDF$yield,
+                 dmDF$yield - irDF$yield)</code></pre>
+<p>Re-order the factor levels for better plotting and analysis later</p>
+<pre><code>difData$method &lt;- factor(difData$method,
+                         levels=c('Impute - Median', 'Match - Median',
+                                  'Match - Impute'))</code></pre>
+<p>Return both the comparison and the differencing data</p>
+<pre><code>return(list(comp = comData,
+            diff = difData))
 }</code></pre>
 </div>
 </div>

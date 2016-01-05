@@ -160,43 +160,17 @@ prrApplyThres <- function(thresData,       # Threshold data object from prrGeoLi
   return(cbind(transData, all))
 }
 
-
-if(F){
-  
-  # Examples of use
-  
-  # Global
-  glob <- prrTrender(list('transYear', 'transQtr', 'transMonth'), xData=xTrans)
-  
-  # Global by Use
-  globBU <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
-                       xData=xTrans, byUse=TRUE)
-  
-  # glob by use weighted
-  globBUW <- prrTrender(list('transYear', 'transQtr', 'transMonth'),
-                        xData=xTrans, byUse=TRUE, weighted=TRUE)
-  
-  ## All LGAs at qtr level
-  lgaQ <- prrTrender(list('transQtr'), xData=xTrans, geog='lga',
-                     geogName='all')
-  
-  ## All LGAs at qtr level by Use
-  lgaQU <- prrTrender(list('transQtr'), xData=xTrans, geog='lga',
-                      geogName='all', byUse=TRUE)
-  
-  
-  ## All GLS at qtr level by use weighted
-  lgaQUW <- prrTrender(list('transQtr'), xData=xTrans, geog='lga',
-                       geogName='all', byUse=TRUE, weighted=TRUE)
-  
-}
-
-
 ##########################################################################################
 ### New Australia Rent Yield Functions (works with stShard operations) -------------------
 
-prrStsGeoWrap <- function(stsData, metrics, spaceField, timeField,
-                          defDim, stsLimit, calcs){
+prrStsGeoWrap <- function(stsData,                    # Observation data frame
+                          metrics,                    # Field(s) to calculate on
+                          spaceField,                 # Field with space variable or 'all'
+                          timeField,                  # Field with time variable
+                          defDim='time',              # 'Space' or 'Time' as dimension
+                          stsLimit,                   # Nbr of obs required per shard
+                          calcs=list(median='median') # Type of calculation to do
+                          ){
   
   ## Source stshard functions if not already done
   if(!exists('spaceTimeShard')) {
@@ -331,9 +305,9 @@ prrSaleRentMatch <- function(sales,               # Data.frame of sales
 
 ## Function to aggregate data by geography -----------------------------------------------
 
-prrAggrGeoData <- function(geoList,
-                           indexList,
-                           geoSplit=FALSE
+prrAggrGeoData <- function(geoList,         # List of sharded results (9 total)
+                           indexList,       # List of price indexes (all, house, unit)
+                           geoSplit=FALSE   # Using a geo smaller than all area?
 ){
   
   
@@ -456,11 +430,11 @@ prrAggrMethData <- function(mmObj,          # Med Meth obj from prrStsGeoWrap
   
   # Extract space from each
   mmGeo <- levels(mmDF$spaceName)
-  crGeo <- levels(as.factor(irDF$spaceName))
+  irGeo <- levels(as.factor(irDF$spaceName))
   dmGeo <- levels(as.factor(dmDF$spaceName))
   
   # Determine intersect and limit to that
-  allGeo <- intersect(intersect(mmGeo, crGeo),dmGeo)
+  allGeo <- intersect(intersect(mmGeo, irGeo),dmGeo)
   mmDF <- subset(mmDF, mmDF$spaceName %in% allGeo)
   irDF <- subset(irDF, irDF$spaceName %in% allGeo)
   dmDF <- subset(dmDF, dmDF$spaceName %in% allGeo)

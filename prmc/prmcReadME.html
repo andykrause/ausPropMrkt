@@ -1844,6 +1844,412 @@ difData$dif &lt;- c(irDF$yield - mmDF$yield,
 <pre><code>return(list(comp = comData,
             diff = difData))
 }</code></pre>
+<p>   </p>
+</div>
+<div id="prrconvststables" class="section level3">
+<h3>prrConvStsTables()</h3>
+<p>Function that calculates locations count weights</p>
+<p>This function takes 6 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>stsTable</strong>: stsTable object from spaceTimeShard() function</li>
+<li><strong>allGeo</strong>: List of Geographies that meet the criteria</li>
+</ol>
+<p>Declare function</p>
+<pre><code>prrConvStsTables &lt;- function(stTable, allGeo){</code></pre>
+<p>Ensure that table is a data frame format</p>
+<pre><code>stTable &lt;- as.data.frame(stTable)</code></pre>
+<p>Remove geographies that do not meet criteria</p>
+<pre><code>stTable &lt;- stTable[rownames(stTable) %in% allGeo, ]</code></pre>
+<p>Add up the row sums</p>
+<pre><code>stSums &lt;- rowSums(stTable)</code></pre>
+<p>Create weights based on the row sums</p>
+<pre><code>stWgts &lt;- stSums / sum(stSums)</code></pre>
+<p>Return a list containing the row sums and the weights</p>
+<pre><code>return(list(sums=stSums,
+            wgts=stWgts))
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrweightuses" class="section level3">
+<h3>prrWeightUses()</h3>
+<p>Function that combines and weights house and unit results</p>
+<p>This function takes 5 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>hDataW</strong>: House wgt data from prrAggrMethData()</li>
+<li><strong>uDataW</strong>: Unit wgt data from prrAggrMethData</li>
+<li><strong>geoList</strong>: Full geolist from prrAggrGeoData</li>
+<li><strong>pIndex</strong>: Price time index generated from impute regressions</li>
+<li><strong>geoSplit</strong>: (FALSE) ArestsTable object from spaceTimeShard() function</li>
+</ol>
+<p>Declare function</p>
+<p>prrWeightUses &lt;- function(hDataW, uDataW, geoList, pIndex, geoSplit=FALSE){</p>
+<p>Operation differ based on whether or not we are doing a global or disaggregated analysis</p>
+<p>If doing disaggregated</p>
+<pre><code>if(geoSplit){</code></pre>
+<p>Begin by extracting the lists of accepting geographies for house and unit, for sales and rents for all three methods.</p>
+<pre><code>mmHPrice &lt;- geoList$mm$house$priceStsTable
+mmHRent &lt;- geoList$mm$house$rentStsTable
+mmUPrice &lt;- geoList$mm$unit$priceStsTable
+mmURent &lt;- geoList$mm$unit$rentStsTable
+irHTable &lt;- geoList$ir$house$stTable
+irUTable &lt;- geoList$ir$unit$stTable
+dmHTable &lt;- geoList$dm$house$stTable
+dmUTable &lt;- geoList$dm$unit$stTable</code></pre>
+<p>Combine all geography names into a single vector. Remove duplicates, create a table and then create an object with the counts of each geography (<strong>geoTable</strong>)</p>
+<pre><code>allGeos &lt;- c(rownames(mmHPrice), rownames(mmHRent), rownames(mmUPrice), 
+            rownames(mmURent), rownames(irHTable), rownames(irUTable),
+            rownames(dmHTable), rownames(dmUTable))
+geoNames &lt;- names(table(allGeos))
+geoTable &lt;- as.numeric(table(allGeos))</code></pre>
+<p>Choose those geographies that are present in all situations</p>
+<pre><code>allGeos &lt;- geoNames[which(geoTable == 8)]</code></pre>
+<p>Limit the list of original geographies to those present everywhere</p>
+<pre><code>mmHPrice &lt;- mmHPrice[rownames(mmHPrice) %in% allGeos, ]
+mmHRent &lt;- mmHRent[rownames(mmHRent) %in% allGeos, ]
+mmUPrice &lt;- mmUPrice[rownames(mmUPrice) %in% allGeos, ]
+mmURent &lt;- mmURent[rownames(mmURent) %in% allGeos, ]
+irHTable &lt;- irHTable[rownames(irHTable) %in% allGeos, ]
+irUTable &lt;- irUTable[rownames(irUTable) %in% allGeos, ]
+dmHTable &lt;- dmHTable[rownames(dmHTable) %in% allGeos, ]
+dmUTable &lt;- dmUTable[rownames(dmUTable) %in% allGeos, ]
+}</code></pre>
+<p>If doing a global analysis instead</p>
+<pre><code>else {</code></pre>
+<p>Extract all data from price/rent, house/unit and all three methods</p>
+<pre><code>mmHPrice &lt;- geoList$mm$house$priceStsTable
+mmHRent &lt;- geoList$mm$house$rentStsTable
+mmUPrice &lt;- geoList$mm$unit$priceStsTable
+mmURent &lt;- geoList$mm$unit$rentStsTable
+irHTable &lt;- geoList$ir$house$stTable
+irUTable &lt;- geoList$ir$unit$stTable
+dmHTable &lt;- geoList$dm$house$stTable
+dmUTable &lt;- geoList$dm$unit$stTable
+}</code></pre>
+<p>Calculate weights for the median method</p>
+<pre><code>mmHwgt &lt;- (sum(mmHPrice + mmHRent)) / (sum(mmHPrice + mmHRent) +
+                                         sum(mmUPrice + mmURent))
+mmUwgt &lt;- 1-mmHwgt</code></pre>
+<p>Calculate weights for the impute method</p>
+<pre><code>irHwgt &lt;- sum(irHTable) / (sum(irHTable + irUTable))  
+irUwgt &lt;- 1-irHwgt</code></pre>
+<p>Calculate weights for the match method</p>
+<pre><code>dmHwgt &lt;- sum(dmHTable) / (sum(dmHTable + dmUTable))  
+dmUwgt &lt;- 1-dmHwgt</code></pre>
+<p>Combine weights into house and unit specific weight tables</p>
+<pre><code>hWgts &lt;- c(rep(mmHwgt, 20), rep(irHwgt, 20), rep(dmHwgt, 20))
+uWgts &lt;- c(rep(mmUwgt, 20), rep(irUwgt, 20), rep(dmUwgt, 20))</code></pre>
+<p>Build the comparison data. First create a similar object to the house datat (<strong>hDataW</strong>). This is just a filler object. Then update the yield values in this object to be the weighted yields for the sum of houses and units. Remove the use field</p>
+<pre><code>compData &lt;- hDataW$comp
+compData$yield &lt;- ((hDataW$comp$yield * hWgts) + 
+                     (uDataW$comp$yield * uWgts))
+compData$use &lt;- NULL</code></pre>
+<p>Re order the factor levels for easier plotting and analysis later</p>
+<pre><code>compData$method &lt;- factor(compData$method,
+                        levels=c('Median', 'Impute', 'Match'))</code></pre>
+<p>Create the differencing data (data to compare method differences to appreciation rates)</p>
+<p>Build initial objects and lenght of time counts</p>
+<pre><code>difData &lt;- compData
+oLng &lt;- 20</code></pre>
+<p>Add the price index to the difference data object and remove the yield field</p>
+<pre><code>difData$pIndex &lt;- rep(pIndex, 3)
+difData$yield &lt;- NULL</code></pre>
+<p>Add the method labels</p>
+<pre><code>difData$method &lt;- c(rep('Impute - Median', oLng),
+                    rep('Match - Median', oLng),
+                    rep('Match - Impute', oLng))</code></pre>
+<p>Split into three data frames based on method type</p>
+<pre><code>mmDF &lt;- subset(compData, method=='Median')
+irDF &lt;- subset(compData, method=='Impute')
+dmDF &lt;- subset(compData, method=='Match')</code></pre>
+<p>Take the yields from these splits and add back onto the difference data frame</p>
+<pre><code>difData$dif &lt;- c(irDF$yield - mmDF$yield,
+                 dmDF$yield - mmDF$yield,
+                 dmDF$yield - irDF$yield)</code></pre>
+<p>Re order the factor levels for easier plotting and analysis later</p>
+<pre><code>difData$method &lt;- factor(difData$method,
+                         levels=c('Impute - Median', 'Match - Median',
+                                'Match - Impute'))</code></pre>
+<p>Return a list of the comparison data and the difference data</p>
+<pre><code>return(list(comp=compData,
+            diff=difData))    
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrgetyields" class="section level3">
+<h3>prrGetYields()</h3>
+<p>Function that combines and weights house and unit results</p>
+<p>This function takes 1 argument:</p>
+<ol style="list-style-type: decimal">
+<li><strong>prrObj</strong>: Data object from <strong>prrAggrMethData()</strong></li>
+</ol>
+<p>Declare function</p>
+<p>Extract the raw yields from a <strong>prrObj</strong></p>
+<pre><code>prrGetYields &lt;- function(prrObj){</code></pre>
+<p>Extract the mixed (house and unit) yields</p>
+<pre><code>mixYields &lt;- prrObj$mix$comp</code></pre>
+<p>Convert these yields into a list, separated by method</p>
+<pre><code>mix &lt;- list(median=subset(mixYields, method=='Median'),
+            impute=subset(mixYields, method=='Impute'),
+            match=subset(mixYields, method=='Match'))</code></pre>
+<p>Next we extract and build a list of house-only yields</p>
+<pre><code>houseYields &lt;- subset(prrObj$use$comp, use=='House')
+house &lt;- list(median=subset(houseYields, method=='Median'),
+              impute=subset(houseYields, method=='Impute'),
+              match=subset(houseYields, method=='Match'))</code></pre>
+<p>Then we extract and build a list of unit-only yields</p>
+<pre><code>unitYields &lt;- subset(prrObj$use$comp, use=='Unit')
+unit &lt;- list(median=subset(unitYields, method=='Median'),
+             impute=subset(unitYields, method=='Impute'),
+             match=subset(unitYields, method=='Match'))</code></pre>
+<p>Return a list of the mixed, house and unit results</p>
+<pre><code>return(list(mix=mix,
+            house=house,
+            unit=unit))
+}    </code></pre>
+<p>   </p>
+</div>
+<div id="prrpredmodelwrap" class="section level3">
+<h3>prrPredModelWrap()</h3>
+<p>Wrapper function to calculate the predictive accuracy of various yield trends</p>
+<p>This function takes 5 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>dmData</strong>: Dataset of direct matches on houses and units</li>
+<li><strong>yieldData</strong>: Yield data object from <strong>prrGetYields()</strong></li>
+<li><strong>byUse</strong>: (FALSE) Separate by use?</li>
+<li><strong>byGeog</strong>: (FALSE) Separate by Geography</li>
+<li><strong>geoField</strong>: (NULL) If byGeog, then which field has the geographic labels</li>
+</ol>
+<p>This function uses one subsidiary custom function:</p>
+<ol style="list-style-type: decimal">
+<li><strong>prrErrorByMethod()</strong></li>
+</ol>
+<p>Declare Function</p>
+<pre><code>prrPredModelWrap &lt;- function(dmData, yieldData, byUse=FALSE, byGeog=FALSE, geoField=NULL){</code></pre>
+<p>Create a small helper function to count number of observations</p>
+<pre><code>geoCount &lt;- function(x){nrow(rbind.fill(x))}</code></pre>
+<p>Throw an error and stop function if no geoField is specified and one is required (byGeog=TRUE)</p>
+<pre><code>if(byGeog &amp; is.null(geoField)) return(cat('Must specify geoField'))</code></pre>
+<p>If calculating differences by use</p>
+<p>if(byUse){</p>
+<p>Begin by subsetting data into houses and units</p>
+<pre><code>hData &lt;- subset(dmData, PropertyType == 'House')
+uData &lt;- subset(dmData, PropertyType == 'Unit')</code></pre>
+<p>If then calculating by geography</p>
+<pre><code>if(byGeog){</code></pre>
+<p>Start by working on houses</p>
+<p>Get geography names and extract necessary data</p>
+<pre><code>  geoListH &lt;- levels(yieldData$house$median$spaceName)
+  geoDataH &lt;- lapply(geoListH, prrExtractGeoData, xData=hData, 
+                     geoField=geoField)
+  </code></pre>
+<p>Identify non-empty datasets (by geog)</p>
+<pre><code>  hCount &lt;- unlist(lapply(geoDataH, nrow))
+  idH &lt;- which(hCount &gt; 0)
+  </code></pre>
+<p>Extract necessary geographic yield information</p>
+<pre><code>  geoYieldsH &lt;- lapply(geoListH, prrExtractGeoYields, yieldData=yieldData$house)
+  </code></pre>
+<p>Identify remaining non-empty dataset (by geog)</p>
+<pre><code>  idYH &lt;- lapply(geoYieldsH, geoCount)
+  idYH &lt;- which(idYH &gt; 0)
+  </code></pre>
+<p>Select those that meet both criteria</p>
+<pre><code>  idH &lt;- intersect(idH, idYH)
+  </code></pre>
+<p>Trim data to those that are not empty</p>
+<pre><code>  geoDataH &lt;- geoDataH[idH]
+  geoYieldsH &lt;- geoYieldsH[idH]
+  </code></pre>
+<p>Estimate the prediction error using the <strong>PrrErrorByMethod</strong> custom function</p>
+<pre><code>  geoH &lt;- mapply(prrErrorByMethod, mData=geoDataH, yieldData=geoYieldsH)
+  </code></pre>
+<p>Combine and rename results hResults &lt;- rbind.fill(geoH) hResults<span class="math">\(use &lt;- 'house'  hResults\)</span>geog &lt;- geoField</p>
+<p>Now, create the same analysis for for units</p>
+<p>Get geography names and extract necessary data</p>
+<pre><code>  geoListU &lt;- levels(yieldData$unit$median$spaceName)
+  geoDataU &lt;- lapply(geoListU, prrExtractGeoData, xData=uData, 
+                     geoField=geoField)
+  </code></pre>
+<p>Identify non-empty datasets (by geog)</p>
+<pre><code>  uCount &lt;- unlist(lapply(geoDataU, nrow))
+  idU &lt;- which(uCount &gt; 0)
+  </code></pre>
+<p>Extract necessary geographic yield information geoYieldsU &lt;- lapply(geoListU, prrExtractGeoYields, yieldData=yieldData$unit)</p>
+<p>Identify remaining non-empty dataset (by geog)</p>
+<pre><code>  idYU &lt;- lapply(geoYieldsU, geoCount)
+  idYU &lt;- which(idYU &gt; 0)
+  </code></pre>
+<p>Select those that meet both criteria</p>
+<pre><code>  idU &lt;- intersect(idU, idYU)
+  </code></pre>
+<p>Trim data to those that are not empty</p>
+<pre><code>  geoDataU &lt;- geoDataU[idU]
+  geoYieldsU &lt;- geoYieldsU[idU]
+  </code></pre>
+<p>Estimate the prediction error</p>
+<pre><code>  geoU &lt;- mapply(prrErrorByMethod, mData=geoDataU, yieldData=geoYieldsU)
+  </code></pre>
+<p>Combine and rename results uResults &lt;- rbind.fill(geoU) uResults<span class="math">\(use &lt;- 'unit'  uResults\)</span>geog &lt;- geoField</p>
+<p>Merge house and unit results</p>
+<pre><code>  xResults &lt;- rbind(hResults, uResults)
+  } 
+  </code></pre>
+<p>If NOT calculating the results by geography</p>
+<pre><code>  else {
+  </code></pre>
+<p>Calculate errors for houses</p>
+<pre><code>  hResults &lt;- prrErrorByMethod(hData, yieldData$house)
+  hResults &lt;- rbind.fill(hResults)
+  hResults$use &lt;- 'house'
+  </code></pre>
+<p>Calculate errors for units</p>
+<pre><code>  uResults &lt;- prrErrorByMethod(uData, yieldData$unit)
+  uResults &lt;- rbind.fill(uResults)
+  uResults$use &lt;- 'unit'
+  </code></pre>
+<p>Combine results</p>
+<pre><code>   xResults &lt;- rbind(hResults, uResults)
+   xResults$geog &lt;- 'all'
+   }
+  } </code></pre>
+<p>If NOT calculating by use</p>
+<pre><code>  else {</code></pre>
+<p>But by geography</p>
+<pre><code>  if(byGeog){
+  </code></pre>
+<p>Extract relevant geography names</p>
+<pre><code>  geoList &lt;- levels(yieldData$mix$median$spaceName)
+  </code></pre>
+<p>Extract geographic base data</p>
+<pre><code>  geoData &lt;- lapply(geoList, prrExtractGeoData, xData=dmData, 
+                    geoField=geoField)
+  </code></pre>
+<p>Extract yield trends</p>
+<pre><code>  geoYields &lt;- lapply(geoList, prrExtractGeoYields, yieldData=yieldData$mix)
+  </code></pre>
+<p>Calculate all errors</p>
+<pre><code>  geo &lt;- mapply(prrErrorByMethod, mData=geoData, yieldData=geoYields)
+  xResults &lt;- rbind.fill(geo)
+  xResults$geog &lt;- geoField
+  } </code></pre>
+<p>If not by use and not by Geography</p>
+<pre><code>  else {</code></pre>
+<p>Calculate error results</p>
+<pre><code>  xResults &lt;- prrErrorByMethod(dmData, yieldData$mix)
+  xResults &lt;- rbind.fill(xResults)
+  xResults$geog &lt;- 'all'
+}</code></pre>
+<p>Add use label</p>
+<pre><code>xResults$use &lt;- 'mix'
+}</code></pre>
+<p>Return values as a list, with a separate list object for each method</p>
+<pre><code>return(list(median=subset(xResults, method=='median'),
+            impute=subset(xResults, method=='impute'),
+            match=subset(xResults, method=='match')))  
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrextractgeodata" class="section level3">
+<h3>prrExtractGeoData()</h3>
+<p>Helper function to extract geographic data from a given dataset</p>
+<p>This function takes 3 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>geoName</strong>: The specific geographic name to extract</li>
+<li><strong>xData</strong>: The full transaction dataset</li>
+<li><strong>geoField</strong>: Field containing the geographic labels</li>
+</ol>
+<p>Declare Function</p>
+<pre><code>prrExtractGeoData &lt;- function(geoName, xData, geoField){</code></pre>
+<p>ID and extract field</p>
+<pre><code>gData &lt;- xData[ ,geoField]</code></pre>
+<p>Label matching rows</p>
+<pre><code>idx &lt;- which(gData == geoName)</code></pre>
+<p>Return rows containing the matching geography</p>
+<pre><code>return(xData[idx, ])
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrextractgeoyields" class="section level3">
+<h3>prrExtractGeoYields()</h3>
+<p>Helper function to extract the three yield types for a given geography</p>
+<p>This function takes 2 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>geoName</strong>: The specific geographic name to extract</li>
+<li><strong>yieldData</strong>: Yield data from prrGetYields()$mix</li>
+</ol>
+<p>Declare function</p>
+<pre><code>prrExtractGeoYields &lt;- function(geoName, yieldData){</code></pre>
+<p>Extract yields for each method</p>
+<pre><code>gMedian &lt;- subset(yieldData$median, spaceName==geoName)
+gImpute &lt;- subset(yieldData$impute, spaceName==geoName)
+gMatch &lt;- subset(yieldData$match, spaceName==geoName)</code></pre>
+<p>Return values a list of each method</p>
+<pre><code>return(list(median=gMedian,
+            impute=gImpute,
+            match=gMatch))
+}</code></pre>
+<p>   </p>
+</div>
+<div id="prrerrorbymethod" class="section level3">
+<h3>prrErrorByMethod()</h3>
+<p>Wrapper function to spread the error calcs over all three methods</p>
+<p>This function takes 2 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>geoName</strong>: The matched dataset</li>
+<li><strong>yieldData</strong>: Yield data from prrGetYields()$mix</li>
+</ol>
+<p>This function uses one subsidiary custom function:</p>
+<ol style="list-style-type: decimal">
+<li><strong>prrCalcPredError()</strong></li>
+</ol>
+<p>Declare function</p>
+<p>prrErrorByMethod &lt;- function(mData, yieldData){</p>
+<p>Calculate errors for median method</p>
+<pre><code>medianError &lt;- prrCalcPredError(mData, yieldData$median)
+medianError$method='median'</code></pre>
+<p>Calculate error for imputation method</p>
+<p>imputeError &lt;- prrCalcPredError(mData, yieldData<span class="math">\(impute)  imputeError\)</span>method=‘impute’</p>
+<p>Calculate error for matching method</p>
+<pre><code>matchError &lt;- prrCalcPredError(mData, yieldData$match)
+matchError$method='match'</code></pre>
+<p>Return values as a list of all three methods</p>
+<pre><code>return(list(median=medianError,
+          impute=imputeError,
+          match=matchError))</code></pre>
+<p>}</p>
+<p>   </p>
+</div>
+<div id="prrcalcprederror" class="section level3">
+<h3>prrCalcPredError()</h3>
+<p>Basic predictive error calculating engine</p>
+<p>This function takes 2 arguments:</p>
+<ol style="list-style-type: decimal">
+<li><strong>mData</strong>: Dataset of matched sales and rentals</li>
+<li><strong>yData</strong>: Timeseries of yield estimates</li>
+</ol>
+<p>Declare function</p>
+<pre><code>prrCalcPredError &lt;- function(mData, yData){</code></pre>
+<p>Subset into sales and rentals based on which observation is first</p>
+<pre><code>sData &lt;- subset(mData, saleTime &lt;= rentTime)
+rData &lt;- subset(mData, saleTime &gt; rentTime)
+sData$tType &lt;- 'sale'
+rData$tType &lt;- 'rent'</code></pre>
+<p>Add the yield information at the time of the first transaction</p>
+<pre><code>sData$pYield &lt;- yData$yield[match(sData$rentTime, yData$timeName)]  
+rData$pYield &lt;- yData$yield[match(rData$saleTime, yData$timeName)]  </code></pre>
+<p>Predict rental value of sales and the error</p>
+<pre><code>sData$pValue &lt;- ((sData$adjSale * sData$pYield) / 52) 
+sData$error &lt;- (sData$rentValue - sData$pValue) / sData$rentValue</code></pre>
+<p>Precict sale value of rentals and the error</p>
+<pre><code>rData$pValue &lt;- (rData$adjRent * 52) / rData$pYield
+rData$error &lt;- (rData$saleValue - rData$pValue) / rData$saleValue</code></pre>
+<p>Merge data together</p>
+<pre><code>xData &lt;- rbind(sData[,c('uID', 'tType', 'error')],
+               rData[,c('uID', 'tType', 'error')])</code></pre>
+<p>Return values</p>
+<pre><code>return(xData)
+}</code></pre>
+<hr />
 </div>
 </div>
 </div>

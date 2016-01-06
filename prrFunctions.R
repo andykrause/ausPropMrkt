@@ -923,9 +923,7 @@ prrCalcPredError <- function(mData,     # Dataset of matched sales and rentals
   # Precict sale value of rentals and the error    
   rData$pValue <- (rData$adjRent * 52) / rData$pYield
   rData$error <- (rData$saleValue - rData$pValue) / rData$saleValue
-
-## TODO:  Make time adjustments  
-  
+ 
   # Merge data together  
   xData <- rbind(sData[,c('uID', 'tType', 'error')],
                  rData[,c('uID', 'tType', 'error')])

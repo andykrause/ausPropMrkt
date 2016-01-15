@@ -28,20 +28,25 @@
 
  ## Set the path to the data
 
-  dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
+  dataPath <- "C:/data/research/priceRentMethComp/"
 
  ## Load in saved workspace
 
   load(paste0(dataPath, 'cleanData.RData'))
-
+  
  ## Load the calculated yield data
   
   yieldData <- read.csv(paste0(dataPath, 'rawresults.csv'))
   
  ## Load in the additional spatial variables
     
-  spatVar <- read.csv(paste0(dataPath, 'prrSpatialVariables.csv'), header=T)
+  spatVar <- read.csv(paste0(dataPath, 'spatialData/prrSpatialVariables.csv'), header=T)
 
+ ## Load in suburb designations
+  
+  subDes <- read.csv('c:/data/aus/vic/geographic/melbourne/suburbDesignations.csv',
+                     header=T)
+  
 ### Prepare data -------------------------------------------------------------------------
   
  ## Convert spatial distances to meters
@@ -58,6 +63,10 @@
   
   yieldData <- merge(yieldData, spatVar, by='AddressID')
   
+ ## Join suburb designation
+  
+  yieldData <- merge(yieldData, subDes, by='suburb')
+  
  ## Create Distance Categories
   
   # Set breaks
@@ -72,7 +81,7 @@
  ## Data cleaning
   
   # Remove very high/low yields
-  yieldData <- subset(yieldData, yield > .01 & yield < .09)
+  yieldData <- subset(yieldData, yield >= .01 & yield <= .09)
   
   # Remove unnecessary fields
   kill <- grep('QT', names(yieldData))
@@ -84,35 +93,83 @@
   
   unitYields <- subset(yieldData, PropertyType == 'Unit')
   houseYields <- subset(yieldData, PropertyType == 'House')
-
+  
+ ## Create a 'recent' dataset
+  
+  yieldData1415 <- subset(yieldData, transQtr >= 17)
+  unitYields1415 <- subset(unitYields, transQtr >= 17)
+  houseYields1415 <- subset(houseYields, transQtr >= 17)
+  
+ ## Split dataset by suburbs
+  
+  unitsInner1415 <- subset(unitYields1415, location == 'Inner')
+  unitsMiddle1415 <- subset(unitYields1415, location == 'Middle')
+  unitsOuter1415 <- subset(unitYields1415, location == 'Outer')
+  houseInner1415 <- subset(houseYields1415, location == 'Inner')
+  houseMiddle1415 <- subset(houseYields1415, location == 'Middle')
+  houseOuter1415 <- subset(houseYields1415, location == 'Outer')
+  
 ### Build basic models looking into trains and trams -------------------------------------  
   
- ## Set the base specification
+ ## Set the base specifications
   
-  baseSpec <- as.formula(yield ~ as.factor(transQtr) + as.factor(suburb) + 
+  unitSpec <- as.formula(yield ~ as.factor(transQtr) + as.factor(suburb) + 
                           as.factor(Bedrooms) + HasGarage + HasPool + 
                            HasAirConditioning)
   
- ## build a base model
+  houseSpec <- as.formula(yield ~ as.factor(transQtr) + as.factor(suburb) + 
+                           as.factor(Bedrooms) + HasGarage + HasPool + 
+                            HasAirConditioning + AreaSize)
   
-  baseModel <- lm(baseSpec, data=yieldData)
-  
-  unitModel <- lm(baseSpec, data=unitYields)
-  houseModel <- lm(baseSpec, data=houseYields)
-  
- ## Add in spatial factors (ring model)
-  
-  unitSpat <- lm(update(baseSpec, . ~ . + as.factor(train) + as.factor(tram)),
-                 data=unitYields)
-  houseSpat <- lm(update(baseSpec, . ~ . + as.factor(train) + as.factor(tram)),
-                   data=houseYields)
-  
+ ## Build basic model (naive to microspatial impacts)
 
- ## Split by sale/lease
-  SunitSpat <- lm(update(baseSpec, . ~ . + as.factor(train) + as.factor(tram) + transValue),
-                 data=unitYields[unitYields$transType == 'sale',])
-  RunitSpat <- lm(update(baseSpec, . ~ . + as.factor(train) + as.factor(tram) + transValue),
-                 data=unitYields[unitYields$transType == 'rent',])
+  unitModel <- lm(unitSpec, data=unitYields1415)
+  houseModel <- lm(houseSpec, data=houseYields1415)
+  
+ ## Add in spatial factors
+  
+  # Linear  
+  unitModel1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                      data=unitYields1415)
+  houseModel1415.lin <- lm(update(houseSpec, . ~ . + trainDist + tramDist), 
+                       data=houseYields1415)
+  
+  # Log
+  unitModel1415.log <- lm(update(unitSpec, . ~ . + log(trainDist) + log(tramDist)),
+                           data=unitYields1415)
+  houseModel1415.log <- lm(update(houseSpec, . ~ . + log(trainDist) + log(tramDist)), 
+                            data=houseYields1415)
+   
+  # Ring
+  unitModel1415.ring <- lm(update(unitSpec, . ~ . + as.factor(train) + as.factor(tram)),
+                          data=unitYields1415)
+  houseModel1415.ring <- lm(update(houseSpec, . ~ . + as.factor(train) + as.factor(tram)), 
+                           data=houseYields1415)
+  
+  # Save for spline
+  
+ ## Check for spatial heterogeneity
+  
+  # Inner Suburbs
+  unitInner1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                          data=unitYields1415[unitYields1415$location == 'Inner',])
+  
+  houseInner1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                            data=houseYields1415[houseYields1415$location == 'Inner',])
+  # Middle Suburbs
+  unitMiddle1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                          data=unitYields1415[unitYields1415$location == 'Middle',])
+  
+  houseMiddle1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                           data=houseYields1415[houseYields1415$location == 'Middle',])
+  
+  # Outer Suburbs
+  unitOuter1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                          data=unitYields1415[unitYields1415$location == 'Outer',])
+  
+  houseOuter1415.lin <- lm(update(unitSpec, . ~ . + trainDist + tramDist),
+                           data=houseYields1415[houseYields1415$location == 'Outer',])
+  
   
   
   

@@ -24,15 +24,14 @@
 
  ## Set the path to the raw data
 
-  #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
-  dataPath <- "D:/data/research/priceRentMethComp/"
-  saleFile <- 'sales10_15.csv'
-  rentFile <- 'rents10_15.csv'
-  ssFile <- 'allSS.csv'
-  subGeoFile <- 'Vic_Suburbs.shp'
-  lgaGeoFile <- 'Vic_LGAs.shp'
-  sla1GeoFile <- 'Vic_SLA1.shp'
-  postGeoFile <- 'Vic_PostCodes.shp'
+  dataPath <- "C:/data/research/priceRentMethComp/"
+  saleFile <- 'transData/sales10_15.csv'
+  rentFile <- 'transData/rents10_15.csv'
+  ssFile <- 'spatialData/allSS.csv'
+  subGeoFile <- 'shapefiles/Vic_Suburbs.shp'
+  lgaGeoFile <- 'shapefiles/Vic_LGAs.shp'
+  sla1GeoFile <- 'shapefiles/Vic_SLA1.shp'
+  postGeoFile <- 'shapefiles/Vic_PostCodes.shp'
   
 ### Read in raw data -----------------------------------------------------------
 
@@ -297,8 +296,6 @@
   allTrans <- prrApplyThres(qtrThres[5:8], allTrans, 'QT', 'sla1')
   allTrans <- prrApplyThres(qtrThres[9:12], allTrans, 'QT', 'suburb')
   allTrans <- prrApplyThres(qtrThres[13:16], allTrans, 'QT', 'lga')
-  
- ## TODO:  Save for combining neighboring localities potential
 
 ### Write out workspace and .csv
   

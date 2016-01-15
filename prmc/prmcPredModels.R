@@ -28,8 +28,7 @@
 
  ## Set the path to the data
 
-  #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
-  dataPath <- "D:/data/research/priceRentMethComp/"
+  dataPath <- "c:/data/research/priceRentMethComp/"
 
  ## Load in saved workspace
   

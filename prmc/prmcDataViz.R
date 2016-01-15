@@ -20,12 +20,11 @@
 
  ## Set the path to the data and map files (FUTURE USE)
 
-  #dataPath <- "C:/Dropbox/Australia Data/ausPropData/melData/"
-  dataPath <- "D:/Data/Research/priceRentMethComp/"
-  subGeoFile <- 'Vic_Suburbs.shp'
-  lgaGeoFile <- 'Vic_LGAs.shp'
-  sla1GeoFile <- 'Vic_SLA1.shp'
-  postGeoFile <- 'Vic_PostCodes.shp'
+  dataPath <- "c:/Data/Research/priceRentMethComp/"
+  subGeoFile <- 'shapefiles/Vic_Suburbs.shp'
+  lgaGeoFile <- 'shapefiles/Vic_LGAs.shp'
+  sla1GeoFile <- 'shapefiles/Vic_SLA1.shp'
+  postGeoFile <- 'shapefiles/Vic_PostCodes.shp'
 
  ## Set viz themes
   

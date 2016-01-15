@@ -303,6 +303,8 @@
 
   save.image(paste0(dataPath, 'dataPrepWrkspc.RData'))
   save(allTrans, file=paste0(dataPath, 'cleanData.RData'))
+  save(studySuburbs, studyLGAs, studyPostCodes, studySLA1s, 
+       file=paste0(dataPath, 'studyShps.RData'))
   
  ## Write .csv
  

@@ -85,26 +85,25 @@ img {
 <div id="preliminary-commands" class="section level4">
 <h4>Preliminary Commands</h4>
 <p>The process begin by loading the necessary libraries.</p>
-<pre><code>library(plyr)
-library(dplyr)
-library(reshape2)
-library(stringr)
-library(maptools)
-library(sp)
-library(rgeos)</code></pre>
+<pre class="r"><code>    library(plyr)
+    library(dplyr)
+    library(reshape2)
+    library(stringr)
+    library(maptools)
+    library(sp)
+    library(rgeos)</code></pre>
 <p>Next, we source a file containing a set of functions that are used throughout the analysis, <strong>prrFunctions.R</strong>. This file is sources from it’s Github location. Details of the individual functions contained in this file can be found in the <em>“Custom Functions”</em> section at the end of this document.</p>
-<pre><code> source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-               'master/prrFunctions.R'))
-               </code></pre>
+<pre class="r"><code>     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                   'master/prrFunctions.R'))</code></pre>
 <p>The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded. This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space syntax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries.</p>
-<pre><code>dataPath &lt;- &quot;C:/.../rawData/&quot;
-saleFile &lt;- 'allSales.csv'
-rentFile &lt;- 'allRents.csv'
-ssFile &lt;- 'allSS.csv'
-subGeoFile &lt;- 'Vic_Suburbs.shp'
-lgaGeoFile &lt;- 'Vic_LGAs.shp'
-sla1GeoFile &lt;- 'Vic_SLA1.shp'
-postGeoFile &lt;- 'Vic_PostCodes.shp'</code></pre>
+<pre class="r"><code>    dataPath &lt;- &quot;C:/.../rawData/&quot;
+    saleFile &lt;- 'allSales.csv'
+    rentFile &lt;- 'allRents.csv'
+    ssFile &lt;- 'allSS.csv'
+    subGeoFile &lt;- 'Vic_Suburbs.shp'
+    lgaGeoFile &lt;- 'Vic_LGAs.shp'
+    sla1GeoFile &lt;- 'Vic_SLA1.shp'
+    postGeoFile &lt;- 'Vic_PostCodes.shp'</code></pre>
 </div>
 <div id="read-in-data" class="section level3">
 <h3>Read in Data</h3>

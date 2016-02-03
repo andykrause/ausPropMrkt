@@ -31,6 +31,8 @@ The **prmcDataPrep.R** file handles the data preparation phase of this analysis.
 
 The process begin by loading the necessary libraries.
 
+```{r, comment=FALSE, warning=FALSE, message=FALSE}
+
     library(plyr)
     library(dplyr)
     library(reshape2)
@@ -39,12 +41,19 @@ The process begin by loading the necessary libraries.
     library(sp)
     library(rgeos)
 
+```
+
 Next, we source a file containing a set of functions that are used throughout the analysis, **prrFunctions.R**.  This file is sources from it's Github location.  Details of the individual functions contained in this file can be found in the *"Custom Functions"* section at the end of this document. 
+
+```{r, comment=FALSE, warning=FALSE, message=FALSE}
 
      source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                    'master/prrFunctions.R'))
-                   
+```
+
 The final set of preliminary commands set the path to the data as well as the names of the individual files to be loaded.  This analysis requires seven separate files: 1) A files of all sales; 2) a file of rentals; 3) a file contain the space syntax values for all properties (calculated externally in GIS); 4-7) GIS shapefiles of suburb, LGA, SLA1 and post code boundaries. 
+
+```{r, comment=FALSE, warning=FALSE, message=FALSE}
 
     dataPath <- "C:/.../rawData/"
     saleFile <- 'allSales.csv'
@@ -54,10 +63,13 @@ The final set of preliminary commands set the path to the data as well as the na
     lgaGeoFile <- 'Vic_LGAs.shp'
     sla1GeoFile <- 'Vic_SLA1.shp'
     postGeoFile <- 'Vic_PostCodes.shp'
-    
+```
+
 ### Read in Data
 
 The data is then read into memory using the data path and file names specified above.
+
+```{r, comment=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
 
      rawSales <- read.csv(paste0(dataPath, saleFile), stringsAsFactors = FALSE)
      rawRents <- read.csv(paste0(dataPath, rentFile), stringsAsFactors = FALSE)
@@ -66,7 +78,8 @@ The data is then read into memory using the data path and file names specified a
      lgaShp <- readShapePoly(paste0(dataPath, lgaGeoFile))
      sla1Shp <- readShapePoly(paste0(dataPath, sla1GeoFile))
      postCodeShp <- readShapePoly(paste0(dataPath, postGeoFile))
-     
+```
+          
 ### Data management
 
 The next step is data management.  In this context data management involvees the fixing of data errors and formats, the combination of information from other table and sources, the removal of duplicate observations and the removal of non-essential fields. No observations are removed at this step as these procedures are saved for the *"Data Cleaning"* section that follows.

@@ -24,6 +24,9 @@
   source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
               'master/prrFunctions.R'))
 
+  source(paste0('https://raw.githubusercontent.com/andykrause/spatialTools/',
+               'master/spatEconTools.R'))
+
  ## Set custom functions
   
   # Function for summarizing lm objects but ignoring fixed effects
@@ -234,6 +237,15 @@
   
   houseO.lm.spl <- lm(as.formula(house.lm.spl), data=hoy.data)
   summFE(houseO.lm.spl, 'suburb')
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 ### Working Vizualization -----------------------------------------------------------------------  
   

@@ -167,10 +167,10 @@
  ## Set the specification (formula)
 
   regSpecH <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
-                 log(AreaSize) +Bedrooms + Baths + ssInteg + ssChoice
+                 log(AreaSize) + Bedrooms + Baths + HasPool + HasGarage
   
   regSpecU <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
-    + Bedrooms + Baths + ssInteg + ssChoice
+                  Bedrooms + Baths + HasPool + HasGarage
   
  ## Estimate models and make new predictions: Global by Use
 

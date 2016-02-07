@@ -507,7 +507,9 @@
 ### Clean up workspace and save ------------------------------------------------
   
   save(metroList, metroData, lgaList, lgaData, slaList, slaData,
-       postcodeList, postcodeData, suburbList, suburbData, dmData,
+       postcodeList, postcodeData, suburbList, suburbData, dmData, 
        file=paste0(dataPath, 'analysisResults.RData'))
+  save(xTrans, file=paste0(dataPath, 'rawResults.RData'))
+  
 
   

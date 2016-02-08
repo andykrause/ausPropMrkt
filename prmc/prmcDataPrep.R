@@ -180,6 +180,22 @@
   
  ## Remove all non house and units
   
+  # Create separate labels
+  
+  allTrans$Terrace <- ifelse(allTrans$PropertyType == 'Terrace', 1, 0)
+  allTrans$Townhouse <- ifelse(allTrans$PropertyType == 'Townhouse', 1, 0)
+  allTrans$Studio <- ifelse(allTrans$PropertyType == 'Studio', 1, 0)
+  allTrans$Duplex <- ifelse(allTrans$PropertyType == 'Duplex', 1, 0)
+  allTrans$Villa <- ifelse(allTrans$PropertyType == 'Villa', 1, 0)
+  
+  # Convert to House or Unit
+  allTrans$PropertyType[allTrans$PropertyType == 'Terrace' | 
+                          allTrans$PropertyType == 'Townhouse' |
+                          allTrans$PropertyType == 'Duplex' |
+                          allTrans$PropertyType == 'Villa'] <- 'House'
+  allTrans$PropertyType[allTrans$PropertyType == 'Studio'] <- 'Unit'
+  
+  # Limit to houses or units
   allTrans <- subset(allTrans, PropertyType == 'House' |
                        PropertyType == 'Unit')
   

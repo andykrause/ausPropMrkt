@@ -1,7 +1,12 @@
+##########################################################################################
+#                                                                                        #
+#  Process for converting raw APM .zip files (form AURIN) into .csvs and a .db database  #
+#                                                                                        #
+##########################################################################################
 
-####################################################################################################
-###  Example Code Use
-####################################################################################################
+##########################################################################################
+###  Example Code Use                                                                    #
+##########################################################################################
 
 if(F){
   
@@ -14,19 +19,20 @@ if(F){
                transList = list('rentals'='rent','sales'=c('sold', 'auct')),
                verbose = TRUE)
   
-  # Instruction for simply converting .zips to .csvs (warning this doesn't correct bad file names)
+  # Instruction for simply converting .zips to .csvs 
+  #(warning this doesn't correct bad file names)
   convertAPMData(basePath, transType='sold', verbose=TRUE)
 
 }
 
-####################################################################################################
-###  Functions
-####################################################################################################
+##########################################################################################
+###  Functions                                                                           #   
+##########################################################################################
 
 ### Master function that converts all zips into a single .db -------------------------
 
 buildAPMData <- function(basePath,                                    # Path to data
-                         newFileName='test.db',                     # Name of export file
+                         newFileName='test.db',                       # Name of exp. file
                          transList=list('rentals'='rent',
                                           'sales'=c('sold', 'auct')), # List of file types
                          verbose=TRUE                                 # Show progress?
@@ -72,12 +78,12 @@ buildAPMData <- function(basePath,                                    # Path to 
   
 }
 
-### Helper function that unzips, combines and turns .zips in to a .csv -----------------------------
+### Helper function that unzips, combines and turns .zips in to a .csv -------------------
 
-convertAPMData <- function(basePath,                # The main directory where the datalives
-                           transType='sold',      # Type of data (subdirectory) to work on
-                           folderName=NULL,       # Name of folder to export to if not transTYpe
-                           verbose=TRUE             # Do you want to see the progress?
+convertAPMData <- function(basePath,            # The main directory where the datalives
+                           transType='sold',    # Type of data (subdirectory) to work on
+                           folderName=NULL,     # Name export folder if not transTYpe
+                           verbose=TRUE         # Do you want to see the progress?
 ){
   
   # Require libraries
@@ -122,7 +128,7 @@ convertAPMData <- function(basePath,                # The main directory where t
   write.csv(csvData, paste0(basePath, '/', folderName, '.csv'))
 }
 
-### Helper functions that handles the unzipping and renaming process -------------------------------
+### Helper functions that handles the unzipping and renaming process ---------------------
 
 extractAPMData <- function(fileName,             # File name to be extracted
                            dataPath,             # Path to the data (.zip file)
@@ -134,7 +140,9 @@ extractAPMData <- function(fileName,             # File name to be extracted
   dir.create(tempPath, showWarnings = FALSE)
   
   # Extract data
-  if(verbose) cat('  Extracting, renaming and moving', gsub('.zip', '.csv', fileName), '\n')
+  if(verbose){
+    cat('  Extracting, renaming and moving', gsub('.zip', '.csv', fileName), '\n')
+  }
   unzip(paste0(dataPath, '/', fileName), exdir=tempPath)
   
   # Remove all non .csv files
@@ -159,7 +167,7 @@ extractAPMData <- function(fileName,             # File name to be extracted
   
 }
 
-### Helper function that allow for sources files directly from github ---------------------
+### Helper function that allow for sources files directly from github --------------------
 
 sourceHttps <- function(u,                       # URL of file
                         unlink.tmp.certs = FALSE # Security cert handling
@@ -179,10 +187,10 @@ sourceHttps <- function(u,                       # URL of file
   eval(parse(text = script), envir= .GlobalEnv)
 }
 
-### Helper function that pulls out certain files from a list --------------------------------
+### Helper function that pulls out certain files from a list -----------------------------
 
-selectFiles <- function(fileList,                 # list/vector of existing files
-                        selector                  # vector of text string to look for in list
+selectFiles <- function(fileList,         # list/vector of existing files
+                        selector          # vector of text string to look for in list
                         ){
   # Single selector
   if(length(selector) == 1){
@@ -201,7 +209,7 @@ selectFiles <- function(fileList,                 # list/vector of existing file
   return(fileList)
 }
 
-### Function that fixes bad file names ---------------------------------------
+### Function that fixes bad file names ---------------------------------------------------
 
 fixFileNames <- function(dirPath,                 # File directory to work in
                          badStr,                  # Bad string part of file name
@@ -227,7 +235,7 @@ fixFileNames <- function(dirPath,                 # File directory to work in
   }
 }
 
-### Function that averts errors caused by reading in .csvs with no data --------
+### Function that averts errors caused by reading in .csvs with no data ------------------
 
 tryReadCSV <- function(x,                        # File Name
                        stringsAsFactors=FALSE    # Option

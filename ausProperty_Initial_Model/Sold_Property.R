@@ -1,6 +1,8 @@
 #rm(Property_Melbourne_Sold_5_y_May_2015_20150728)
 
 SoldP = Property_Melbourne_Sold_5_y_May_2015_20150728
+write.table(SoldP, "/Users/gaschwanden/Desktop/Sold_All.txt", sep=",", na="")
+
 
 summary(SoldP)
 

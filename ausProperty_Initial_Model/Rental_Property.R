@@ -13,6 +13,7 @@ Rent2011 = Melbourne.Rental.Data.12.months.to.May.2011...20150729
 
 Rent_All = rbind(Rent2011,Rent2012,Rent2013,Rent2014,Rent2015)
 
+
 summary(Rent_All)
 write.table(Rent_All, "/Users/gaschwanden/Desktop/Rent_All.txt", sep=",", na="")
 

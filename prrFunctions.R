@@ -255,12 +255,13 @@ prrSaleRentMatch <- function(sales,               # Data.frame of sales
   mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
   
   # Make the match
-  mTrans <- merge(mSales[, c(matchField, saleField, timeField)],
-                  mRentals[, c(matchField, rentField, timeField)],
+  mTrans <- merge(mSales[, c(matchField, 'UID', saleField, timeField)],
+                  mRentals[, c(matchField, 'UID', rentField, timeField)],
                   by=matchField)
   
   # Rename Match Fields
-  names(mTrans) <- c(matchField, 'saleValue', 'saleTime', 'rentValue', 'rentTime')
+  names(mTrans) <- c(matchField, 'saleID', 'saleValue', 'saleTime', 
+                     'rentID', 'rentValue', 'rentTime')
   
   ## Make time adjustments to matched transactions
   

@@ -128,9 +128,9 @@ medianMethodWrap <- function(cleanData,            # clean trans data (apmDataOb
   
   mmResults <- list(metro=list(all=mmMetro, house=mmMetroH, unit=mmMetroU),
                     lga=list(all=mmLga, house=mmLgaH, unit=mmLgaU),
-                    lga=list(all=mmSla, house=mmSlaH, unit=mmSlaU),
-                    lga=list(all=mmSuburb, house=mmSuburbH, unit=mmSuburbU),
-                    lga=list(all=mmPostcode, house=mmPostcodeH, unit=mmPostcodeU))
+                    sla=list(all=mmSla, house=mmSlaH, unit=mmSlaU),
+                    suburb=list(all=mmSuburb, house=mmSuburbH, unit=mmSuburbU),
+                    postcode=list(all=mmPostcode, house=mmPostcodeH, unit=mmPostcodeU))
 
  ## Return Results
 
@@ -142,72 +142,27 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
                              )
 {
 
- ## Estimate models and make new predictions: Global by Use
-  
-  if(verbose) cat('Developing Price Imputation Models\n')
-  
-  # For houses
-  if(verbose) cat('...Imputing House Prices and Rents\n')
-  houseResults <- prrImputeReg(apmOptions$houseEquation, 
-                               subset(cleanData, transType == 'sale' &
-                                        PropertyType == 'House' & 
-                                        QT_house_postCode == 1),
-                               subset(cleanData, transType == 'rent' &
-                                        PropertyType == 'House' & 
-                                        QT_house_postCode == 1),
-                               verbose=verbose)
-  
-  # For Units
-  if(verbose) cat('...Imputing Unit Prices and Rents\n')
-  unitResults <- prrImputeReg(apmOptions$unitEquation, 
-                              subset(cleanData, transType == 'sale' &
-                                       PropertyType == 'Unit' & 
-                                       QT_unit_postCode == 1),
-                              subset(cleanData, transType == 'rent' &
-                                       PropertyType == 'Unit' & 
-                                       QT_unit_postCode == 1),
-                              verbose=verbose)
-  
-  assign('imputeRegResults', list(houseResults=houseResults,
-                                  unitResults=unitResults),
-         envir=.GlobalEnv)
-  
-  ## Calculate the ratio
-  
-  if(verbose) cat('...Calculating Yield Ratios\n')
-  
-  # Extract vales
-  irValues <- rbind(houseResults$results, unitResults$results)
-  
-  # Calculate the ratio
-  irValues$impYield <- (irValues$Rent * 52) / irValues$Price
-  
-  # Add Ratio to full dataset 
-  cleanData$impYield <- irValues$impYield[match(cleanData$UID, irValues$UID)]
-  xTrans <- subset(cleanData, !is.na(impYield)) 
-  
-
-  ### Break down results by dimensions -------------------------------------------
+### Break down results by dimensions -------------------------------------------
   
   ## Metro
   
   if(verbose) cat('...Analyze at Metro Level\n')
   
   # Metro 
-  irMetro <- spaceTimeShard(stsData = xTrans,
+  irMetro <- spaceTimeShard(stsData = cleanData,
                             metric=c('impYield'),
                             spaceField='all', timeField='transQtr',
                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
                             calcs=list(median='median'))
   
   # By Use
-  irMetroH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+  irMetroH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
                              metric=c('impYield'),
                              spaceField='all', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
-  irMetroU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+  irMetroU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
                              metric=c('impYield'),
                              spaceField='all', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
@@ -216,20 +171,20 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
   
   if(verbose) cat('...Analyze at LGA Level\n')
   
-  irLga <- spaceTimeShard(stsData = xTrans,
+  irLga <- spaceTimeShard(stsData = cleanData,
                           metric=c('impYield'),
                           spaceField='lga', timeField='transQtr',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use
-  irLgaH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+  irLgaH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
                            metric=c('impYield'),
                            spaceField='lga', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
-  irLgaU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+  irLgaU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
                            metric=c('impYield'),
                            spaceField='lga', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
@@ -239,20 +194,20 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
   
   if(verbose) cat('...Analyze at SLA Level\n')
   
-  irSla <- spaceTimeShard(stsData = xTrans,
+  irSla <- spaceTimeShard(stsData = cleanData,
                           metric=c('impYield'),
                           spaceField='sla1', timeField='transQtr',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use
-  irSlaH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+  irSlaH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
                            metric=c('impYield'),
                            spaceField='sla1', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
-  irSlaU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+  irSlaU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
                            metric=c('impYield'),
                            spaceField='sla1', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
@@ -262,20 +217,20 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
   
   if(verbose) cat('...Analyze at Suburb Level\n')
   
-  irSuburb <- spaceTimeShard(stsData = xTrans,
+  irSuburb <- spaceTimeShard(stsData = cleanData,
                              metric=c('impYield'),
                              spaceField='suburb', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   # By Use
-  irSuburbH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+  irSuburbH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
                               metric=c('impYield'),
                               spaceField='suburb', timeField='transQtr',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
   
-  irSuburbU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+  irSuburbU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
                               metric=c('impYield'),
                               spaceField='suburb', timeField='transQtr',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
@@ -285,20 +240,20 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
   
   if(verbose) cat('...Analyze at Postcode Level\n')
   
-  irPostcode <- spaceTimeShard(stsData = xTrans,
+  irPostcode <- spaceTimeShard(stsData = cleanData,
                                metric=c('impYield'),
                                spaceField='postCode', timeField='transQtr',
                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                calcs=list(median='median'))
   
   # By Use
-  irPostcodeH <- spaceTimeShard(xTrans[xTrans$PropertyType == 'House', ],
+  irPostcodeH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
                                 metric=c('impYield'),
                                 spaceField='postCode', timeField='transQtr',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median'))
   
-  irPostcodeU <- spaceTimeShard(xTrans[xTrans$PropertyType == 'Unit', ],
+  irPostcodeU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
                                 metric=c('impYield'),
                                 spaceField='postCode', timeField='transQtr',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
@@ -308,12 +263,184 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
   
   irResults <- list(metro=list(all=irMetro, house=irMetroH, unit=irMetroU),
                     lga=list(all=irLga, house=irLgaH, unit=irLgaU),
-                    lga=list(all=irSla, house=irSlaH, unit=irSlaU),
-                    lga=list(all=irSuburb, house=irSuburbH, unit=irSuburbU),
-                    lga=list(all=irPostcode, house=irPostcodeH, unit=irPostcodeU))
+                    sla=list(all=irSla, house=irSlaH, unit=irSlaU),
+                    suburb=list(all=irSuburb, house=irSuburbH, unit=irSuburbU),
+                    postcode=list(all=irPostcode, house=irPostcodeH, unit=irPostcodeU))
   
   ## Return Results
   
   return(irResults)  
   
 }
+
+### Function that assigns the imputed yields to the correct observations -------
+
+apmAssignIRYield <- function(cleanData,            # apmDataObj
+                             houseRegRes,          # Results of house reg.
+                             unitRegRes            # Results of unit reg.
+)
+{
+  
+  # Extract vales
+  irValues <- rbind(houseRegRes$results, unitRegRes$results)
+  
+  # Calculate the ratio
+  irValues$impYield <- (irValues$Rent * 52) / irValues$Price
+  
+  # Add Ratio to full dataset 
+  cleanData$impYield <- irValues$impYield[match(cleanData$UID, irValues$UID)]
+  xTrans <- subset(cleanData, !is.na(impYield)) 
+  
+  return(xTrans)
+}  
+
+### Function for extracting time index from impute results ---------------------
+
+apmMakeIndex <- function(coefs,                    # Coefs from impute models
+                         verbose=FALSE){
+  
+  coefs.df <- as.data.frame(coefs)
+  coefs.time <- c(0, coefs.df$Estimate[grep('transQtr', rownames(coefs.df))])
+  coefs.index <- exp(c(0, (coefs.time[-1] - coefs.time[-length(coefs.time)])))-1
+  
+  return(coefs.index)
+}
+
+### Function for applying match method to all properties -----------------------
+
+matchMethodWrap <- function(matchData,             # Matched data object
+                            verbose=FALSE)
+{
+  
+  if(verbose) cat('Calculating yields with match method\n')
+  
+  ## All Metro  
+  
+  if(verbose) cat('...Analyze at Metro Level\n')
+  
+  dmMetro <- spaceTimeShard(stsData = matchData,
+                            metric=c('saleYield'),
+                            spaceField='all', timeField='saleTime',
+                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                            calcs=list(median='median'))
+  
+  # By Use   
+  dmMetroH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
+                             metric=c('saleYield'),
+                             spaceField='all', timeField='saleTime',
+                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                             calcs=list(median='median'))
+  
+  dmMetroU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
+                             metric=c('saleYield'),
+                             spaceField='all', timeField='saleTime',
+                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                             calcs=list(median='median'))
+  
+  ## LGA  
+  
+  if(verbose) cat('...Analyze at LGA Level\n')
+  
+  dmLga <- spaceTimeShard(stsData = matchData,
+                          metric=c('saleYield'),
+                          spaceField='lga', timeField='saleTime',
+                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                          calcs=list(median='median'))
+  
+  # By Use   
+  dmLgaH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
+                           metric=c('saleYield'),
+                           spaceField='lga', timeField='saleTime',
+                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                           calcs=list(median='median'))
+  
+  dmLgaU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
+                           metric=c('saleYield'),
+                           spaceField='lga', timeField='saleTime',
+                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                           calcs=list(median='median'))
+  
+  ## SLA1 
+  
+  if(verbose) cat('...Analyze at SLA1 Level\n')
+  
+  dmSla <- spaceTimeShard(stsData = matchData,
+                          metric=c('saleYield'),
+                          spaceField='sla1', timeField='saleTime',
+                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                          calcs=list(median='median'))
+  
+  # By Use   
+  dmSlaH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
+                           metric=c('saleYield'),
+                           spaceField='sla1', timeField='saleTime',
+                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                           calcs=list(median='median'))
+  
+  dmSlaU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
+                           metric=c('saleYield'),
+                           spaceField='sla1', timeField='saleTime',
+                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                           calcs=list(median='median')) 
+  
+  ## Suburb
+  
+  if(verbose) cat('...Analyze at Suburb Level\n')
+  
+  dmSuburb <- spaceTimeShard(stsData = matchData,
+                             metric=c('saleYield'),
+                             spaceField='suburb', timeField='saleTime',
+                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                             calcs=list(median='median'))
+  
+  # By Use   
+  dmSuburbH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
+                              metric=c('saleYield'),
+                              spaceField='suburb', timeField='saleTime',
+                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                              calcs=list(median='median'))
+  
+  dmSuburbU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
+                              metric=c('saleYield'),
+                              spaceField='suburb', timeField='saleTime',
+                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                              calcs=list(median='median')) 
+  
+  ## PostCode 
+  
+  if(verbose) cat('...Analyze at Postcode Level\n')
+  
+  dmPostcode <- spaceTimeShard(stsData = matchData,
+                               metric=c('saleYield'),
+                               spaceField='postCode', timeField='saleTime',
+                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                               calcs=list(median='median'))
+  
+  # By Use   
+  dmPostcodeH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
+                                metric=c('saleYield'),
+                                spaceField='postCode', timeField='saleTime',
+                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                                calcs=list(median='median'))
+  
+  dmPostcodeU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
+                                metric=c('saleYield'),
+                                spaceField='postCode', timeField='saleTime',
+                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
+                                calcs=list(median='median'))  
+  
+  ## Combine Results  
+  
+  dmResults <- list(metro=list(all=dmMetro, house=dmMetroH, unit=dmMetroU),
+                    lga=list(all=dmLga, house=dmLgaH, unit=dmLgaU),
+                    sla=list(all=dmSla, house=dmSlaH, unit=dmSlaU),
+                    suburb=list(all=dmSuburb, house=dmSuburbH, unit=dmSuburbU),
+                    postcode=list(all=dmPostcode, house=dmPostcodeH, unit=dmPostcodeU))
+  
+  ## Return Results
+  
+  return(dmResults) 
+}  
+
+
+

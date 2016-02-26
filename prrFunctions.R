@@ -1,10 +1,10 @@
-################################################################################
-#                                                                              #
-#  Suite of functions for analyzing price to rent ratios in Australia          #
-#                                                                              #
-################################################################################
+##########################################################################################
+#                                                                                        #
+#  Suite of functions for analyzing price to rent ratios in Australia                    #
+#                                                                                        #
+##########################################################################################
 
-### Function to convert various APM date structures into R date structure ------
+### Function to convert various APM date structures into R date structure ----------------
 
 fixAPMDates <- function(xDates      # Vector of dates to be fixed
                         )
@@ -20,7 +20,7 @@ fixAPMDates <- function(xDates      # Vector of dates to be fixed
   xDates <- gsub(" 0:00", "", xDates)
   
   # Find location of slashes
-  sLoc <- matrix(unlist(str_locate_all(xDates, '/')), ncol=4, byrow=TRUE)[ ,1:2]
+  sLoc <- matrix(unlist(str_locate_all(xDates, '/')), ncol=4, byrow=TRUE)[,1:2]
   
   # Correct Days
   days <- as.numeric(substr(xDates, 1, sLoc[ ,1] - 1))
@@ -43,7 +43,7 @@ fixAPMDates <- function(xDates      # Vector of dates to be fixed
   return(newDates)
 }
 
-### Regression function that creates imputed rent and sales values -------------
+### Regression function that creates imputed rent and sales values -----------------------
 
 prrImputeReg <- function(formula,               # LM regression formula
                          saleData,              # Data containing sales
@@ -54,24 +54,24 @@ prrImputeReg <- function(formula,               # LM regression formula
  ## Estimate models and make new predictions
   
   # Esimate models
-  if(verbose) cat('Estimating sale and rent models\n')
+  if(verbose) cat('......Estimating sale and rent models\n')
   saleModel <- lm(formula, data=saleData)
   rentModel <- lm(formula, data=rentData)
   
   # Make predictions of imputed values
-  if(verbose) cat('Imputing values\n')
+  if(verbose) cat('......Imputing values\n')
   impPrice <- exp(predict(saleModel, newdata=rentData))
   impRent <- exp(predict(rentModel, newdata=saleData))
   
   # Apply cross values
-  if(verbose) cat('Stacking observed and imputed values\n')
+  if(verbose) cat('......Stacking observed and imputed values\n')
   saleData$Price <- saleData$transValue
   rentData$Price <- impPrice
   saleData$Rent <- impRent
   rentData$Rent <- rentData$transValue
   
   # Combine data back together
-  if(verbose) cat('Merging data\n')
+  if(verbose) cat('......Merging data\n')
   allData <- rbind(saleData, rentData)
 
   ## Extract model information
@@ -84,6 +84,8 @@ prrImputeReg <- function(formula,               # LM regression formula
                         sigma=summary(rentModel)$r.squared,
                         resid=summary(rentModel)$residuals)
   
+  
+  
  ## Return values
   return(list(results = allData[ ,c('UID', 'Price', 'Rent')],
               saleModel = saleModelInfo,
@@ -91,7 +93,7 @@ prrImputeReg <- function(formula,               # LM regression formula
          
 }
 
-### Function to determine which geo areas meet use and time criteria -----------
+### Function to determine which geo areas meet use and time criteria ---------------------
 
 prrGeoLimit <- function(transData,               # Dataframe of trans data
                         locField = 'locName',    # Field containing location
@@ -134,31 +136,32 @@ prrGeoLimit <- function(transData,               # Dataframe of trans data
               eitherGeo = eitherGeo))  
 }
 
-### Apply the threshold designations across all transactions -------------------
+### Apply the threshold designations across all transactions -----------------------------
 
-prrApplyThres <- function(thresData,       # Data object from prrGeoLimit
+prrApplyThres <- function(thresData,       # Threshold data object from prrGeoLimit
                           transData,       # Set of transaction data
                           timePrefix='YT', # Which time was used YT or QT
-                          geo='postCode'   # Which geo to use (one at a time)
+                          geo="postCode"   # Which geo to use (one at a time)
                           ){
   
   # Pull out single designations
-  both <- ifelse(transData[ ,geo] %in% thresData[[1]], 1, 0)
-  house <- ifelse(transData[ ,geo] %in% thresData[[2]], 1, 0)
-  unit <- ifelse(transData[ ,geo] %in% thresData[[3]], 1, 0)
-  either <- ifelse(transData[ ,geo] %in% thresData[[4]], 1, 0)
+  both <- ifelse(transData[,geo] %in% thresData[[1]],1,0)
+  house <- ifelse(transData[,geo] %in% thresData[[2]],1,0)
+  unit <- ifelse(transData[,geo] %in% thresData[[3]],1,0)
+  either <- ifelse(transData[,geo] %in% thresData[[4]],1,0)
   
   # Combine them
   all <- as.data.frame(cbind(both, house, unit, either))
   
   # Rename
-  names(all) <- paste0(timePrefix, "_", names(all), "_", geo)
+  names(all) <- paste0(timePrefix, "_", names(all), "_",geo)
   
   # Add to existing transactions
   return(cbind(transData, all))
 }
 
-### New Australia Rent Yield Functions (works with stShard operations) ---------
+##########################################################################################
+### New Australia Rent Yield Functions (works with stShard operations) -------------------
 
 prrStsGeoWrap <- function(stsData,                    # Observation data frame
                           metrics,                    # Field(s) to calculate on
@@ -174,6 +177,7 @@ prrStsGeoWrap <- function(stsData,                    # Observation data frame
     source(paste0('https://raw.githubusercontent.com/andykrause/',
                   'dataAnalysisTools/master/stShardFunctions.R'))
   }
+  
   
   ## Calculate prices and rents
   
@@ -212,6 +216,7 @@ prrStsGeoWrap <- function(stsData,                    # Observation data frame
                            rent=xRent$stsDF$median,
                            yield=((xRent$stsDF$median * 52) / 
                              xPrice$stsDF$median))
+    
   }
     
   ## Export data  
@@ -250,13 +255,13 @@ prrSaleRentMatch <- function(sales,               # Data.frame of sales
   mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
   
   # Make the match
-  mTrans <- merge(mSales[, c(matchField, saleField, timeField)],
-                  mRentals[, c(matchField, rentField, timeField)],
+  mTrans <- merge(mSales[, c(matchField, 'UID', saleField, timeField)],
+                  mRentals[, c(matchField, 'UID', rentField, timeField)],
                   by=matchField)
   
   # Rename Match Fields
-  names(mTrans) <- c(matchField, 'saleValue', 'saleTime', 
-                     'rentValue', 'rentTime')
+  names(mTrans) <- c(matchField, 'saleID', 'saleValue', 'saleTime', 
+                     'rentID', 'rentValue', 'rentTime')
   
   ## Make time adjustments to matched transactions
   

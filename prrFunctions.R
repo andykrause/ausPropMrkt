@@ -230,18 +230,20 @@ prrStsGeoWrap <- function(stsData,                    # Observation data frame
 
 prrSaleRentMatch <- function(sales,               # Data.frame of sales
                              rentals,             # Data.frame of rentals
+                             saleIndex,           # SaleIndexObj
+                             rentIndex,           # RentIndexObj
                              matchField = 'ID',   # Field containing matching ID
                              saleField = 'Price', # Field containing sale price
                              rentField = 'Rent',  # Field containing rent 
                              timeField = 'Year'   # Field containing time breakdown
 ){
-
+  
   ## Matching sales to rentals
   
   # Remove NAs in matchField
   xSales <- subset(sales, !is.na(sales[matchField]))
   xRentals <- subset(rentals, !is.na(rentals[matchField]))
-
+  
   # Sort to order
   xSales <- xSales[order(xSales[,matchField]),]
   xRentals <- xRentals[order(xRentals[,matchField]),]
@@ -255,39 +257,48 @@ prrSaleRentMatch <- function(sales,               # Data.frame of sales
   mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
   
   # Make the match
-  mTrans <- merge(mSales[, c(matchField, 'UID', saleField, timeField)],
+  mTrans <- merge(mSales[, c(matchField, 'PropertyType', 'UID', saleField,
+                             timeField)],
                   mRentals[, c(matchField, 'UID', rentField, timeField)],
                   by=matchField)
   
   # Rename Match Fields
-  names(mTrans) <- c(matchField, 'saleID', 'saleValue', 'saleTime', 
+  names(mTrans) <- c(matchField, 'PropertyType', 'saleID', 'saleValue', 'saleTime', 
                      'rentID', 'rentValue', 'rentTime')
   
   ## Make time adjustments to matched transactions
   
-  # Create the rent index
-  rentTrend <- as.numeric(tapply(mTrans$rentValue, mTrans$rentTime, median))
-  rentIndex <- rentTrend / rentTrend[1]
+  # Split into house and unit
+  houseTrans <- mTrans[mTrans$PropertyType == "House", ]
+  unitTrans <- mTrans[mTrans$PropertyType == "Unit", ]
   
-  # Create the sale index
-  saleTrend <- as.numeric(tapply(mTrans$saleValue, mTrans$saleTime, median))
-  saleIndex <- saleTrend / saleTrend[1]
+  # Make adjustment to houses 
+  houseSaleAdj <- (saleIndex$house[as.numeric(as.factor(houseTrans$rentTime))] /
+                     saleIndex$house[as.numeric(as.factor(houseTrans$saleTime))])
+  houseTrans$adjSale <- houseTrans$saleValue * houseSaleAdj
   
-  # Make the adjustments to the rentals
-  rentAdj <- (rentIndex[as.numeric(as.factor(mTrans$saleTime))] /
-                rentIndex[as.numeric(as.factor(mTrans$rentTime))])
-  mTrans$adjRent <- mTrans$rentValue * rentAdj
+  houseRentAdj <- (rentIndex$house[as.numeric(as.factor(houseTrans$saleTime))] /
+                     rentIndex$house[as.numeric(as.factor(houseTrans$rentTime))])
+  houseTrans$adjRent <- houseTrans$rentValue * houseRentAdj
   
-  # Make the adjustments to the sales
-  saleAdj <- (saleIndex[as.numeric(as.factor(mTrans$rentTime))] /
-                saleIndex[as.numeric(as.factor(mTrans$saleTime))])
-  mTrans$adjSale <- mTrans$saleValue * saleAdj
+  # Make adjustment to units 
+  unitSaleAdj <- (saleIndex$unit[as.numeric(as.factor(unitTrans$rentTime))] /
+                    saleIndex$unit[as.numeric(as.factor(unitTrans$saleTime))])
+  unitTrans$adjSale <- unitTrans$saleValue * unitSaleAdj
+  
+  unitRentAdj <- (rentIndex$unit[as.numeric(as.factor(unitTrans$saleTime))] /
+                    rentIndex$unit[as.numeric(as.factor(unitTrans$rentTime))])
+  unitTrans$adjRent <- unitTrans$rentValue * unitRentAdj
+  
+  # Merge back together
+  mTrans <- rbind(houseTrans, unitTrans)
   
   # Calc Yields
   mTrans$saleYield <- (mTrans$adjRent * 52) / mTrans$saleValue
   mTrans$rentYield <- (mTrans$rentValue * 52) / mTrans$adjSale
+  mTrans$dmYield <- (mTrans$saleYield + mTrans$rentYield) / 2
   
- ## Add Location variables
+  ## Add Location variables
   
   mTrans$lga <- xSales$lga[match(mTrans$AddressID, xSales$AddressID)]
   mTrans$sla1 <- xSales$sla1[match(mTrans$AddressID, xSales$AddressID)]
@@ -299,7 +310,7 @@ prrSaleRentMatch <- function(sales,               # Data.frame of sales
                                                       xSales$AddressID)]
   mTrans$PropertyType <- xSales$PropertyType[match(mTrans$AddressID, 
                                                    xSales$AddressID)]
-
+  
   ## Return Values    
   return(mTrans)  
 }  

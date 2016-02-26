@@ -442,5 +442,74 @@ matchMethodWrap <- function(matchData,             # Matched data object
   return(dmResults) 
 }  
 
+### Function to convert data from method based to geography based --------------
+
+apmConvertToGeo <- function(mmRes, irRes, dmRes, indexList){
+  
+  ## Metro Level
+  
+  metroList <- list(mm=list(all=mmRes$metro$all, house=mmRes$metro$house,
+                            unit=mmRes$metro$unit),
+                    ir=list(all=irRes$metro$all, house=irRes$metro$house,
+                            unit=irRes$metro$unit),
+                    dm=list(all=dmRes$metro$all, house=dmRes$metro$house,
+                            unit=dmRes$metro$unit))
+  
+  metroData <- prrAggrGeoData(metroList, indexList)
+  
+  ## LGA Level
+  
+  lgaList <- list(mm=list(all=mmRes$lga$all, house=mmRes$lga$house,
+                          unit=mmRes$lga$unit),
+                  ir=list(all=irRes$lga$all, house=irRes$lga$house,
+                          unit=irRes$lga$unit),
+                  dm=list(all=dmRes$lga$all, house=dmRes$lga$house,
+                          unit=dmRes$lga$unit))
+  
+  lgaData <- prrAggrGeoData(lgaList, indexList, geoSplit=TRUE)
+  
+  ## SLA1 Level
+  
+  slaList <- list(mm=list(all=mmRes$sla$all, house=mmRes$sla$house,
+                          unit=mmRes$sla$unit),
+                  ir=list(all=irRes$sla$all, house=irRes$sla$house,
+                          unit=irRes$sla$unit),
+                  dm=list(all=dmRes$sla$all, house=dmRes$sla$house,
+                          unit=dmRes$sla$unit))
+  
+  slaData <- prrAggrGeoData(slaList, indexList, geoSplit=TRUE)
+  
+  ## suburb Level
+  
+  suburbList <- list(mm=list(all=mmRes$suburb$all, house=mmRes$suburb$house,
+                             unit=mmRes$suburb$unit),
+                     ir=list(all=irRes$suburb$all, house=irRes$suburb$house,
+                             unit=irRes$suburb$unit),
+                     dm=list(all=dmRes$suburb$all, house=dmRes$suburb$house,
+                             unit=dmRes$suburb$unit))
+  
+  suburbData <- prrAggrGeoData(suburbList, indexList, geoSplit=TRUE)
+  
+  ## postcode Level
+  
+  postcodeList <- list(mm=list(all=mmRes$postcode$all, house=mmRes$postcode$house,
+                               unit=mmRes$postcode$unit),
+                       ir=list(all=irRes$postcode$all, house=irRes$postcode$house,
+                               unit=irRes$postcode$unit),
+                       dm=list(all=dmRes$postcode$all, house=dmRes$postcode$house,
+                               unit=dmRes$postcode$unit))
+  
+  postcodeData <- prrAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
+  
+  ## Return Results
+  
+  return(list(metroData=metroData,
+              lgaData=lgaData,
+              slaData=slaData,
+              suburbData=suburbData,
+              postcodeData=postcodeData))
+  
+}
+
 
 

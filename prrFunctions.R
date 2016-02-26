@@ -818,7 +818,7 @@ prrPredModelWrap <- function(dmData,              # matched dataset
     if(byGeog){
       
       # Extract relevant geography names
-      geoList <- levels(yieldData$mix$median$spaceName)
+      geoList <- names(table(as.character(yieldData$mix$median$spaceName)))
       
       # Extract geographic base data
       geoData <- lapply(geoList, prrExtractGeoData, xData=dmData, 

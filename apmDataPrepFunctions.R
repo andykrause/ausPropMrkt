@@ -362,7 +362,7 @@ setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAP
   
  ## Limit shapefiles
   
-  if(verbose) cat('...Limiting Geography Files to Extent of Data\n')
+  if(verbose) cat('Limiting Geography Files to Extent of Data\n')
   
   # Suburbs
   studySuburbs <- geoShapes$suburb[(which(geoShapes$suburb@data$NAME_2006 %in% 
@@ -432,6 +432,7 @@ setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAP
   
  ## Return values
   
-  return(apmDataObj)
+  return(list(apmDataObj=apmDataObj,
+              studyShapes=studyShapes))
 }
 

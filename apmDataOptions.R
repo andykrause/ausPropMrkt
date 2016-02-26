@@ -37,6 +37,14 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   startMonth <- 6
   geoTempLimit <- 3
   
+ ## Set equations for impute model  
+  
+  houseEquation <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+    log(AreaSize) + Bedrooms + Baths + HasPool + HasGarage + Studio
+  
+  unitEquation <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+    Bedrooms + Baths + HasPool + HasGarage + Terrace + Townhouse + Villa + Duplex
+  
  ## Add to a temporary list of options  
   
   tempOptions <- list(areaLimits = areaLimits,
@@ -52,7 +60,9 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
                       startMonth = startMonth,
                       unitTypes = unitTypes,
                       houseTypes = houseTypes,
-                      geoTempLimit = geoTempLimit)
+                      geoTempLimit = geoTempLimit,
+                      houseEquation = houseEquation,
+                      unitEquation = unitEquation)
  
  ## Assign the options to the global environment  
    

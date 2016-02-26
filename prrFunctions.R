@@ -54,24 +54,24 @@ prrImputeReg <- function(formula,               # LM regression formula
  ## Estimate models and make new predictions
   
   # Esimate models
-  if(verbose) cat('Estimating sale and rent models\n')
+  if(verbose) cat('......Estimating sale and rent models\n')
   saleModel <- lm(formula, data=saleData)
   rentModel <- lm(formula, data=rentData)
   
   # Make predictions of imputed values
-  if(verbose) cat('Imputing values\n')
+  if(verbose) cat('......Imputing values\n')
   impPrice <- exp(predict(saleModel, newdata=rentData))
   impRent <- exp(predict(rentModel, newdata=saleData))
   
   # Apply cross values
-  if(verbose) cat('Stacking observed and imputed values\n')
+  if(verbose) cat('......Stacking observed and imputed values\n')
   saleData$Price <- saleData$transValue
   rentData$Price <- impPrice
   saleData$Rent <- impRent
   rentData$Rent <- rentData$transValue
   
   # Combine data back together
-  if(verbose) cat('Merging data\n')
+  if(verbose) cat('......Merging data\n')
   allData <- rbind(saleData, rentData)
 
   ## Extract model information

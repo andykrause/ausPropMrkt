@@ -66,9 +66,14 @@ prrImputeReg <- function(formula,               # LM regression formula
   # Apply cross values
   if(verbose) cat('......Stacking observed and imputed values\n')
   saleData$Price <- saleData$transValue
-  rentData$Price <- impPrice
-  saleData$Rent <- impRent
+  saleData$impPrice <- saleModel$fitted.values
+  saleData$Rent <- rep(0, nrow(saleData))
+  saleData$impRent <- impRent
+  
+  rentData$Price <- rep(0, nrow(rentData))
+  rentData$impPrice <- impPrice
   rentData$Rent <- rentData$transValue
+  rentData$impRent <- rentModel$fitted.values
   
   # Combine data back together
   if(verbose) cat('......Merging data\n')
@@ -87,7 +92,8 @@ prrImputeReg <- function(formula,               # LM regression formula
   
   
  ## Return values
-  return(list(results = allData[ ,c('UID', 'Price', 'Rent')],
+  return(list(results = allData[ ,c('UID', 'Price', 'impPrice', 
+                                    'Rent', 'impRent')],
               saleModel = saleModelInfo,
               rentModel = rentModelInfo))
          

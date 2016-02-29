@@ -35,16 +35,6 @@ loadAPMData <- function(dataPath,               # Location of raw data
   
   if(verbose) cat('Loading Libraries and Source Files\n')
   
-  ## Load Libraries
-  
-  library(plyr)
-  library(dplyr)
-  library(reshape2)
-  library(stringr)
-  library(maptools)
-  library(sp)
-  library(rgeos)
-  
   ## Source Files
   
   # File containing function for working with prr and APM data

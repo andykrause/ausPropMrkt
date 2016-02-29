@@ -28,4 +28,18 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source(paste0('https://raw.githubusercontent.com/andykrause/',
                   'dataAnalysisTools/master/stShardFunctions.R'))
   }
+  
+  if(verbose) cat('Loading Libraries\n')
+  
+  ## Load Libraries
+  
+  library(plyr)
+  library(dplyr)
+  library(reshape2)
+  library(stringr)
+  library(maptools)
+  library(sp)
+  library(rgeos)
+  
+  
 }

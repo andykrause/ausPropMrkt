@@ -36,6 +36,7 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   startYear <- 2010
   startMonth <- 6
   geoTempLimit <- 3
+  geoTempField <- "QT_house_postCode"
   
  ## Set equations for impute model  
   
@@ -61,6 +62,7 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
                       unitTypes = unitTypes,
                       houseTypes = houseTypes,
                       geoTempLimit = geoTempLimit,
+                      geoTempField = geoTempField,
                       houseEquation = houseEquation,
                       unitEquation = unitEquation)
  

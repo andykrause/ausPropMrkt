@@ -15,7 +15,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   
   if(offline){
     source('c:/Code/research/ausPropMrkt/prrFunctions.R')
-    source('c:/Code/research/ausPropMrkt/apmDataOptions.R')
+    source('c:/Code/research/ausPropMrkt/apmOptions.R')
     source('c:/Code/research/ausPropMrkt/apmDataPrepFunctions.R')
     source('c:/Code/research/ausPropMrkt/apmAnalysisFunctions.R')
     
@@ -24,7 +24,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/prrFunctions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                  'master/apmDataOptions.R'))
+                  'master/apmOptions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmDataPrepFunctions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
@@ -33,17 +33,17 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
                   'dataAnalysisTools/master/stShardFunctions.R'))
   }
   
+ ## Load Libraries
+  
   if(verbose) cat('Loading Libraries\n')
-  
-  ## Load Libraries
-  
-  library(plyr)
-  library(dplyr)
-  library(reshape2)
-  library(stringr)
-  library(maptools)
-  library(sp)
-  library(rgeos)
-  
+ 
+  require(plyr)
+  require(dplyr)
+  require(reshape2)
+  require(stringr)
+  require(maptools)
+  require(sp)
+  require(rgeos)
+  require(spdep)
   
 }

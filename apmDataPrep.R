@@ -30,25 +30,7 @@ apmLoadRawData <- function(dataPath,               # Location of raw data
                    offline=TRUE,
                    verbose=TRUE)
      }
-  
-  ### Preliminary Commands ---------------------------------------------------------------
-  
-  if(verbose) cat('Loading Libraries and Source Files\n')
-  
-  ## Source Files
-  
-  # File containing function for working with prr and APM data
-  if(offline){
-    source('c:/Code/research/ausPropMrkt/prrFunctions.R')
-    source('c:/Code/research/ausPropMrkt/apmDataOptions.R')
-    
-  } else {
-    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                  'master/prrFunctions.R'))
-    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                  'master/apmDataOptions.R'))
-  }
-  
+
   ### Read in raw data -------------------------------------------------------------------
   
   if(verbose) cat('Loading Data\n')

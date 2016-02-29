@@ -7,14 +7,14 @@
 ### Function to convert various APM date structures into R date structure ----------------
 
 fixAPMDates <- function(xDates      # Vector of dates to be fixed
-                        )
-  {
+)
+{
   
- ## Set required libraries
+  ## Set required libraries
   
   require(stringr)
-
- ## Break down dates
+  
+  ## Break down dates
   
   # Remove Time
   xDates <- gsub(" 0:00", "", xDates)
@@ -25,7 +25,7 @@ fixAPMDates <- function(xDates      # Vector of dates to be fixed
   # Correct Days
   days <- as.numeric(substr(xDates, 1, sLoc[ ,1] - 1))
   days <- ifelse(days < 10, paste0('0', days), as.character(days))
-    
+  
   # Correct Months
   months <- as.numeric(substr(xDates, sLoc[ ,1] + 1, sLoc[ ,2] - 1))
   months <- ifelse(months < 10, paste0('0', months), as.character(months))
@@ -33,15 +33,16 @@ fixAPMDates <- function(xDates      # Vector of dates to be fixed
   # Correct years
   years <- as.numeric(substr(xDates, sLoc[ ,2] + 1, 50))
   years <- ifelse(years < 2000, paste0('20', years), as.character(years))
-
- ## Recombine into R date format  
-    
+  
+  ## Recombine into R date format  
+  
   newDates <- as.Date(paste0(days, '/' , months, '/', years), "%d/%m/%Y")
-
- ## Return Values  
+  
+  ## Return Values  
   
   return(newDates)
 }
+
 
 ### Regression function that creates imputed rent and sales values -----------------------
 
@@ -99,6 +100,7 @@ prrImputeReg <- function(formula,               # LM regression formula
          
 }
 
+
 ### Function to determine which geo areas meet use and time criteria ---------------------
 
 prrGeoLimit <- function(transData,               # Dataframe of trans data
@@ -148,7 +150,7 @@ prrApplyThres <- function(thresData,       # Threshold data object from prrGeoLi
                           transData,       # Set of transaction data
                           timePrefix='YT', # Which time was used YT or QT
                           geo="postCode"   # Which geo to use (one at a time)
-                          ){
+){
   
   # Pull out single designations
   both <- ifelse(transData[,geo] %in% thresData[[1]],1,0)
@@ -165,6 +167,7 @@ prrApplyThres <- function(thresData,       # Threshold data object from prrGeoLi
   # Add to existing transactions
   return(cbind(transData, all))
 }
+
 
 ##########################################################################################
 ### New Australia Rent Yield Functions (works with stShard operations) -------------------

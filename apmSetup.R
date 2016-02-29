@@ -16,7 +16,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   if(offline){
     source('c:/Code/research/ausPropMrkt/prrFunctions.R')
     source('c:/Code/research/ausPropMrkt/apmOptions.R')
-    source('c:/Code/research/ausPropMrkt/apmDataPrepFunctions.R')
+    source('c:/Code/research/ausPropMrkt/apmDataPrep.R')
     source('c:/Code/research/ausPropMrkt/apmAnalysisFunctions.R')
     
     source('c:/Code/research/dataAnalysisTools/stShardFunctions.R')
@@ -26,7 +26,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmOptions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                  'master/apmDataPrepFunctions.R'))
+                  'master/apmDataPrep.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmAnalysisFunctions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',

@@ -84,8 +84,8 @@ apmLoadRawData <- function(dataPath,               # Location of raw data
 
 ### Function to convert various APM date structures into R date structure ----------------
 
-apmFixData <- function(xDates      # Vector of dates to be fixed
-                       )
+apmFixDates <- function(xDates      # Vector of dates to be fixed
+                        )
 {
   
   ## Set required libraries
@@ -124,7 +124,7 @@ apmFixData <- function(xDates      # Vector of dates to be fixed
 
 ### Function to integrate data  ----------------------------------------------------------  
 
-buildAPMData <- function(rawRents,              # Raw rental data
+apmBuildData <- function(rawRents,              # Raw rental data
                          rawSales,              # Raw sale data
                          ssData,                # space syntax data
                          geoShapes,             # geographic shape files
@@ -289,27 +289,16 @@ buildAPMData <- function(rawRents,              # Raw rental data
   return(allTrans)
 }
 
-
-
-
-
-
-
-
-
-
-
-
 ### Function to clean data  --------------------------------------------------------------  
 
-cleanAPMData <- function(apmDataObj,            # transaction data from buildAPMData()
+apmCleanData <- function(apmDataObj,            # transaction data from buildAPMData()
                          verbose=FALSE){
 
 
  ## Example function call
   
   if(F){
-    allTrans <- cleanAPMData(apmDataObj=allTrans, verbose=TRUE)
+    allTrans <- apmCleanData(apmDataObj=allTrans, verbose=TRUE)
   }
   
   if(verbose) cat('Cleaning Data\n')
@@ -332,8 +321,7 @@ cleanAPMData <- function(apmDataObj,            # transaction data from buildAPM
   
   # Limit to houses or units
   if(verbose) cat('...Limiting to Houses and Units\n')
-  apmDataObj <- subset(apmDataObj, PropertyType == 'House' |
-                       PropertyType == 'Unit')
+  apmDataObj <- subset(apmDataObj, PropertyType == 'House' | PropertyType == 'Unit')
 
   ## Removing missing values  
 
@@ -387,7 +375,7 @@ cleanAPMData <- function(apmDataObj,            # transaction data from buildAPM
 
 ### Function that sets the limits for # of obs by geo by time ---------------------------- 
 
-setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAPMData()
+apmSetGeoThres <- function(apmDataObj,           # transaction data from cleanAPMData()
                            geoShapes,            # geographic shape files
                            verbose=FALSE         # Show progress
                            )
@@ -396,7 +384,7 @@ setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAP
  ## Example function call
   
   if(F){
-    allTrans <- setAPMGeoThres(allTrans, geoShapes, verbose=TRUE) 
+    allTrans <- apmSetGeoThres(allTrans, geoShapes, verbose=TRUE) 
   }
   
  ## Limit shapefiles
@@ -430,7 +418,7 @@ setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAP
   if(verbose) cat('...Adding Sample Size Threshold Designators\n')
   
   # Yearly threshold
-  yearThres <- mapply(prrGeoLimit, 
+  yearThres <- mapply(apmGeoLimit, 
                       locField=c('postCode', 'sla1', 'suburb', 'lga'), 
                       MoreArgs=list(timeField='transYear',
                                     transData=apmDataObj,
@@ -443,7 +431,7 @@ setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAP
                                rep('suburb',4), rep('lga', 4)))
   
   # Quarterly threshold
-  qtrThres <- mapply(prrGeoLimit, 
+  qtrThres <- mapply(apmGeoLimit, 
                      locField=c('postCode', 'sla1', 'suburb', 'lga'), 
                      MoreArgs=list(timeField='transQtr',
                                    transData=apmDataObj,
@@ -458,20 +446,87 @@ setAPMGeoThres <- function(apmDataObj,           # transaction data from cleanAP
  ## Add designators to transactions
   
   # Yearly thresholds
-  apmDataObj <- prrApplyThres(yearThres[1:4], apmDataObj, 'YT', 'postCode')
-  apmDataObj <- prrApplyThres(yearThres[5:8], apmDataObj, 'YT', 'sla1')
-  apmDataObj <- prrApplyThres(yearThres[9:12], apmDataObj, 'YT', 'suburb')
-  apmDataObj <- prrApplyThres(yearThres[13:16], apmDataObj, 'YT', 'lga')
+  apmDataObj <- apmApplyThres(yearThres[1:4], apmDataObj, 'YT', 'postCode')
+  apmDataObj <- apmApplyThres(yearThres[5:8], apmDataObj, 'YT', 'sla1')
+  apmDataObj <- apmApplyThres(yearThres[9:12], apmDataObj, 'YT', 'suburb')
+  apmDataObj <- apmApplyThres(yearThres[13:16], apmDataObj, 'YT', 'lga')
   
   # Quarterly thresholds
-  apmDataObj <- prrApplyThres(qtrThres[1:4], apmDataObj, 'QT', 'postCode')
-  apmDataObj <- prrApplyThres(qtrThres[5:8], apmDataObj, 'QT', 'sla1')
-  apmDataObj <- prrApplyThres(qtrThres[9:12], apmDataObj, 'QT', 'suburb')
-  apmDataObj <- prrApplyThres(qtrThres[13:16], apmDataObj, 'QT', 'lga')
+  apmDataObj <- apmApplyThres(qtrThres[1:4], apmDataObj, 'QT', 'postCode')
+  apmDataObj <- apmApplyThres(qtrThres[5:8], apmDataObj, 'QT', 'sla1')
+  apmDataObj <- apmApplyThres(qtrThres[9:12], apmDataObj, 'QT', 'suburb')
+  apmDataObj <- apmApplyThres(qtrThres[13:16], apmDataObj, 'QT', 'lga')
   
  ## Return values
   
   return(list(apmDataObj=apmDataObj,
               studyShapes=studyShapes))
+}
+
+### Function to determine which geo areas meet use and time criteria ---------------------
+
+apmGeoLimit <- function(transData,               # Dataframe of trans data
+                        locField = 'locName',    # Field containing location
+                        timeField = 'transYear', # Field containing time
+                        geoTempLimit = 3         # Min trans per use/time/loc
+){  
+  
+  # Split transactions by use
+  houseSales <- subset(transData, PropertyType == 'House' &
+                         transType == 'sale')
+  unitSales <- subset(transData, PropertyType == 'Unit' & 
+                        transType == 'sale')
+  houseRentals <- subset(transData, PropertyType == 'House' & 
+                           transType == 'rent')
+  unitRentals <- subset(transData, PropertyType == 'Unit' & 
+                          transType == 'rent')
+  
+  # Determine which suburbs meet criteria for each
+  saleHTable <- table(houseSales[,locField], houseSales[,timeField])
+  shKeep <- which(apply(saleHTable, 1, min) >= geoTempLimit)
+  shGeo <- rownames(saleHTable[shKeep, ])
+  saleUTable <- table(unitSales[,locField], unitSales[,timeField])
+  suKeep <- which(apply(saleUTable, 1, min) >= geoTempLimit)
+  suGeo <- rownames(saleUTable[suKeep, ])
+  rentHTable <- table(houseRentals[,locField], houseRentals[,timeField])
+  rhKeep <- which(apply(rentHTable, 1, min) >= geoTempLimit)
+  rhGeo <- rownames(rentHTable[rhKeep, ])
+  rentUTable <- table(unitRentals[,locField], unitRentals[,timeField])
+  ruKeep <- which(apply(rentUTable, 1, min) >= geoTempLimit)
+  ruGeo <- rownames(rentUTable[ruKeep, ])
+  bothGeo <- intersect(intersect(intersect(shGeo, suGeo), rhGeo), ruGeo)
+  houseGeo <- intersect(shGeo,rhGeo)
+  unitGeo <- intersect(suGeo, ruGeo)
+  eitherGeo <- union(houseGeo, unitGeo)
+  
+  # Create tables
+  return(list(bothGeo = bothGeo,
+              houseGeo = houseGeo,
+              unitGeo = unitGeo,
+              eitherGeo = eitherGeo))  
+}
+
+### Apply the threshold designations across all transactions -----------------------------
+
+apmApplyThres <- function(thresData,       # Threshold data object from prrGeoLimit
+                          transData,       # Set of transaction data
+                          timePrefix='YT', # Which time was used YT or QT
+                          geo="postCode"   # Which geo to use (one at a time)
+){
+  
+  # Pull out single designations
+  both <- ifelse(transData[,geo] %in% thresData[[1]],1,0)
+  house <- ifelse(transData[,geo] %in% thresData[[2]],1,0)
+  unit <- ifelse(transData[,geo] %in% thresData[[3]],1,0)
+  either <- ifelse(transData[,geo] %in% thresData[[4]],1,0)
+  
+  # Combine them
+  all <- as.data.frame(cbind(both, house, unit, either))
+  
+  # Rename
+  names(all) <- paste0(timePrefix, "_", names(all), "_",geo)
+  
+  # Add to existing transactions
+  return(cbind(transData, all))
 }
 

@@ -1,3 +1,12 @@
+##########################################################################################
+#                                                                                        #
+#  Suite of functions for analyzing price to rent ratios with APM data                   #
+#                                                                                        #
+##########################################################################################
+
+
+
+
 
 
 medianMethodWrap <- function(cleanData,            # clean trans data (apmDataObj) 

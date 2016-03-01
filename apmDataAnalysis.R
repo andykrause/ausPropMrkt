@@ -236,7 +236,49 @@ apmTimeAdjMatches <- function(transData,          # Transaction data
   
 }
 
+### Swap yield information from imputations and matching methods -------------------------
 
+apmYieldSwap <- function(transData,       # Transaction data
+                         matchData        # Set of matched data from apmSaleRentMatch()
+)
+{
+  
+  ##  Split into sales and rent sets
+  
+  transSales <- transData[transData$transType == 'sale', ]
+  transRents <- transData[transData$transType == 'rent', ]
+  
+  ## Apply the imputed yields to the match data  
+  
+  matchData$impSaleYield <- transSales$impSaleYield[match(matchData$saleID,
+                                                          transSales$UID)]
+  matchData$impRentYield <- transRents$impRentYield[match(matchData$rentID,
+                                                          transRents$UID)]
+  matchData$impSaleYieldX <- transSales$impYield[match(matchData$saleID,
+                                                       transSales$UID)]
+  matchData$impRentYieldX <- transRents$impYield[match(matchData$rentID,
+                                                       transRents$UID)]
+  
+  ## Resolve situations where properties have more than one matched yield  
+  
+  matchSales <- tapply2DF(xData=matchData$dmSaleYield, byField=matchData$saleID, 
+                          xFunc=median)
+  matchRents <- tapply2DF(xData=matchData$dmRentYield, byField=matchData$rentID, 
+                          xFunc=median) 
+  
+  ## Add matched yields to the transaction data  
+  
+  transSales$dmSaleYield <- matchSales$Var[match(transSales$UID, matchSales$ID)]
+  transSales$dmRentYield <- NA
+  transRents$dmRentYield <- matchRents$Var[match(transRents$UID, matchRents$ID)]
+  transRents$dmSaleYield <- NA
+  
+  ## Recombine transdata
+  
+  return(list(transData=rbind(transSales, transRents),
+              matchData=matchData))
+  
+}  
 
 
 

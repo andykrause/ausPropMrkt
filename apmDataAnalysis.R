@@ -4,6 +4,67 @@
 #                                                                                        #
 ##########################################################################################
 
+apmImpRegress <- function(formula,               # LM regression formula
+                          transData,             # Transaction data (sales and rentals)
+                          verbose = FALSE        # Show progress?
+){
+  
+  ## Split data
+  
+  if(verbose) cat('...Separating sales and rentals\n')
+  saleData <- subset(transData, transType == 'sale')
+  rentData <- subset(transData, transType == 'rent')
+  
+  ## Estimate models and make new predictions
+  
+  # Esimate models
+  if(verbose) cat('......Estimating sale and rent models\n')
+  saleModel <- lm(formula, data=saleData)
+  rentModel <- lm(formula, data=rentData)
+  
+  # Make predictions of imputed values
+  if(verbose) cat('......Imputing values\n')
+  impPrice <- exp(predict(saleModel, newdata=rentData))
+  impRent <- exp(predict(rentModel, newdata=saleData))
+  
+ ## Building data compatability 
+  
+  if(verbose) cat('......Stacking observed and imputed values\n')
+  
+  saleData$Price <- saleData$transValue
+  saleData$impPrice <- round(exp(saleModel$fitted.values), 0)
+  saleData$Rent <- rep(0, nrow(saleData))
+  saleData$impRent <- impRent
+  
+  rentData$Price <- rep(0, nrow(rentData))
+  rentData$impPrice <- impPrice
+  rentData$Rent <- rentData$transValue
+  rentData$impRent <- round(exp(rentModel$fitted.values), 0)
+  
+  # Combine data back together
+  if(verbose) cat('......Merging data\n')
+  allData <- rbind(saleData, rentData)
+  
+  ## Extract model information
+  saleModelInfo <- list(coef=summary(saleModel)$coefficients,
+                        r2=summary(saleModel)$r.squared,
+                        sigma=summary(saleModel)$r.squared,
+                        resid=summary(saleModel)$residuals)
+  
+  rentModelInfo <- list(coef=summary(rentModel)$coefficients,
+                        r2=summary(rentModel)$r.squared,
+                        sigma=summary(rentModel)$r.squared,
+                        resid=summary(rentModel)$residuals)
+
+  ## Return values
+  return(list(results = allData[ ,c('UID', 'Price', 'impPrice', 
+                                    'Rent', 'impRent')],
+              saleModel = saleModelInfo,
+              rentModel = rentModelInfo))
+  
+}
+
+
 
 
 

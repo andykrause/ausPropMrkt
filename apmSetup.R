@@ -18,6 +18,8 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source('c:/Code/research/ausPropMrkt/apmOptions.R')
     source('c:/Code/research/ausPropMrkt/apmDataPrep.R')
     source('c:/Code/research/ausPropMrkt/apmDataAnalysis.R')
+    source('c:/Code/dataMgmtTools/dataMungeTools.R')
+    
     
     source('c:/Code/research/dataAnalysisTools/stShardFunctions.R')
   } else {
@@ -31,6 +33,8 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
                   'master/apmDataAnalysis.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',
                   'dataAnalysisTools/master/stShardFunctions.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/',
+                  'dataMgmtTools/master/dataMungeTools.R'))
   }
   
  ## Load Libraries

@@ -4,8 +4,8 @@
 #                                                                                        #
 ##########################################################################################
 
-apmImpRegress <- function(formula,               # LM regression formula
-                          transData,             # Transaction data (sales and rentals)
+apmImpRegress <- function(transData,             # Transaction data (sales and rentals)
+                          reg.spec,              # REgression specification
                           verbose = FALSE        # Show progress?
 ){
   
@@ -19,8 +19,8 @@ apmImpRegress <- function(formula,               # LM regression formula
   
   # Esimate models
   if(verbose) cat('......Estimating sale and rent models\n')
-  saleModel <- lm(formula, data=saleData)
-  rentModel <- lm(formula, data=rentData)
+  saleModel <- lm(reg.spec, data=saleData)
+  rentModel <- lm(reg.spec, data=rentData)
   
   # Make predictions of imputed values
   if(verbose) cat('......Imputing values\n')
@@ -49,12 +49,16 @@ apmImpRegress <- function(formula,               # LM regression formula
   saleModelInfo <- list(coef=summary(saleModel)$coefficients,
                         r2=summary(saleModel)$r.squared,
                         sigma=summary(saleModel)$r.squared,
-                        resid=summary(saleModel)$residuals)
+                        resid=summary(saleModel)$residuals,
+                        baseValue=median(saleData$transValue[which(as.factor(
+                          saleData$transQtr) == 1)]))
   
   rentModelInfo <- list(coef=summary(rentModel)$coefficients,
                         r2=summary(rentModel)$r.squared,
                         sigma=summary(rentModel)$r.squared,
-                        resid=summary(rentModel)$residuals)
+                        resid=summary(rentModel)$residuals,
+                        baseValue=median(rentData$transValue[which(as.factor(
+                          rentData$transQtr) == 1)]))
 
   ## Return values
   return(list(results = allData[ ,c('UID', 'Price', 'impPrice', 
@@ -367,11 +371,13 @@ apmAssignIRYield <- function(cleanData,            # apmDataObj
 ### Function for extracting time index from impute results ---------------------
 
 apmMakeIndex <- function(coefs,                    # Coefs from impute models
-                         verbose=FALSE){
+                         timeField='transQtr',     # Field to search for coefs in
+                         verbose=FALSE)
+{
   
   coefs.df <- as.data.frame(coefs)
-  coefs.time <- c(0, coefs.df$Estimate[grep('transQtr', rownames(coefs.df))])
-  coefs.index <- exp(c(0, (coefs.time[-1] - coefs.time[-length(coefs.time)])))-1
+  coefs.time <- c(0, coefs.df$Estimate[grep(timeField, rownames(coefs.df))])
+  coefs.index <- exp(c(0, (coefs.time[-1] - coefs.time[-length(coefs.time)]))) - 1
   
   return(coefs.index)
 }

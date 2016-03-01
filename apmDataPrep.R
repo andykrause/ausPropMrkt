@@ -4,6 +4,73 @@
 #                                                                                        #
 ##########################################################################################
 
+### Master function to build all data ----------------------------------------------------
+
+apmFullDataBuild <- function(dataPath,               # Location of raw data
+                             saleFile,               # File name/loc of sales
+                             rentFile,               # File name/loc of rents
+                             geoFiles=list(),        # List of shapefiles
+                             offline=FALSE,          # Are you offline??
+                             verbose=FALSE,          # Show progress?
+                             optionChanges=NULL      # Future capability to change options
+                             )
+  {
+ 
+### Example Function Call --------------------------------------------------------------
+  
+  if(F){
+    
+  apmFullDataBuild(dataPath="C:/data/research/priceRentMethComp/",
+                   saleFile='transData/sales10_15.csv',
+                   rentFile='transData/rents10_15.csv',
+                   geoFiles=list(suburb='shapefiles/Vic_Suburbs.shp',
+                                 lga='shapefiles/Vic_LGAs.shp',
+                                 sla1='shapefiles/Vic_SLA1.shp',
+                                 postcode='shapefiles/Vic_PostCodes.shp',
+                                 ssFile='spatialData/allSS.csv'),
+                   offline=TRUE,
+                   verbose=TRUE,
+                   optionChanges=NULL)
+  }   
+  
+  # Load Raw data
+  apmLoadRawData(dataPath=dataPath, saleFile=salePath, rentFile=rentPath,
+                 geoFiles=geoPath, offline=offline, verbose=verbose)
+  
+  # Build Data
+  
+  allTrans <- apmBuildData(rawRents, rawSales, ssData, geoShapes,
+                           verbose=verbose)
+  
+  # Clean Data
+  
+  allTrans <- apmCleanData(apmDataObj=allTrans, verbose=verbose)
+  
+  # Apply geographic/time filters
+  
+  cleanData <- apmSetGeoThres(allTrans, geoShapes, verbose=verbose) 
+  
+  # Isolate clean transaction data
+  cleanTrans <- cleanData$apmDataObj
+  
+  # Isolate study area shapes
+  studyShapes <- cleanData$studyShapes
+
+ ## Write out data objects
+
+  if(verbose) cat('Writing out data objects')
+  save(cleanTrans, file=paste0(exportPath, 'cleanTrans.RData'))
+  save(studyShapes, file=paste0(exportPath, 'studyShps.RData')) 
+  
+ ## Clean up environment
+  
+  rm(rawRents, envir=.GlobalEnv)
+  rm(rawSales, envir=.GlobalEnv)
+  rm(ssData, envir=.GlobalEnv)
+  gc()
+  
+}
+
 ### Function to load necessary APM data ----------------------------------------
   
 apmLoadRawData <- function(dataPath,               # Location of raw data
@@ -369,31 +436,7 @@ apmSetGeoThres <- function(apmDataObj,           # transaction data from cleanAP
     allTrans <- apmSetGeoThres(allTrans, geoShapes, verbose=TRUE) 
   }
   
- ## Limit shapefiles
-  
-  if(verbose) cat('Limiting Geography Files to Extent of Data\n')
-  
-  # Suburbs
-  studySuburbs <- geoShapes$suburb[(which(geoShapes$suburb@data$NAME_2006 %in% 
-                                     names(table(allTrans$suburb)))), ]
-  
-  # Post Codes
-  studyPostCodes <- geoShapes$postcode[(which(geoShapes$postcode@data$POA_2006 %in% 
-                                         names(table(allTrans$postCode)))), ]
-  
-  # SLA1
-  studySLA1s <- geoShapes$sla1[(which(geoShapes$sla1@data$SLA_NAME11 %in% 
-                                 names(table(allTrans$sla1)))), ]
-  
-  # LGAs
-  studyLGAs <- geoShapes$lga[(which(geoShapes$lga@data$LGA_NAME11 %in% 
-                               names(table(allTrans$lga)))), ]
-  
-  # Combine into a single list
-  studyShapes <- list(suburb=studySuburbs,
-                      postcode=studyPostCodes,
-                      lga=studyLGAs,
-                      sla1=studySLA1s)
+
 
  ## Determine which geographies meet which time thresholds
   
@@ -438,7 +481,50 @@ apmSetGeoThres <- function(apmDataObj,           # transaction data from cleanAP
   apmDataObj <- apmApplyThres(qtrThres[5:8], apmDataObj, 'QT', 'sla1')
   apmDataObj <- apmApplyThres(qtrThres[9:12], apmDataObj, 'QT', 'suburb')
   apmDataObj <- apmApplyThres(qtrThres[13:16], apmDataObj, 'QT', 'lga')
+
   
+  # Remove observations form areas without enough sales
+  
+  if(verbose) cat('...Limiting Observations to areas with enough transactions\n')
+  
+  houseTrans <- subset(apmDataObj, PropertyType == 'House')
+  houseTrans <- houseTrans[houseTrans[ ,apmOptions$geoTempFieldHouse] == 1,]
+  unitTrans <- subset(apmDataObj, PropertyType == 'Unit')
+  unitTrans <- unitTrans[unitTrans[ ,apmOptions$geoTempFieldUnit] == 1,]
+  
+  # Merge back together
+  apmDataObj <- rbind(houseTrans, unitTrans)
+  
+  # Remove the unneeded fields
+  xFields <- c(grep('YT_', names(apmDataObj)), grep('QT_', names(apmDataObj))) 
+  apmDataObj <- apmDataObj[ ,-xFields]
+  
+  ## Limit shapefiles
+  
+  if(verbose) cat('Limiting Geography Files to Extent of Data\n')
+  
+  # Suburbs
+  studySuburbs <- geoShapes$suburb[(which(geoShapes$suburb@data$NAME_2006 %in% 
+                                            names(table(apmDataObj$suburb)))), ]
+  
+  # Post Codes
+  studyPostCodes <- geoShapes$postcode[(which(geoShapes$postcode@data$POA_2006 %in% 
+                                                names(table(apmDataObj$postCode)))), ]
+  
+  # SLA1
+  studySLA1s <- geoShapes$sla1[(which(geoShapes$sla1@data$SLA_NAME11 %in% 
+                                        names(table(apmDataObj$sla1)))), ]
+  
+  # LGAs
+  studyLGAs <- geoShapes$lga[(which(geoShapes$lga@data$LGA_NAME11 %in% 
+                                      names(table(apmDataObj$lga)))), ]
+  
+  # Combine into a single list
+  studyShapes <- list(suburb=studySuburbs,
+                      postcode=studyPostCodes,
+                      lga=studyLGAs,
+                      sla1=studySLA1s)  
+    
  ## Return values
   
   return(list(apmDataObj=apmDataObj,

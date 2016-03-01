@@ -4,6 +4,8 @@
 #                                                                                        #
 ##########################################################################################
 
+### Run the impute regression on a set of sale and rental data ---------------------------
+
 apmImpRegress <- function(transData,             # Transaction data (sales and rentals)
                           reg.spec,              # REgression specification
                           verbose = FALSE        # Show progress?
@@ -67,6 +69,72 @@ apmImpRegress <- function(transData,             # Transaction data (sales and r
               rentModel = rentModelInfo))
   
 }
+
+### Assign the impute regression yields back to the transaction data ---------------------
+
+apmAssignIRYields <- function(transData,            # apmDataObj
+                              houseRegRes,          # Results of house reg.
+                              unitRegRes            # Results of unit reg.
+)
+{
+  
+  # Extract values
+  irValues <- rbind(houseRegRes$results, unitRegRes$results)
+  
+  # Calculate the ratio
+  irValues$impYield <- (irValues$impRent * 52) / irValues$impPrice
+  
+  # Calculate the mixed ratios
+  idS <- which(irValues$Rent == 0)
+  idR <- which(irValues$Price == 0)
+  
+  irValues$saleYield <- 0
+  irValues$saleYield[idS] <- (irValues$impRent[idS] * 52) / irValues$Price[idS]
+  irValues$rentYield <- 0
+  irValues$rentYield[idR] <- (irValues$Rent[idR] * 52) / irValues$impPrice[idR]
+  
+  # Add Ratio to full dataset 
+  transData$impYield <- irValues$impYield[match(transData$UID, irValues$UID)]
+  transData$saleYield <- irValues$saleYield[match(transData$UID, irValues$UID)]
+  transData$rentYield <- irValues$rentYield[match(transData$UID, irValues$UID)]
+  
+  xTrans <- subset(transData, !is.na(impYield)) 
+  
+  return(xTrans)
+}  
+
+### Create a set of indexes based on impute regression results ---------------------------
+
+apmCreateIndexes <- function(irHouse,           # House results from impute regression
+                             irUnit             # Unit results from impute regression
+)
+{
+  
+  ## Build sales indexes
+  
+  saleIndex <- list(house = 1 + apmMakeIndex(impHouse$saleModel$coef),
+                    unit = 1 + apmMakeIndex(impUnit$saleModel$coef))
+  saleIndex$all <- (saleIndex$house + saleIndex$unit) / 2
+  saleIndex$houseValue <- saleIndex$house * impHouse$saleModel$baseValue
+  saleIndex$unitValue <- saleIndex$unit * impUnit$saleModel$baseValue
+  
+  ## Build Rent Indexes
+  
+  rentIndex <- list(house = 1 + apmMakeIndex(impHouse$rentModel$coef),
+                    unit = 1 + apmMakeIndex(impUnit$rentModel$coef))
+  rentIndex$all <- (rentIndex$house + rentIndex$unit) / 2  
+  rentIndex$houseValue <- rentIndex$house * impHouse$rentModel$baseValue
+  rentIndex$unitValue <- rentIndex$unit * impUnit$rentModel$baseValue
+  
+  ## Return values
+  
+  return(list(rent = rentIndex,
+              sale = saleIndex))
+}
+
+
+
+
 
 
 
@@ -349,24 +417,6 @@ imputeMethodWrap <- function(cleanData,            # Clean trans data (apmDataOb
 
 ### Function that assigns the imputed yields to the correct observations -------
 
-apmAssignIRYield <- function(cleanData,            # apmDataObj
-                             houseRegRes,          # Results of house reg.
-                             unitRegRes            # Results of unit reg.
-)
-{
-  
-  # Extract vales
-  irValues <- rbind(houseRegRes$results, unitRegRes$results)
-  
-  # Calculate the ratio
-  irValues$impYield <- (irValues$Rent * 52) / irValues$Price
-  
-  # Add Ratio to full dataset 
-  cleanData$impYield <- irValues$impYield[match(cleanData$UID, irValues$UID)]
-  xTrans <- subset(cleanData, !is.na(impYield)) 
-  
-  return(xTrans)
-}  
 
 ### Function for extracting time index from impute results ---------------------
 

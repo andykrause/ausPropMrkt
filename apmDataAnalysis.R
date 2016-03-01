@@ -88,17 +88,20 @@ apmAssignIRYields <- function(transData,            # apmDataObj
   idS <- which(irValues$Rent == 0)
   idR <- which(irValues$Price == 0)
   
-  irValues$saleYield <- 0
-  irValues$saleYield[idS] <- (irValues$impRent[idS] * 52) / irValues$Price[idS]
-  irValues$rentYield <- 0
-  irValues$rentYield[idR] <- (irValues$Rent[idR] * 52) / irValues$impPrice[idR]
+  irValues$impSaleYield <- 0
+  irValues$impSaleYield[idS] <- (irValues$impRent[idS] * 52) / irValues$Price[idS]
+  irValues$impRentYield <- 0
+  irValues$impRentYield[idR] <- (irValues$Rent[idR] * 52) / irValues$impPrice[idR]
   
   # Add Ratio to full dataset 
   transData$impYield <- irValues$impYield[match(transData$UID, irValues$UID)]
-  transData$saleYield <- irValues$saleYield[match(transData$UID, irValues$UID)]
-  transData$rentYield <- irValues$rentYield[match(transData$UID, irValues$UID)]
+  transData$impSaleYield <- irValues$impSaleYield[match(transData$UID, irValues$UID)]
+  transData$impRentYield <- irValues$impRentYield[match(transData$UID, irValues$UID)]
   
+  # Remove those with missing values
   xTrans <- subset(transData, !is.na(impYield)) 
+  
+ ## Return  transactions  
   
   return(xTrans)
 }  
@@ -131,6 +134,113 @@ apmCreateIndexes <- function(irHouse,           # House results from impute regr
   return(list(rent = rentIndex,
               sale = saleIndex))
 }
+
+
+### Function to compare price and rent on only matched properties ------------------------
+
+apmSaleRentMatch <- function(transData,           # Transaction data
+                             indexObj,            # Index obj from apmCreateIndexes()
+                             matchField = 'ID',   # Field containing matching ID
+                             saleField = 'Price', # Field containing sale price
+                             rentField = 'Rent',  # Field containing rent 
+                             timeField = 'Year'   # Field containing time breakdown
+){
+  
+  ## Split into sales and rentals
+  
+  sales <- transData[transData$transType == 'sale',]
+  rentals <- transData[transData$transType == 'rent',]
+  
+  ## Matching sales to rentals
+  
+  # Remove NAs in matchField
+  xSales <- subset(sales, !is.na(sales[matchField]))
+  xRentals <- subset(rentals, !is.na(rentals[matchField]))
+  
+  # Sort to order
+  xSales <- xSales[order(xSales[,matchField]),]
+  xRentals <- xRentals[order(xRentals[,matchField]),]
+  
+  # Extract matching field
+  sMatch <- xSales[ ,matchField]
+  rMatch <- xRentals[ ,matchField]
+  
+  # Perform cross match identification
+  mSales <- xSales[!is.na(match(sMatch, rMatch)), ]
+  mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
+  
+  # Make the match
+  mTrans <- merge(mSales[, c(matchField, 'PropertyType', 'UID', saleField, timeField)],
+                  mRentals[, c(matchField, 'UID', rentField, timeField)],
+                  by=matchField)
+  
+  # Rename Match Fields
+  names(mTrans) <- c(matchField, 'PropertyType', 'saleID', 'saleValue', 'saleTime', 
+                     'rentID', 'rentValue', 'rentTime')
+  
+  ## Make time adjustments to matched transactions
+
+  mTrans <- apmTimeAdjMatches(transData=mTrans,
+                              indexObj=indexObj)
+
+  # Calc Yields
+  mTrans$dmSaleYield <- (mTrans$adjRent * 52) / mTrans$saleValue
+  mTrans$dmRentYield <- (mTrans$rentValue * 52) / mTrans$adjSale
+  mTrans$dmYield <- (mTrans$dmSaleYield + mTrans$dmRentYield) / 2
+  
+  # Add information on time between transactions
+  mTrans$timeGap <- mTrans$rentTime - mTrans$saleTime
+
+ ## Return Values    
+  
+  return(mTrans)  
+}  
+
+### Time adjusts the direct matches based on a given set of indexes ----------------------
+
+apmTimeAdjMatches <- function(transData,          # Transaction data
+                              indexObj            # Index obj from apmCreateIndexes()
+)
+{
+  
+  ## Split by use
+  
+  houseTrans <- transData[transData$PropertyType == "House", ]
+  unitTrans <- transData[transData$PropertyType == "Unit", ]
+  
+  # Make adjustment to houses 
+  houseSaleAdj <- (indexObj$sale$house[as.numeric(as.factor(houseTrans$rentTime))] /
+                     indexObj$sale$house[as.numeric(as.factor(houseTrans$saleTime))])
+  houseTrans$adjSale <- houseTrans$saleValue * houseSaleAdj
+  
+  houseRentAdj <- (indexObj$rent$house[as.numeric(as.factor(houseTrans$saleTime))] /
+                     indexObj$rent$house[as.numeric(as.factor(houseTrans$rentTime))])
+  houseTrans$adjRent <- houseTrans$rentValue * houseRentAdj
+  
+  # Make adjustment to units 
+  unitSaleAdj <- (indexObj$sale$unit[as.numeric(as.factor(unitTrans$rentTime))] /
+                    indexObj$sale$unit[as.numeric(as.factor(unitTrans$saleTime))])
+  unitTrans$adjSale <- unitTrans$saleValue * unitSaleAdj
+  
+  unitRentAdj <- (indexObj$rent$unit[as.numeric(as.factor(unitTrans$saleTime))] /
+                    indexObj$sale$unit[as.numeric(as.factor(unitTrans$rentTime))])
+  unitTrans$adjRent <- unitTrans$rentValue * unitRentAdj
+  
+  ## Merge back together
+  
+  mTrans <- rbind(houseTrans, unitTrans)
+  
+  ## Return Data  
+  
+  return(mTrans)
+  
+}
+
+
+
+
+
+
 
 
 

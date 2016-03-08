@@ -108,8 +108,8 @@ apmAssignIRYields <- function(transData,            # apmDataObj
 
 ### Create a set of indexes based on impute regression results ---------------------------
 
-apmCreateIndexes <- function(irHouse,           # House results from impute regression
-                             irUnit             # Unit results from impute regression
+apmCreateIndexes <- function(impHouse,           # House results from impute regression
+                             impUnit             # Unit results from impute regression
 )
 {
   
@@ -280,12 +280,301 @@ apmYieldSwap <- function(transData,       # Transaction data
   
 }  
 
+## Compare the differences between the matched observations and all observations ---------
+
+apmCompareSamples <- function(clean.trans)
+{  
+  
+  ## Create a match trans showing only those observations used in the match data  
+  
+  matchTrans <- cleanTrans[!is.na(cleanTrans$dmSaleYield) | 
+                             !is.na(cleanTrans$dmRentYield),]
+  
+  ## De trend sales prices and rents of all transactions
+  
+  # Create separate data sets
+  c.unit.rent <- subset(cleanTrans, transType=='rent' & PropertyType == 'Unit')
+  c.house.rent <- subset(cleanTrans, transType=='rent' & PropertyType == 'House')
+  c.unit.sale <- subset(cleanTrans, transType=='sale' & PropertyType == 'Unit')
+  c.house.sale <- subset(cleanTrans, transType=='sale' & PropertyType == 'House')
+  
+  # Create an index for detrending
+  unitrentsTrender <- tapply(c.unit.rent$transValue, c.unit.rent$transQtr, median)
+  unitrentsTrender <- data.frame(qtr=1:20,
+                                 adj=1/(unitrentsTrender/unitrentsTrender[1]))
+  unitsalesTrender <- tapply(c.unit.sale$transValue, c.unit.sale$transQtr, median)
+  unitsalesTrender <- data.frame(qtr=1:20,
+                                 adj=1/(unitsalesTrender/unitsalesTrender[1]))
+  houserentsTrender <- tapply(c.house.rent$transValue, c.house.rent$transQtr, median)
+  houserentsTrender <- data.frame(qtr=1:20,
+                                  adj=1/(houserentsTrender/houserentsTrender[1]))
+  housesalesTrender <- tapply(c.house.sale$transValue, c.house.sale$transQtr, median)
+  housesalesTrender <- data.frame(qtr=1:20,
+                                  adj=1/(housesalesTrender/housesalesTrender[1]))
+  
+  # Apply detrending adjustments
+  c.unit.rent$xValue <- (c.unit.rent$transValue * 
+                           unitrentsTrender$adj[match(c.unit.rent$transQtr,
+                                                      unitrentsTrender$qtr)])
+  c.house.rent$xValue <- (c.house.rent$transValue * 
+                            houserentsTrender$adj[match(c.house.rent$transQtr,
+                                                        houserentsTrender$qtr)])
+  c.unit.sale$xValue <- (c.unit.sale$transValue * 
+                           unitsalesTrender$adj[match(c.unit.sale$transQtr,
+                                                      unitsalesTrender$qtr)])
+  c.house.sale$xValue <- (c.house.sale$transValue * 
+                            housesalesTrender$adj[match(c.house.sale$transQtr,
+                                                        housesalesTrender$qtr)])
+  
+  ## Detrend sales and rents of matched trans
+  
+  # Subset data
+  m.unit.rent <- subset(matchTrans, transType=='rent' & PropertyType == 'Unit')
+  m.house.rent <- subset(matchTrans, transType=='rent' & PropertyType == 'House')
+  m.unit.sale <- subset(matchTrans, transType=='sale' & PropertyType == 'Unit')
+  m.house.sale <- subset(matchTrans, transType=='sale' & PropertyType == 'House')
+  
+  # Detrend values
+  m.unit.rent$xValue <- (m.unit.rent$transValue * 
+                           unitrentsTrender$adj[match(m.unit.rent$transQtr,
+                                                      unitrentsTrender$qtr)])
+  m.house.rent$xValue <- (m.house.rent$transValue * 
+                            houserentsTrender$adj[match(m.house.rent$transQtr,
+                                                        houserentsTrender$qtr)])
+  m.unit.sale$xValue <- (m.unit.sale$transValue * 
+                           unitsalesTrender$adj[match(m.unit.sale$transQtr,
+                                                      unitsalesTrender$qtr)])
+  m.house.sale$xValue <- (m.house.sale$transValue * 
+                            housesalesTrender$adj[match(m.house.sale$transQtr,
+                                                        housesalesTrender$qtr)])
+  
+  ## Calculate differences in the de-trended values  
+  
+  ur <- t.test(c.unit.rent$xValue, m.unit.rent$xValue)
+  us <- t.test(c.unit.sale$xValue, m.unit.sale$xValue)
+  hr <- t.test(c.house.rent$xValue, m.house.rent$xValue)
+  hs <- t.test(c.house.sale$xValue, m.house.sale$xValue)
+  
+  ## Return Values
+  return(list(match.trans = matchTrans,
+              house.sale=list(all=c.house.sale,
+                              match=m.house.sale),
+              unit.sale=list(all=c.unit.sale,
+                             match=m.unit.sale),
+              house.rent=list(all=c.house.rent,
+                              match=m.house.rent),
+              unit.rent=list(all=c.unit.rent,
+                             match=m.unit.rent),
+              house.sale.test = hs,
+              unit.sale.test = us,
+              house.rent.test = hr,
+              unit.rent.test = ur))
+  
+}
 
 
 
+apmGeoIndex <- function(geo.value, 
+                        geo.field, 
+                        x.data, 
+                        timeField='transQtr'){
+  
+ ## Fix equations 
+   
+  houseEq <- apmOptions$houseEquation
+  unitEq <- apmOptions$houseEquation
+  unitEq <- update(unitEq, . ~ . -as.factor(postCode))
+  houseEq <- update(houseEq, . ~ . -as.factor(postCode))
+  
+ ## Required length
+  
+  req.length <- length(levels(as.factor(x.data[,timeField])))
+  
+ ## Isolate data  
+  
+  if(geo.field == 'all') {
+      xx.data <- x.data
+  } else {
+      xx.data <- x.data[x.data[,geo.field] == geo.value, ]
+  }
+  
+  house.data <- xx.data[xx.data$PropertyType == 'House', ]
+  unit.data <- xx.data[xx.data$PropertyType == 'Unit', ]
+  
+  ## Deal with Houses   
+  
+  if(nrow(house.data) > 30){
+    house.sales <- subset(house.data, transType == 'sale')
+    house.rents <- subset(house.data, transType == 'rent')
+    
+    if(nrow(house.sales) > 30){
+      hs.model <- lm(houseEq, data=house.sales)
+      hs.index <- 1 + apmMakeIndex(hs.model$coef, timeField=timeField)
+      hs.index <- hs.index * median(house.sales$transValue[house.sales[,timeField] == 1])
+    } else {
+      hs.index <- 'Not Enough Data'
+    }
+    
+    if(nrow(house.rents) > 30){
+      hr.model <- lm(houseEq, data=house.rents)
+      hr.index <- 1 + apmMakeIndex(hr.model$coef, timeField=timeField)
+      hr.index <- hr.index * median(house.rents$transValue[house.rents[,timeField] == 1])
+    } else {
+      hr.index <- 'Not Enough Data'
+    }
+  } else {
+    hs.index <- 'Not Enough Data'
+    hr.index <- 'Not Enough Data'
+    
+  }
+  
+  ## Deal with Units  
+  
+  if(nrow(unit.data) > 30){
+    unit.sales <- subset(unit.data, transType == 'sale')
+    unit.rents <- subset(unit.data, transType == 'rent')
+    
+    if(nrow(unit.sales) > 30){
+      us.model <- lm(unitEq, data=unit.sales)
+      us.index <- 1 + apmMakeIndex(us.model$coef, timeField=timeField)
+      us.index <- us.index * median(unit.sales$transValue[unit.sales[,timeField] == 1])
+      
+    } else {
+      us.index <- 'Not Enough Data'
+    }
+    
+    if(nrow(unit.rents) > 30){
+      ur.model <- lm(unitEq, data=unit.rents)
+      ur.index <- 1 + apmMakeIndex(ur.model$coef, timeField=timeField)
+      ur.index <- ur.index * median(unit.rents$transValue[unit.rents[,timeField] == 1])
+    } else {
+      ur.index <- 'Not Enough Data'
+    }
+  } else {
+    us.index <- 'Not Enough Data'
+    ur.index <- 'Not Enough Data'
+  }
+  
+ ## Calculate indexes  
+  
+  # Units
+  if(length(us.index) == req.length & length(ur.index) == req.length){
+    unit.yields <- (ur.index * 52) / us.index
+  } else {
+    unit.yields <- 0
+  }
+  
+  # Houses
+  if(length(hs.index) == req.length & length(hr.index) == req.length){
+    house.yields <- (hr.index * 52) / hs.index
+  } else {
+    house.yields <- 0
+  }
+  
+  # All
+  if(house.yields[1] != 0 & unit.yields[1] != 0){
+    all.yields <- (unit.yields + house.yields) / 2
+  } else {
+    all.yields <- 0
+  }
+  
+  ## Return values
+  
+  return(list(unit.yields=unit.yields,
+              house.yields=house.yields,
+              all.yields=all.yields,
+              house.sale=hs.index,
+              house.rent=hr.index,
+              unit.sale=us.index,
+              unit.rent=ur.index
+              ))
+  
+  
+}
+
+apmIndGeoWrap <- function(geo.field,
+                          trans.data){
+  
+  ## Get the list of geographies to use
+  
+  geo.list <- levels(as.factor(trans.data[,geo.field]))
+  
+  ## Apply geo index method across all
+  
+  ind.list <- lapply(geo.list, FUN=apmGeoIndex, x.data=trans.data, geo.field=geo.field)
+  
+  ## name list items
+  
+  names(ind.list) <- geo.list
+  
+  ## return values
+  
+  return(ind.list)
+  
+}    
 
 
 
+apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
+                                                'postcode'),
+                             verbose=FALSE){
+  
+  ## Prep data and objects
+  
+  aimw.list <- list()
+  idL <- 1
+  
+  ## All area analysis
+  
+  if('All' %in% geos){
+    if(verbose) cat('Estimating all area index method\n')
+    all.ind <- apmGeoIndex('all', 'all', trans.data)
+    aimw.list[[idL]] <- all.ind
+    idL <- idL + 1
+  }
+  
+  ## LGA area analysis
+  
+  if('lga' %in% geos){
+    if(verbose) cat('Estimating lga level index method\n')
+    lga.ind <- apmIndGeoWrap('lga', trans.data)
+    aimw.list[[idL]] <- lga.ind
+    idL <- idL + 1
+  }
+  
+  ## SLA1 area analysis
+  
+  if('sla1' %in% geos){
+    if(verbose) cat('Estimating sla1 level index method\n')
+    sla1.ind <- apmIndGeoWrap('sla1', trans.data)
+    aimw.list[[idL]] <- sla1.ind
+    idL <- idL + 1
+  }
+  
+  ## Suburb area analysis
+  
+  if('suburb' %in% geos){
+    if(verbose) cat('Estimating suburb level index method\n')
+    suburb.ind <- apmIndGeoWrap('suburb', trans.data)
+    aimw.list[[idL]] <- suburb.ind
+    idL <- idL + 1
+  }
+  
+  ## Post code area analysis  
+  
+  if('postcode' %in% geos){
+    if(verbose) cat('Estimating postcode level index method\n')
+    postcode.ind <- apmIndGeoWrap('postCode', trans.data)
+    aimw.list[[idL]] <- postcode.ind
+    idL <- idL + 1
+  }
+  
+  ## Fix names and return values  
+  names(aimw.list) <- geos
+  
+  return(list(index.methods=aimw.list))
+  
+}  
 
 
 
@@ -577,7 +866,8 @@ apmMakeIndex <- function(coefs,                    # Coefs from impute models
                          verbose=FALSE)
 {
   
-  coefs.df <- as.data.frame(coefs)
+  coefs.df <- as.data.frame(coefs) 
+  names(coefs.df)[1] <- 'Estimate'
   coefs.time <- c(0, coefs.df$Estimate[grep(timeField, rownames(coefs.df))])
   coefs.index <- exp(c(0, (coefs.time[-1] - coefs.time[-length(coefs.time)]))) - 1
   

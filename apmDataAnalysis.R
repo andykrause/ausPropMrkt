@@ -334,68 +334,84 @@ apmAreaIndLevelWrap <- function(trans.data,
 
 ### Run the impute regression on a set of sale and rental data ---------------------------
 
-apmImpRegress <- function(transData,             # Transaction data (sales and rentals)
-                          reg.spec,              # REgression specification
-                          verbose = FALSE        # Show progress?
+apmHedImpute <- function(trans.data,             # Transaction data (sales and rentals)
+                         reg.spec,              # REgression specification
+                         verbose = FALSE        # Show progress?
 ){
   
-  ## Split data
+  # ARGUMENTS
+  #
+  # trans.data = transaction data with sales and rentals
+  # regression specification to be used
+  # verbose = show progress?
+  
+ ## Split data
   
   if(verbose) cat('...Separating sales and rentals\n')
-  saleData <- subset(transData, transType == 'sale')
-  rentData <- subset(transData, transType == 'rent')
+  sale.data <- subset(trans.data, transType == 'sale')
+  rent.data <- subset(trans.data, transType == 'rent')
   
   ## Estimate models and make new predictions
   
   # Esimate models
   if(verbose) cat('......Estimating sale and rent models\n')
-  saleModel <- lm(reg.spec, data=saleData)
-  rentModel <- lm(reg.spec, data=rentData)
+  sale.model <- lm(reg.spec, data=sale.data)
+  rent.model <- lm(reg.spec, data=rent.data)
   
   # Make predictions of imputed values
   if(verbose) cat('......Imputing values\n')
-  impPrice <- exp(predict(saleModel, newdata=rentData))
-  impRent <- exp(predict(rentModel, newdata=saleData))
+  himp.price <- exp(predict(sale.model, newdata=rent.data))
+  himp.rent <- exp(predict(rent.model, newdata=sale.data))
   
  ## Building data compatability 
   
   if(verbose) cat('......Stacking observed and imputed values\n')
   
-  saleData$Price <- saleData$transValue
-  saleData$impPrice <- round(exp(saleModel$fitted.values), 0)
-  saleData$Rent <- rep(0, nrow(saleData))
-  saleData$impRent <- impRent
+  sale.data$Price <- sale.data$transValue
+  sale.data$himp.price <- round(exp(sale.model$fitted.values), 0)
+  sale.data$Rent <- rep(0, nrow(sale.data))
+  sale.data$himp.rent <- himp.rent
   
-  rentData$Price <- rep(0, nrow(rentData))
-  rentData$impPrice <- impPrice
-  rentData$Rent <- rentData$transValue
-  rentData$impRent <- round(exp(rentModel$fitted.values), 0)
+  rent.data$Price <- rep(0, nrow(rent.data))
+  rent.data$himp.price <- himp.price
+  rent.data$Rent <- rent.data$transValue
+  rent.data$himp.rent <- round(exp(rent.model$fitted.values), 0)
   
   # Combine data back together
   if(verbose) cat('......Merging data\n')
-  allData <- rbind(saleData, rentData)
+  all.data <- rbind(sale.data, rent.data)
   
-  ## Extract model information
-  saleModelInfo <- list(coef=summary(saleModel)$coefficients,
-                        r2=summary(saleModel)$r.squared,
-                        sigma=summary(saleModel)$r.squared,
-                        resid=summary(saleModel)$residuals,
-                        baseValue=median(saleData$transValue[which(as.factor(
-                          saleData$transQtr) == 1)]))
+ ## Extract model information
   
-  rentModelInfo <- list(coef=summary(rentModel)$coefficients,
-                        r2=summary(rentModel)$r.squared,
-                        sigma=summary(rentModel)$r.squared,
-                        resid=summary(rentModel)$residuals,
-                        baseValue=median(rentData$transValue[which(as.factor(
-                          rentData$transQtr) == 1)]))
+  sale.model.info <- list(coef=summary(sale.model)$coefficients,
+                          r2=summary(sale.model)$r.squared,
+                          sigma=summary(sale.model)$r.squared,
+                          resid=summary(sale.model)$residuals,
+                          baseValue=median(sale.data$transValue[which(as.factor(
+                            sale.data$transQtr) == 1)]))
+  
+  rent.model.info <- list(coef=summary(rent.model)$coefficients,
+                          r2=summary(rent.model)$r.squared,
+                          sigma=summary(rent.model)$r.squared,
+                          resid=summary(rent.model)$residuals,
+                          baseValue=median(rent.data$transValue[which(as.factor(
+                            rent.data$transQtr) == 1)]))
 
-  ## Return values
-  return(list(results = allData[ ,c('UID', 'Price', 'impPrice', 'Rent', 'impRent')],
-              saleModel = saleModelInfo,
-              rentModel = rentModelInfo))
+ ## Return values
+  
+  return(list(results = all.data[ ,c('UID', 'Price', 'himp.price', 'Rent', 'himp.rent')],
+              sale.model = sale.model.info,
+              rent.model = rent.model.info))
   
 }
+
+
+
+
+
+
+
+
 
 ### Assign the impute regression yields back to the transaction data ---------------------
 

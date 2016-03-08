@@ -501,7 +501,7 @@ apmIndGeoWrap <- function(geo.field,
   
   ## Apply geo index method across all
   
-  ind.list <- lapply(geo.list, FUN=apmGeoIndex, x.data=trans.data, geo.field=geo.field)
+  ind.list <- lapply(geo.list[[1]], FUN=apmGeoIndex, x.data=trans.data, geo.field=geo.field)
   
   ## name list items
   
@@ -572,7 +572,7 @@ apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
   ## Fix names and return values  
   names(aimw.list) <- geos
   
-  return(list(index.methods=aimw.list))
+  return(aimw.list)
   
 }  
 

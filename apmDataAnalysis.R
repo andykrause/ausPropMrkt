@@ -516,14 +516,14 @@ apmSaleRentMatch <- function(transData,           # Transaction data
   mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
   
   # Make the match
-  mTrans <- merge(mSales[, c(matchField, 'PropertyType', index.geo, 'UID', 
-                             saleField, timeField)],
+  mTrans <- merge(mSales[, c(matchField, 'PropertyType', 'lga', 'sla1','suburb',
+                             'postCode', 'UID', saleField, timeField)],
                   mRentals[, c(matchField, 'UID', rentField, timeField)],
                   by=matchField)
   
   # Rename Match Fields
-  names(mTrans) <- c(matchField, 'PropertyType', index.geo, 'saleID', 'saleValue', 
-                     'saleTime', 'rentID', 'rentValue', 'rentTime')
+  names(mTrans) <- c(matchField, 'PropertyType', 'lga', 'sla1', 'suburb', 'postCode',
+                     'saleID', 'saleValue', 'saleTime', 'rentID', 'rentValue', 'rentTime')
   
   ## Make time adjustments to matched transactions
   
@@ -1081,20 +1081,20 @@ matchMethodWrap <- function(matchData,             # Matched data object
   if(verbose) cat('...Analyze at Metro Level\n')
   
   dmMetro <- spaceTimeShard(stsData = matchData,
-                            metric=c('saleYield'),
+                            metric=c('dmYield'),
                             spaceField='all', timeField='saleTime',
                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
                             calcs=list(median='median'))
   
   # By Use   
   dmMetroH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                             metric=c('saleYield'),
+                             metric=c('dmYield'),
                              spaceField='all', timeField='saleTime',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   dmMetroU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                             metric=c('saleYield'),
+                             metric=c('dmYield'),
                              spaceField='all', timeField='saleTime',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
@@ -1104,20 +1104,20 @@ matchMethodWrap <- function(matchData,             # Matched data object
   if(verbose) cat('...Analyze at LGA Level\n')
   
   dmLga <- spaceTimeShard(stsData = matchData,
-                          metric=c('saleYield'),
+                          metric=c('dmYield'),
                           spaceField='lga', timeField='saleTime',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use   
   dmLgaH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                           metric=c('saleYield'),
+                           metric=c('dmYield'),
                            spaceField='lga', timeField='saleTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   dmLgaU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                           metric=c('saleYield'),
+                           metric=c('dmYield'),
                            spaceField='lga', timeField='saleTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
@@ -1127,20 +1127,20 @@ matchMethodWrap <- function(matchData,             # Matched data object
   if(verbose) cat('...Analyze at SLA1 Level\n')
   
   dmSla <- spaceTimeShard(stsData = matchData,
-                          metric=c('saleYield'),
+                          metric=c('dmYield'),
                           spaceField='sla1', timeField='saleTime',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use   
   dmSlaH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                           metric=c('saleYield'),
+                           metric=c('dmYield'),
                            spaceField='sla1', timeField='saleTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   dmSlaU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                           metric=c('saleYield'),
+                           metric=c('dmYield'),
                            spaceField='sla1', timeField='saleTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median')) 
@@ -1150,20 +1150,20 @@ matchMethodWrap <- function(matchData,             # Matched data object
   if(verbose) cat('...Analyze at Suburb Level\n')
   
   dmSuburb <- spaceTimeShard(stsData = matchData,
-                             metric=c('saleYield'),
+                             metric=c('dmYield'),
                              spaceField='suburb', timeField='saleTime',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   # By Use   
   dmSuburbH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                              metric=c('saleYield'),
+                              metric=c('dmYield'),
                               spaceField='suburb', timeField='saleTime',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
   
   dmSuburbU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                              metric=c('saleYield'),
+                              metric=c('dmYield'),
                               spaceField='suburb', timeField='saleTime',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median')) 
@@ -1173,20 +1173,20 @@ matchMethodWrap <- function(matchData,             # Matched data object
   if(verbose) cat('...Analyze at Postcode Level\n')
   
   dmPostcode <- spaceTimeShard(stsData = matchData,
-                               metric=c('saleYield'),
+                               metric=c('dmYield'),
                                spaceField='postCode', timeField='saleTime',
                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                calcs=list(median='median'))
   
   # By Use   
   dmPostcodeH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                                metric=c('saleYield'),
+                                metric=c('dmYield'),
                                 spaceField='postCode', timeField='saleTime',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median'))
   
   dmPostcodeU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                                metric=c('saleYield'),
+                                metric=c('dmYield'),
                                 spaceField='postCode', timeField='saleTime',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median'))  
@@ -1275,3 +1275,202 @@ apmConvertToGeo <- function(mmRes, irRes, dmRes, indexList){
 
 
 
+apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
+                            'postcode'),
+                           verbose=FALSE){
+  
+  ## Prep data and objects
+  
+  aimw.list <- list()
+  idL <- 1
+  
+  ## All area analysis
+  
+  if('All' %in% geos){
+    if(verbose) cat('Estimating all area index method\n')
+    all.ind <- apmGeoIndex('all', 'all', trans.data)
+    aimw.list[[idL]] <- all.ind
+    idL <- idL + 1
+  }
+  
+  ## LGA area analysis
+  
+  if('lga' %in% geos){
+    if(verbose) cat('Estimating lga level index method\n')
+    lga.ind <- apmIndGeoWrap('lga', trans.data)
+    aimw.list[[idL]] <- lga.ind
+    idL <- idL + 1
+  }
+  
+  ## SLA1 area analysis
+  
+  if('sla1' %in% geos){
+    if(verbose) cat('Estimating sla1 level index method\n')
+    sla1.ind <- apmIndGeoWrap('sla1', trans.data)
+    aimw.list[[idL]] <- sla1.ind
+    idL <- idL + 1
+  }
+  
+  ## Suburb area analysis
+  
+  if('suburb' %in% geos){
+    if(verbose) cat('Estimating suburb level index method\n')
+    suburb.ind <- apmIndGeoWrap('suburb', trans.data)
+    aimw.list[[idL]] <- suburb.ind
+    idL <- idL + 1
+  }
+  
+  ## Post code area analysis  
+  
+  if('postcode' %in% geos){
+    if(verbose) cat('Estimating postcode level index method\n')
+    postcode.ind <- apmIndGeoWrap('postCode', trans.data)
+    aimw.list[[idL]] <- postcode.ind
+    idL <- idL + 1
+  }
+  
+  ## Fix names and return values  
+  names(aimw.list) <- geos
+  
+  return(aimw.list)
+  
+}
+
+apmIndGeoWrap <- function(geo.field,
+                             trans.data){
+  
+  ## Get the list of geographies to use
+  
+  geo.list <- levels(as.factor(trans.data[,geo.field]))
+  
+  ## Apply geo index method across all
+  
+  ind.list <- lapply(geo.list[[1]], FUN=apmGeoIndex, x.data=trans.data, geo.field=geo.field)
+  
+  ## name list items
+  
+  names(ind.list) <- geo.list
+  
+  ## return values
+  
+  return(ind.list)
+  
+}
+
+apmGeoIndex <- function(geo.value, 
+                         geo.field, 
+                         x.data, 
+                          timeField='transQtr'){
+  
+  ## Fix equations 
+  
+  houseEq <- apmOptions$houseEquation
+  unitEq <- apmOptions$houseEquation
+  unitEq <- update(unitEq, . ~ . -as.factor(postCode))
+  houseEq <- update(houseEq, . ~ . -as.factor(postCode))
+  
+  ## Required length
+  
+  req.length <- length(levels(as.factor(x.data[,timeField])))
+  
+  ## Isolate data  
+  
+  if(geo.field == 'all') {
+    xx.data <- x.data
+  } else {
+    xx.data <- x.data[x.data[,geo.field] == geo.value, ]
+  }
+  
+  house.data <- xx.data[xx.data$PropertyType == 'House', ]
+  unit.data <- xx.data[xx.data$PropertyType == 'Unit', ]
+  
+  ## Deal with Houses   
+  
+  if(nrow(house.data) > 30){
+    house.sales <- subset(house.data, transType == 'sale')
+    house.rents <- subset(house.data, transType == 'rent')
+    
+    if(nrow(house.sales) > 30){
+      hs.model <- lm(houseEq, data=house.sales)
+      hs.index <- 1 + apmMakeIndex(hs.model$coef, timeField=timeField)
+      hs.index <- hs.index * median(house.sales$transValue[house.sales[,timeField] == 1])
+    } else {
+      hs.index <- 'Not Enough Data'
+    }
+    
+    if(nrow(house.rents) > 30){
+      hr.model <- lm(houseEq, data=house.rents)
+      hr.index <- 1 + apmMakeIndex(hr.model$coef, timeField=timeField)
+      hr.index <- hr.index * median(house.rents$transValue[house.rents[,timeField] == 1])
+    } else {
+      hr.index <- 'Not Enough Data'
+    }
+  } else {
+    hs.index <- 'Not Enough Data'
+    hr.index <- 'Not Enough Data'
+    
+  }
+  
+  ## Deal with Units  
+  
+  if(nrow(unit.data) > 30){
+    unit.sales <- subset(unit.data, transType == 'sale')
+    unit.rents <- subset(unit.data, transType == 'rent')
+    
+    if(nrow(unit.sales) > 30){
+      us.model <- lm(unitEq, data=unit.sales)
+      us.index <- 1 + apmMakeIndex(us.model$coef, timeField=timeField)
+      us.index <- us.index * median(unit.sales$transValue[unit.sales[,timeField] == 1])
+      
+    } else {
+      us.index <- 'Not Enough Data'
+    }
+    
+    if(nrow(unit.rents) > 30){
+      ur.model <- lm(unitEq, data=unit.rents)
+      ur.index <- 1 + apmMakeIndex(ur.model$coef, timeField=timeField)
+      ur.index <- ur.index * median(unit.rents$transValue[unit.rents[,timeField] == 1])
+    } else {
+      ur.index <- 'Not Enough Data'
+    }
+  } else {
+    us.index <- 'Not Enough Data'
+    ur.index <- 'Not Enough Data'
+  }
+  
+  ## Calculate indexes  
+  
+  # Units
+  if(length(us.index) == req.length & length(ur.index) == req.length){
+    unit.yields <- (ur.index * 52) / us.index
+  } else {
+    unit.yields <- 0
+  }
+  
+  # Houses
+  if(length(hs.index) == req.length & length(hr.index) == req.length){
+    house.yields <- (hr.index * 52) / hs.index
+  } else {
+    house.yields <- 0
+  }
+  
+  # All
+  if(house.yields[1] != 0 & unit.yields[1] != 0){
+    all.yields <- (unit.yields + house.yields) / 2
+  } else {
+    all.yields <- 0
+  }
+  
+  ## Return values
+  
+  return(list(unit.yields=unit.yields,
+              house.yields=house.yields,
+              all.yields=all.yields,
+              house.sale=hs.index,
+              house.rent=hr.index,
+              unit.sale=us.index,
+              unit.rent=ur.index
+  ))
+  
+  
+}

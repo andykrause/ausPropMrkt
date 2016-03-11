@@ -35,6 +35,8 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   
   startYear <- 2010
   startMonth <- 6
+  time.field <- 'transQtr'
+  time.periods <- 20
   geoTempLimit <- 3
   geoTempFieldUnit <- "QT_unit_postCode"
   geoTempFieldHouse <- "QT_house_postCode"
@@ -61,6 +63,8 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
                       ssFields = ssFields,
                       startYear = startYear,
                       startMonth = startMonth,
+                      time.field = time.field,
+                      time.periods = time.periods,
                       unitTypes = unitTypes,
                       houseTypes = houseTypes,
                       geoTempLimit = geoTempLimit,

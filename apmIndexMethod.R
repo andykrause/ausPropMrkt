@@ -451,9 +451,6 @@ apmGeoIndex <- function(series.obj, series.name="Global"){
 # Functions for tidying up index method data                                             #
 ##########################################################################################
 
-
-
-
 apmTidyIndexWrap <- function(index.results, 
                              geo.names=c('Global', 'lga', 'sla1', 'suburb', 'postCode')){
   
@@ -562,3 +559,47 @@ apmTidyIndex <- function(index.results, geo.name='Global'){
     return(tidy.index)
   }  
 }
+
+##########################################################################################
+# Wrappers for apply index functions across dimensions                                   #
+##########################################################################################
+
+# 
+# indexGeoWrap <- function(index.data, geo.level, fun.wrap){
+#   
+#   if(fun.wrap=='indexYielder'){
+#     geo.list <- names(index.data)
+#   }
+#   
+#   
+#   index.list <- lapply(geo.list, FUN=fun.wrap, index.data)
+#   
+#   ## Get the list of geographies to use
+#   
+#   geo.list <- names(series.obj)
+#   
+#   ## Apply geo index method across all
+#   
+#   ind.list <- lapply(geo.list, FUN=apmGeoIndex, series.obj=series.obj)
+#   
+#   ## name list items
+#   
+#   names(ind.list) <- geo.list
+#   
+#   ## return values
+#   
+#   return(ind.list)
+#   
+#   
+#   
+#   geo.list <- as.list(names(index.results))
+#   
+#   ind.list <- lapply(X=geo.list, FUN=apmTidyIndex, index.results=index.results)
+#   
+#   ind.class <- which(unlist(lapply(ind.list, class)) == 'data.frame')
+#   
+#   ind.df <- rbind.fill(ind.list[ind.class])  
+#   
+#   return(ind.df)
+#   
+# }

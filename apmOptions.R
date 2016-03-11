@@ -5,6 +5,10 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
                           )
   {
   
+ ## Set the geographic levels to use throughout the analysis
+  
+  geo.levels <- c('Global', 'lga', 'sla1', 'suburb', 'postCode')
+  
  ## Set field from which to require obsevations
   
   reqFields <- c('transValue', 'AreaSize', 'Bedrooms', 'Baths', 'ssInteg', 'ssChoice')
@@ -52,7 +56,8 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   
  ## Add to a temporary list of options  
   
-  tempOptions <- list(areaLimits = areaLimits,
+  tempOptions <- list(geo.levels = geo.levels,
+                      areaLimits = areaLimits,
                       bathLimits = bathLimits,
                       bedLimits = bedLimits,
                       rentLimits = rentLimits,

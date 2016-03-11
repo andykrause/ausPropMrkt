@@ -358,6 +358,11 @@ apmCleanData <- function(apmDataObj,            # transaction data from buildAPM
   
   if(verbose) cat('Cleaning Data\n')
 
+ ## Remove by year
+  
+  apmDataObj <- apmDataObj[apmDataObj$transYear >= apmOptions$startYear,]
+  apmDataObj <- apmDataObj[apmDataObj$transYear <= apmOptions$endYear,]
+  
  ## Remove all non house and units
 
   # Create separate labels

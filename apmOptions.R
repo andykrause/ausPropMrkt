@@ -37,8 +37,8 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   
  ## Set time information
   
-  startYear <- 2010
-  startMonth <- 6
+  startYear <- 2011
+  startMonth <- 1
   time.field <- 'transQtr'
   time.periods <- 20
   geoTempLimit <- 3

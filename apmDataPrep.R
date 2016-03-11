@@ -145,6 +145,8 @@ apmFixDates <- function(xDates      # Vector of dates to be fixed
   
   # Remove Time
   xDates <- gsub(" 0:00", "", xDates)
+  xDates <- gsub(" 12:00:00 AM", "", xDates)
+  
   
   # Find location of slashes
   sLoc <- matrix(unlist(str_locate_all(xDates, '/')), ncol=4, byrow=TRUE)[,1:2]

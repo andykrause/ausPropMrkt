@@ -18,6 +18,11 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source('c:/Code/research/ausPropMrkt/apmOptions.R')
     source('c:/Code/research/ausPropMrkt/apmDataPrep.R')
     source('c:/Code/research/ausPropMrkt/apmDataAnalysis.R')
+    source('c:/Code/research/ausPropMrkt/apmSpagMethod.R')
+    source('c:/Code/research/ausPropMrkt/apmIndexMethod.R')
+    source('c:/Code/research/ausPropMrkt/apmSrmMethod.R')
+    source('c:/Code/research/ausPropMrkt/apmHedimpMethod.R')
+    
     source('c:/Code/dataMgmtTools/dataMungeTools.R')
     
     
@@ -31,6 +36,14 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
                   'master/apmDataPrep.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmDataAnalysis.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/apmSpagMethod.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/apmIndexMethod.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/apmHedimpMethod.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/apmSrmMethod.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',
                   'dataAnalysisTools/master/stShardFunctions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',
@@ -49,6 +62,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   require(sp)
   require(rgeos)
   require(spdep)
+  require(ggplot2)
   
 }
 

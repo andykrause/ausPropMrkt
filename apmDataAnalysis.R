@@ -8,6 +8,8 @@
 # General purpose analytical functions working on all method types                       #
 ##########################################################################################
 
+### Generic data tidying engine ----------------------------------------------------------
+
 apmGenTidyer <- function(yield.results,
                          geo.level){
   
@@ -26,7 +28,7 @@ apmGenTidyer <- function(yield.results,
   
   # Unit
   unit <- geo.results$unit$stsDF
-  unit$type <- 'house'
+  unit$type <- 'unit'
   unit$geo.level <- geo.level
   
   if(geo.level == 'Global') {
@@ -39,11 +41,11 @@ apmGenTidyer <- function(yield.results,
 
 }
 
-###
+### Function to wrap the generic tidyer over one geo level -------------------------------
 
 apmGenTidyerGeoWrap <- function(yield.results,
                                 geo.levels=apmOptions$geo.levels,
-                                method.type='median'){
+                                method.type='spag'){
    
  ## Make geo list
   
@@ -57,7 +59,7 @@ apmGenTidyerGeoWrap <- function(yield.results,
    
  ## Fix remaining columns 
    
-   if(method.type == 'median'){
+   if(method.type == 'spag'){
      names(tidy.df)[1:2] <- c('time', 'geo')
    } else {
      tidy.df$price <- 0
@@ -71,254 +73,67 @@ apmGenTidyerGeoWrap <- function(yield.results,
 }
  
  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Function to compare price and rent on only matched properties ------------------------
-apmSaleRentMatch <- function(transData,           # Transaction data
-                             indexObj,            # Index obj from apmAreaIndLevelWrap()
-                             index.geo = 'Global',# Level at which to use adj Indexes
-                             matchField = 'ID',   # Field containing matching ID
-                             saleField = 'Price', # Field containing sale price
-                             rentField = 'Rent',  # Field containing rent 
-                             timeField = 'Year'   # Field containing time breakdown
-){
-  
- ## Deal with a global index.geo
-  if(index.geo == 'Global') transData$Global <- 0
-  
-  ## Split into sales and rentals
-  
-  sales <- transData[transData$transType == 'sale',]
-  rentals <- transData[transData$transType == 'rent',]
-  
-  ## Matching sales to rentals
-  
-  # Remove NAs in matchField
-  xSales <- subset(sales, !is.na(sales[matchField]))
-  xRentals <- subset(rentals, !is.na(rentals[matchField]))
-  
-  # Sort to order
-  xSales <- xSales[order(xSales[,matchField]),]
-  xRentals <- xRentals[order(xRentals[,matchField]),]
-  
-  # Extract matching field
-  sMatch <- xSales[ ,matchField]
-  rMatch <- xRentals[ ,matchField]
-  
-  # Perform cross match identification
-  mSales <- xSales[!is.na(match(sMatch, rMatch)), ]
-  mRentals <- xRentals[!is.na(match(rMatch, sMatch)), ]
-  
-  # Make the match
-  mTrans <- merge(mSales[, c(matchField, 'PropertyType', 'lga', 'sla1','suburb',
-                             'postCode', 'UID', saleField, timeField)],
-                  mRentals[, c(matchField, 'UID', rentField, timeField)],
-                  by=matchField)
-  
-  # Rename Match Fields
-  names(mTrans) <- c(matchField, 'PropertyType', 'lga', 'sla1', 'suburb', 'postCode',
-                     'saleID', 'saleValue', 'saleTime', 'rentID', 'rentValue', 'rentTime')
-  
-  ## Make time adjustments to matched transactions
-  
-  mTrans <- apmTimeAdjGeoWrap(transData=mTrans,
-                              indexObj=indexObj,
-                              index.geo=index.geo)
-  
-  # Calc Yields
-  mTrans$dmSaleYield <- (mTrans$adjRent * 52) / mTrans$saleValue
-  mTrans$dmRentYield <- (mTrans$rentValue * 52) / mTrans$adjSale
-  mTrans$dmYield <- (mTrans$dmSaleYield + mTrans$dmRentYield) / 2
-  
-  # Add information on time between transactions
-  mTrans$timeGap <- mTrans$rentTime - mTrans$saleTime
-  
-  ## Return Values    
-  
-  return(mTrans)  
-} 
-
-apmTimeAdjGeoWrap <- function(transData,
-                              indexObj,
-                              index.geo
-){
-  
- ## List of Geographies  
-  
-  if(index.geo != 'Global'){
-    geo.list <- levels(as.factor(transData[,index.geo]))
-  } else {
-    geo.list <- 'Global'
-  }
- 
- ## Extract the relevant index objects
-  
-  idObj <- which(names(indexObj) == index.geo)
-  index.obj <- indexObj[[idObj]]
-  
- ## Make the matches
-  
-  match.list <- lapply(geo.list, FUN=apmTimeAdjMatches, transData=transData,
-                       indexObj=index.obj, index.geo=index.geo)
-  
-
- ## Convert to data frame
-  
-  match.data <- rbind.fill(match.list)
-  
- ## Return values  
-  
-  return(match.data)  
-}
-
-### Time adjusts the direct matches based on a given set of indexes ----------------------
-
-apmTimeAdjMatches <- function(transData,          # Transaction data
-                              indexObj,           # Index obj from apmCreateIndexes()
-                              index.geo,          # Geography to time adjust at
-                              geo.value=NULL      # Specific Geo Value
-                              )
-{
-  
-  if(!is.null(geo.value)) transData <- transData[transData[,index.geo] == geo.value, ]
-  
-  idO <- which(names(indexObj) == geo.value)
-  indexObj <- indexObj[[idO]]
-  
- ## Split by use
-  
-  houseTrans <- transData[transData$PropertyType == "House", ]
-  unitTrans <- transData[transData$PropertyType == "Unit", ]
-  
-  # Make adjustment to houses
-  if(nrow(houseTrans) > 0 & indexObj$house.sale[1] != "NA" &
-                                 indexObj$house.rent[1] != 'NA'){
-    houseSaleAdj <- (indexObj$house.sale[as.numeric(as.factor(houseTrans$rentTime))] /
-                       indexObj$house.sale[as.numeric(as.factor(houseTrans$saleTime))])
-    houseTrans$adjSale <- houseTrans$saleValue * houseSaleAdj
-  
-    houseRentAdj <- (indexObj$house.rent[as.numeric(as.factor(houseTrans$saleTime))] /
-                     indexObj$house.rent[as.numeric(as.factor(houseTrans$rentTime))])
-    houseTrans$adjRent <- houseTrans$rentValue * houseRentAdj
-  } else {
-    houseTrans <- NULL
-  }
-  
-  # Make adjustment to units 
-  if(nrow(unitTrans) & indexObj$unit.sale[1] != "NA" &
-                            indexObj$unit.rent[1] != 'NA'){
-    unitSaleAdj <- (indexObj$unit.sale[as.numeric(as.factor(unitTrans$rentTime))] /
-                      indexObj$unit.sale[as.numeric(as.factor(unitTrans$saleTime))])
-    unitTrans$adjSale <- unitTrans$saleValue * unitSaleAdj
-  
-    unitRentAdj <- (indexObj$unit.rent[as.numeric(as.factor(unitTrans$saleTime))] /
-                      indexObj$unit.rent[as.numeric(as.factor(unitTrans$rentTime))])
-    unitTrans$adjRent <- unitTrans$rentValue * unitRentAdj
-  } else {
-    unitTrans <- NULL
-  }
-  
-  ## Merge back together
-  
-  if(!is.null(houseTrans) && !is.null(unitTrans)){
-    mTrans <- rbind(houseTrans, unitTrans)
-  }
-  if(!is.null(houseTrans) & is.null(unitTrans)){
-    mTrans <- houseTrans
-  }  
-  if(is.null(houseTrans) & !is.null(unitTrans)){
-    mTrans <- unitTrans
-  }  
-  if(is.null(houseTrans) & is.null(unitTrans)){
-    mTrans <- NULL
-  }  
-  
-  
-  ## Return Data  
-  
-  return(mTrans)
-  
-}
-
 ### Swap yield information from imputations and matching methods -------------------------
 
-apmYieldSwap <- function(transData,       # Transaction data
-                         matchData        # Set of matched data from apmSaleRentMatch()
+apmYieldSwap <- function(trans.data,       # Transaction data
+                         match.data        # Set of matched data from apmSaleRentMatch()
 )
 {
   
   ##  Split into sales and rent sets
   
-  transSales <- transData[transData$transType == 'sale', ]
-  transRents <- transData[transData$transType == 'rent', ]
+  transSales <- trans.data[trans.data$transType == 'sale', ]
+  transRents <- trans.data[trans.data$transType == 'rent', ]
   
   ## Apply the imputed yields to the match data  
   
-  matchData$impSaleYield <- transSales$impSaleYield[match(matchData$saleID,
+  match.data$imp.saleyield <- transSales$imp.saleyield[match(match.data$saleID,
+                                                               transSales$UID)]
+  match.data$imp.rentyield <- transRents$imp.rentyield[match(match.data$rentID,
+                                                                  transRents$UID)]
+  match.data$imp.saleyieldX <- transSales$imp.yield[match(match.data$saleID,
                                                           transSales$UID)]
-  matchData$impRentYield <- transRents$impRentYield[match(matchData$rentID,
+  match.data$imp.rentyieldX <- transRents$imp.yield[match(match.data$rentID,
                                                           transRents$UID)]
-  matchData$impSaleYieldX <- transSales$impYield[match(matchData$saleID,
-                                                       transSales$UID)]
-  matchData$impRentYieldX <- transRents$impYield[match(matchData$rentID,
-                                                       transRents$UID)]
   
   ## Resolve situations where properties have more than one matched yield  
   
-  matchSales <- tapply2DF(xData=matchData$dmSaleYield, byField=matchData$saleID, 
+  matchSales <- tapply2DF(xData=match.data$srm.saleyield, byField=match.data$saleID, 
                           xFunc=median)
-  matchRents <- tapply2DF(xData=matchData$dmRentYield, byField=matchData$rentID, 
+  matchRents <- tapply2DF(xData=match.data$srm.rentyield, byField=match.data$rentID, 
                           xFunc=median) 
   
   ## Add matched yields to the transaction data  
   
-  transSales$dmSaleYield <- matchSales$Var[match(transSales$UID, matchSales$ID)]
-  transSales$dmRentYield <- NA
-  transRents$dmRentYield <- matchRents$Var[match(transRents$UID, matchRents$ID)]
-  transRents$dmSaleYield <- NA
+  transSales$srm.saleyield <- matchSales$Var[match(transSales$UID, matchSales$ID)]
+  transSales$srm.rentyield <- NA
+  transRents$srm.rentyield <- matchRents$Var[match(transRents$UID, matchRents$ID)]
+  transRents$srm.saleyield <- NA
   
-  ## Recombine transdata
+  ## Recombine trans.data
   
-  return(list(transData=rbind(transSales, transRents),
-              matchData=matchData))
+  return(list(trans.data=rbind(transSales, transRents),
+              match.data=match.data))
   
 }  
 
 ## Compare the differences between the matched observations and all observations ---------
 
-apmCompareSamples <- function(clean.trans)
+apmCompareSamples <- function(trans.data)
 {  
   
   ## Create a match trans showing only those observations used in the match data  
   
-  matchTrans <- cleanTrans[!is.na(cleanTrans$dmSaleYield) | 
-                             !is.na(cleanTrans$dmRentYield),]
+  match.trans <- trans.data[!is.na(trans.data$srm.saleyield) | 
+                             !is.na(trans.data$srm.rentyield),]
   
   ## De trend sales prices and rents of all transactions
   
   # Create separate data sets
-  c.unit.rent <- subset(cleanTrans, transType=='rent' & PropertyType == 'Unit')
-  c.house.rent <- subset(cleanTrans, transType=='rent' & PropertyType == 'House')
-  c.unit.sale <- subset(cleanTrans, transType=='sale' & PropertyType == 'Unit')
-  c.house.sale <- subset(cleanTrans, transType=='sale' & PropertyType == 'House')
+  c.unit.rent <- subset(trans.data, transType=='rent' & PropertyType == 'Unit')
+  c.house.rent <- subset(trans.data, transType=='rent' & PropertyType == 'House')
+  c.unit.sale <- subset(trans.data, transType=='sale' & PropertyType == 'Unit')
+  c.house.sale <- subset(trans.data, transType=='sale' & PropertyType == 'House')
   
   # Create an index for detrending
   unitrentsTrender <- tapply(c.unit.rent$transValue, c.unit.rent$transQtr, median)
@@ -351,10 +166,10 @@ apmCompareSamples <- function(clean.trans)
   ## Detrend sales and rents of matched trans
   
   # Subset data
-  m.unit.rent <- subset(matchTrans, transType=='rent' & PropertyType == 'Unit')
-  m.house.rent <- subset(matchTrans, transType=='rent' & PropertyType == 'House')
-  m.unit.sale <- subset(matchTrans, transType=='sale' & PropertyType == 'Unit')
-  m.house.sale <- subset(matchTrans, transType=='sale' & PropertyType == 'House')
+  m.unit.rent <- subset(match.trans, transType=='rent' & PropertyType == 'Unit')
+  m.house.rent <- subset(match.trans, transType=='rent' & PropertyType == 'House')
+  m.unit.sale <- subset(match.trans, transType=='sale' & PropertyType == 'Unit')
+  m.house.sale <- subset(match.trans, transType=='sale' & PropertyType == 'House')
   
   # Detrend values
   m.unit.rent$xValue <- (m.unit.rent$transValue * 
@@ -378,7 +193,7 @@ apmCompareSamples <- function(clean.trans)
   hs <- t.test(c.house.sale$xValue, m.house.sale$xValue)
   
   ## Return Values
-  return(list(match.trans = matchTrans,
+  return(list(match.trans = match.trans,
               house.sale=list(all=c.house.sale,
                               match=m.house.sale),
               unit.sale=list(all=c.unit.sale,
@@ -402,142 +217,11 @@ apmCompareSamples <- function(clean.trans)
 
 
 
- 
-### Function for applying match method to all properties -----------------------
 
-matchMethodWrap <- function(matchData,             # Matched data object
-                            verbose=FALSE)
-{
-  
-  if(verbose) cat('Calculating yields with match method\n')
-  
-  ## All Metro  
-  
-  if(verbose) cat('...Analyze at Metro Level\n')
-  
-  dmMetro <- spaceTimeShard(stsData = matchData,
-                            metric=c('dmYield'),
-                            spaceField='all', timeField='saleTime',
-                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                            calcs=list(median='median'))
-  
-  # By Use   
-  dmMetroH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                             metric=c('dmYield'),
-                             spaceField='all', timeField='saleTime',
-                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                             calcs=list(median='median'))
-  
-  dmMetroU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                             metric=c('dmYield'),
-                             spaceField='all', timeField='saleTime',
-                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                             calcs=list(median='median'))
-  
-  ## LGA  
-  
-  if(verbose) cat('...Analyze at LGA Level\n')
-  
-  dmLga <- spaceTimeShard(stsData = matchData,
-                          metric=c('dmYield'),
-                          spaceField='lga', timeField='saleTime',
-                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                          calcs=list(median='median'))
-  
-  # By Use   
-  dmLgaH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                           metric=c('dmYield'),
-                           spaceField='lga', timeField='saleTime',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median'))
-  
-  dmLgaU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                           metric=c('dmYield'),
-                           spaceField='lga', timeField='saleTime',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median'))
-  
-  ## SLA1 
-  
-  if(verbose) cat('...Analyze at SLA1 Level\n')
-  
-  dmSla <- spaceTimeShard(stsData = matchData,
-                          metric=c('dmYield'),
-                          spaceField='sla1', timeField='saleTime',
-                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                          calcs=list(median='median'))
-  
-  # By Use   
-  dmSlaH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                           metric=c('dmYield'),
-                           spaceField='sla1', timeField='saleTime',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median'))
-  
-  dmSlaU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                           metric=c('dmYield'),
-                           spaceField='sla1', timeField='saleTime',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median')) 
-  
-  ## Suburb
-  
-  if(verbose) cat('...Analyze at Suburb Level\n')
-  
-  dmSuburb <- spaceTimeShard(stsData = matchData,
-                             metric=c('dmYield'),
-                             spaceField='suburb', timeField='saleTime',
-                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                             calcs=list(median='median'))
-  
-  # By Use   
-  dmSuburbH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                              metric=c('dmYield'),
-                              spaceField='suburb', timeField='saleTime',
-                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                              calcs=list(median='median'))
-  
-  dmSuburbU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                              metric=c('dmYield'),
-                              spaceField='suburb', timeField='saleTime',
-                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                              calcs=list(median='median')) 
-  
-  ## PostCode 
-  
-  if(verbose) cat('...Analyze at Postcode Level\n')
-  
-  dmPostcode <- spaceTimeShard(stsData = matchData,
-                               metric=c('dmYield'),
-                               spaceField='postCode', timeField='saleTime',
-                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                               calcs=list(median='median'))
-  
-  # By Use   
-  dmPostcodeH <- spaceTimeShard(matchData[matchData$PropertyType == 'House',],
-                                metric=c('dmYield'),
-                                spaceField='postCode', timeField='saleTime',
-                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                                calcs=list(median='median'))
-  
-  dmPostcodeU <- spaceTimeShard(matchData[matchData$PropertyType == 'Unit',],
-                                metric=c('dmYield'),
-                                spaceField='postCode', timeField='saleTime',
-                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                                calcs=list(median='median'))  
-  
-  ## Combine Results  
-  
-  dmResults <- list(metro=list(all=dmMetro, house=dmMetroH, unit=dmMetroU),
-                    lga=list(all=dmLga, house=dmLgaH, unit=dmLgaU),
-                    sla=list(all=dmSla, house=dmSlaH, unit=dmSlaU),
-                    suburb=list(all=dmSuburb, house=dmSuburbH, unit=dmSuburbU),
-                    postcode=list(all=dmPostcode, house=dmPostcodeH, unit=dmPostcodeU))
-  
-  ## Return Results
-  
-  return(dmResults) 
-}  
+
+
+
+
 
 ### Function to convert data from method based to geography based --------------
 

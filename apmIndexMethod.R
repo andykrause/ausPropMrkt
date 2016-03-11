@@ -339,7 +339,8 @@ indexTidyerGeoWrap <- function(x.data,
   
  ## Conver to a data.frame  
   
-  ind.df <- rbind.fill(ind.list[ind.class])  
+  ind.df <- rbind.fill(ind.list[ind.class])
+  ind.df$geo.level <- geo.level
   
  ## Return Values  
   

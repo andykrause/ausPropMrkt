@@ -51,3 +51,5 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   require(spdep)
   
 }
+
+

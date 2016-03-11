@@ -425,16 +425,16 @@ apmAssignIRYields <- function(transData,            # apmDataObj
   irValues <- rbind(houseRegRes$results, unitRegRes$results)
   
   # Calculate the ratio
-  irValues$impYield <- (irValues$impRent * 52) / irValues$impPrice
+  irValues$impYield <- (irValues$himp.rent * 52) / irValues$himp.price
   
   # Calculate the mixed ratios
   idS <- which(irValues$Rent == 0)
   idR <- which(irValues$Price == 0)
   
   irValues$impSaleYield <- 0
-  irValues$impSaleYield[idS] <- (irValues$impRent[idS] * 52) / irValues$Price[idS]
+  irValues$impSaleYield[idS] <- (irValues$himp.rent[idS] * 52) / irValues$Price[idS]
   irValues$impRentYield <- 0
-  irValues$impRentYield[idR] <- (irValues$Rent[idR] * 52) / irValues$impPrice[idR]
+  irValues$impRentYield[idR] <- (irValues$Rent[idR] * 52) / irValues$himp.price[idR]
   
   # Add Ratio to full dataset 
   transData$impYield <- irValues$impYield[match(transData$UID, irValues$UID)]
@@ -1274,10 +1274,11 @@ apmConvertToGeo <- function(mmRes, irRes, dmRes, indexList){
 }
 
 
+########## WORKING BELOW HERE ------------------------------------------------------------
 
-apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
-                            'postcode'),
-                           verbose=FALSE){
+apmIndMethodWrap <- function(index.values,
+                             geos=c('Global', 'lga', 'sla1', 'suburb', 'postCode'),
+                             verbose=FALSE){
   
   ## Prep data and objects
   
@@ -1286,10 +1287,10 @@ apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
   
   ## All area analysis
   
-  if('All' %in% geos){
-    if(verbose) cat('Estimating all area index method\n')
-    all.ind <- apmGeoIndex('all', 'all', trans.data)
-    aimw.list[[idL]] <- all.ind
+  if('Global' %in% geos){
+    if(verbose) cat('Estimating global index method\n')
+    glob.ind <- apmGeoIndex(index.values$Global)
+    aimw.list[[idL]] <- glob.ind
     idL <- idL + 1
   }
   
@@ -1297,7 +1298,7 @@ apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
   
   if('lga' %in% geos){
     if(verbose) cat('Estimating lga level index method\n')
-    lga.ind <- apmIndGeoWrap('lga', trans.data)
+    lga.ind <- apmIndGeoWrap(index.values$lga)
     aimw.list[[idL]] <- lga.ind
     idL <- idL + 1
   }
@@ -1306,7 +1307,7 @@ apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
   
   if('sla1' %in% geos){
     if(verbose) cat('Estimating sla1 level index method\n')
-    sla1.ind <- apmIndGeoWrap('sla1', trans.data)
+    sla1.ind <- apmIndGeoWrap(index.values$sla1)
     aimw.list[[idL]] <- sla1.ind
     idL <- idL + 1
   }
@@ -1315,16 +1316,16 @@ apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
   
   if('suburb' %in% geos){
     if(verbose) cat('Estimating suburb level index method\n')
-    suburb.ind <- apmIndGeoWrap('suburb', trans.data)
+    suburb.ind <- apmIndGeoWrap(index.values$suburb)
     aimw.list[[idL]] <- suburb.ind
     idL <- idL + 1
   }
   
   ## Post code area analysis  
   
-  if('postcode' %in% geos){
+  if('postCode' %in% geos){
     if(verbose) cat('Estimating postcode level index method\n')
-    postcode.ind <- apmIndGeoWrap('postCode', trans.data)
+    postcode.ind <- apmIndGeoWrap(index.values$postCode)
     aimw.list[[idL]] <- postcode.ind
     idL <- idL + 1
   }
@@ -1336,16 +1337,15 @@ apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
   
 }
 
-apmIndGeoWrap <- function(geo.field,
-                             trans.data){
+apmIndGeoWrap <- function(series.obj){
   
   ## Get the list of geographies to use
   
-  geo.list <- levels(as.factor(trans.data[,geo.field]))
+  geo.list <- names(series.obj)
   
   ## Apply geo index method across all
   
-  ind.list <- lapply(geo.list[[1]], FUN=apmGeoIndex, x.data=trans.data, geo.field=geo.field)
+  ind.list <- lapply(geo.list, FUN=apmGeoIndex, series.obj=series.obj)
   
   ## name list items
   
@@ -1357,120 +1357,98 @@ apmIndGeoWrap <- function(geo.field,
   
 }
 
-apmGeoIndex <- function(geo.value, 
-                         geo.field, 
-                         x.data, 
-                          timeField='transQtr'){
+apmGeoIndex <- function(series.obj, series.name="Global"){
   
   ## Fix equations 
   
-  houseEq <- apmOptions$houseEquation
-  unitEq <- apmOptions$houseEquation
-  unitEq <- update(unitEq, . ~ . -as.factor(postCode))
-  houseEq <- update(houseEq, . ~ . -as.factor(postCode))
-  
-  ## Required length
-  
-  req.length <- length(levels(as.factor(x.data[,timeField])))
-  
-  ## Isolate data  
-  
-  if(geo.field == 'all') {
-    xx.data <- x.data
+  if(series.name == 'Global'){ 
+    raw.series <- series.obj$raw
   } else {
-    xx.data <- x.data[x.data[,geo.field] == geo.value, ]
+    raw.series <- series.obj[[which(names(series.obj) == series.name)]]$raw
   }
-  
-  house.data <- xx.data[xx.data$PropertyType == 'House', ]
-  unit.data <- xx.data[xx.data$PropertyType == 'Unit', ]
-  
-  ## Deal with Houses   
-  
-  if(nrow(house.data) > 30){
-    house.sales <- subset(house.data, transType == 'sale')
-    house.rents <- subset(house.data, transType == 'rent')
     
-    if(nrow(house.sales) > 30){
-      hs.model <- lm(houseEq, data=house.sales)
-      hs.index <- 1 + apmMakeIndex(hs.model$coef, timeField=timeField)
-      hs.index <- hs.index * median(house.sales$transValue[house.sales[,timeField] == 1])
-    } else {
-      hs.index <- 'Not Enough Data'
-    }
     
-    if(nrow(house.rents) > 30){
-      hr.model <- lm(houseEq, data=house.rents)
-      hr.index <- 1 + apmMakeIndex(hr.model$coef, timeField=timeField)
-      hr.index <- hr.index * median(house.rents$transValue[house.rents[,timeField] == 1])
-    } else {
-      hr.index <- 'Not Enough Data'
-    }
+  if(raw.series$house.rent[1] != "NA" & raw.series$house.sale[1] != 'NA' &
+     length(raw.series$house.rent) == length(raw.series$house.sale)){
+    house.series <- (raw.series$house.rent * 52) / raw.series$house.sale
   } else {
-    hs.index <- 'Not Enough Data'
-    hr.index <- 'Not Enough Data'
-    
+    house.series <- "NA"
   }
   
-  ## Deal with Units  
-  
-  if(nrow(unit.data) > 30){
-    unit.sales <- subset(unit.data, transType == 'sale')
-    unit.rents <- subset(unit.data, transType == 'rent')
-    
-    if(nrow(unit.sales) > 30){
-      us.model <- lm(unitEq, data=unit.sales)
-      us.index <- 1 + apmMakeIndex(us.model$coef, timeField=timeField)
-      us.index <- us.index * median(unit.sales$transValue[unit.sales[,timeField] == 1])
-      
-    } else {
-      us.index <- 'Not Enough Data'
-    }
-    
-    if(nrow(unit.rents) > 30){
-      ur.model <- lm(unitEq, data=unit.rents)
-      ur.index <- 1 + apmMakeIndex(ur.model$coef, timeField=timeField)
-      ur.index <- ur.index * median(unit.rents$transValue[unit.rents[,timeField] == 1])
-    } else {
-      ur.index <- 'Not Enough Data'
-    }
+  if(raw.series$unit.rent[1] != "NA" & raw.series$unit.sale[1] != 'NA' &
+     length(raw.series$unit.rent) == length(raw.series$unit.sale)){
+    unit.series <- (raw.series$unit.rent * 52) / raw.series$unit.sale
   } else {
-    us.index <- 'Not Enough Data'
-    ur.index <- 'Not Enough Data'
+    unit.series <- "NA"
   }
-  
-  ## Calculate indexes  
-  
-  # Units
-  if(length(us.index) == req.length & length(ur.index) == req.length){
-    unit.yields <- (ur.index * 52) / us.index
-  } else {
-    unit.yields <- 0
-  }
-  
-  # Houses
-  if(length(hs.index) == req.length & length(hr.index) == req.length){
-    house.yields <- (hr.index * 52) / hs.index
-  } else {
-    house.yields <- 0
-  }
-  
-  # All
-  if(house.yields[1] != 0 & unit.yields[1] != 0){
-    all.yields <- (unit.yields + house.yields) / 2
-  } else {
-    all.yields <- 0
-  }
-  
+
   ## Return values
   
-  return(list(unit.yields=unit.yields,
-              house.yields=house.yields,
-              all.yields=all.yields,
-              house.sale=hs.index,
-              house.rent=hr.index,
-              unit.sale=us.index,
-              unit.rent=ur.index
-  ))
-  
-  
+  return(list(house.yields=house.series,
+              unit.yields=unit.series))
 }
+
+
+
+
+
+# apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
+#                                                 'postcode'),
+#                              verbose=FALSE){
+#   
+#   ## Prep data and objects
+#   
+#   aimw.list <- list()
+#   idL <- 1
+#   
+#   ## All area analysis
+#   
+#   if('All' %in% geos){
+#     if(verbose) cat('Estimating all area index method\n')
+#     all.ind <- apmGeoIndex('all', 'all', trans.data)
+#     aimw.list[[idL]] <- all.ind
+#     idL <- idL + 1
+#   }
+#   
+#   ## LGA area analysis
+#   
+#   if('lga' %in% geos){
+#     if(verbose) cat('Estimating lga level index method\n')
+#     lga.ind <- apmIndGeoWrap('lga', trans.data)
+#     aimw.list[[idL]] <- lga.ind
+#     idL <- idL + 1
+#   }
+#   
+#   ## SLA1 area analysis
+#   
+#   if('sla1' %in% geos){
+#     if(verbose) cat('Estimating sla1 level index method\n')
+#     sla1.ind <- apmIndGeoWrap('sla1', trans.data)
+#     aimw.list[[idL]] <- sla1.ind
+#     idL <- idL + 1
+#   }
+#   
+#   ## Suburb area analysis
+#   
+#   if('suburb' %in% geos){
+#     if(verbose) cat('Estimating suburb level index method\n')
+#     suburb.ind <- apmIndGeoWrap('suburb', trans.data)
+#     aimw.list[[idL]] <- suburb.ind
+#     idL <- idL + 1
+#   }
+#   
+#   ## Post code area analysis  
+#   
+#   if('postcode' %in% geos){
+#     if(verbose) cat('Estimating postcode level index method\n')
+#     postcode.ind <- apmIndGeoWrap('postCode', trans.data)
+#     aimw.list[[idL]] <- postcode.ind
+#     idL <- idL + 1
+#   }
+#   
+#   ## Fix names and return values  
+#   names(aimw.list) <- geos
+#   
+#   return(aimw.list)
+#   
+# }

@@ -10,8 +10,8 @@
 
 ### Base function for creating time index from a set of reg. coefficients  ---------------
 
-apmIndexEngine <- function(ref.coefs,                     
-                           time.field='transQtr'      
+indexEngine <- function(ref.coefs,                     
+                        time.field=apmOptions$time.field      
 )
 {
   
@@ -38,13 +38,58 @@ apmIndexEngine <- function(ref.coefs,
   return(coefs.index)
 }
 
-### Geo Unit Wrapper to calc house, unit, sale and rent indexes across a given geo -------
+### Modeling function to derive coefficients and index from regression model -------------
 
-apmGeoIndUnitWrap <- function(geo.value, 
-                              geo.field, 
-                              trans.data, 
-                              time.field='transQtr',
-                              verbose=FALSE
+indexModeler <- function(x.data, 
+                         use.type='house',
+                         req.nbr=60
+                         )
+{
+
+ ## Set Equation  
+  
+  if(use.type=='house'){
+    model.eq <- apmOptions$houseEquation
+  } else {
+    model.eq <- apmOptions$unitEquation
+  }
+  
+  # Remove postcode fixed effects
+  model.eq <- update(model.eq, . ~ . -as.factor(postCode))
+  
+  
+ ## If 
+  
+  if(nrow(x.data) > req.nbr){
+  
+    x.model <- lm(model.eq, data=x.data)
+    x.index <- indexEngine(x.model$coef)
+    x.raw <- ((x.index / 100) * 
+                mean(x.data$transValue[x.data[, apmOptions$time.field] == 1]))
+  } else {
+    
+    x.index <- 'NA'
+    x.raw <- 'NA'
+    
+  }
+  
+  if(length(x.index) < apmOptions$time.periods){
+    x.index <- 'NA'
+    x.raw <- 'NA'
+  }
+  
+  return(list(index=x.index,
+              raw=x.raw))
+}
+
+
+### Model wrapper to calculate indexes across house/unit and sale/rent dimensions --------
+
+indexModelWrap <- function(geo.value, 
+                           geo.field, 
+                           x.data, 
+                           time.field=apmOptions$time.field,
+                           verbose=FALSE
 )
 {
   
@@ -54,29 +99,18 @@ apmGeoIndUnitWrap <- function(geo.value,
   # geo.field = field containing the geo.value
   # trans.data = transaction data
   # time.field = field containing the time period analyzed
-  
-  ## Fix equations by removing spatial fixed effects
-  
-  house.eq <- apmOptions$houseEquation
-  unit.eq <- apmOptions$houseEquation
-  unit.eq <- update(unit.eq, . ~ . -as.factor(postCode))
-  house.eq <- update(house.eq, . ~ . -as.factor(postCode))
-  
-  ## Calculate the required length to cover all periods
-  
-  req.length <- length(levels(as.factor(trans.data[, time.field])))
-  
+
   ## Isolate data geographically
   
   if(verbose) cat('Isolating data for: ', geo.value, '\n')
   
   # If global take all data
   if(geo.field == 'Global') {
-    geo.data <- trans.data
+    geo.data <- x.data
   } else {
     
     # Otherwise limit to that specific geography  
-    geo.data <- trans.data[trans.data[, geo.field] == geo.value, ]
+    geo.data <- x.data[x.data[, geo.field] == geo.value, ]
   }
   
   ## Split into house and units
@@ -86,154 +120,65 @@ apmGeoIndUnitWrap <- function(geo.value,
   house.data <- geo.data[geo.data$PropertyType == 'House', ]
   unit.data <- geo.data[geo.data$PropertyType == 'Unit', ]
   
-  ## Calculate indexes for Houses   
+ ## Calculate indexes for Houses   
   
   if(verbose) cat('Calculate house price and rent indexes\n')
+
+  house.sales <- subset(house.data, transType == 'sale')
+  house.rents <- subset(house.data, transType == 'rent')
+
+  hs.values <- indexModeler(house.sales, use.type='house')
+  hr.values <- indexModeler(house.rents, use.type='house')
   
-  if(nrow(house.data) > 60){
+ ## Calculate indexes for Units  
+
+  unit.sales <- subset(unit.data, transType == 'sale')
+  unit.rents <- subset(unit.data, transType == 'rent')
     
-    house.sales <- subset(house.data, transType == 'sale')
-    house.rents <- subset(house.data, transType == 'rent')
-    
-    # House Sales
-    if(nrow(house.sales) > 60){
-      
-      hs.model <- lm(house.eq, data=house.sales)
-      hs.index <- apmIndexEngine(hs.model$coef, time.field=time.field)
-      hs.raw <- ((hs.index / 100) * 
-                   median(house.sales$transValue[house.sales[, time.field] == 1]))
-    } else {
-      
-      hs.index <- 'NA'
-      hs.raw <- 'NA'
-      
-    }
-    
-    # House Rents
-    if(nrow(house.rents) > 60){
-      
-      hr.model <- lm(house.eq, data=house.rents)
-      hr.index <- apmIndexEngine(hr.model$coef, time.field=time.field)
-      hr.raw <- ((hr.index / 100) * 
-                   median(house.rents$transValue[house.rents[, time.field] == 1]))
-    } else {
-      
-      hr.index <- 'NA'
-      hr.raw <- 'NA'
-      
-    }
-    
-  } else {
-    
-    hs.index <- 'NA'
-    hr.index <- 'NA'
-    hs.raw <- 'NA'
-    hr.raw <- 'NA'
-    
-  }
-  
-  ## Calculate indexes for Units  
-  
-  if(nrow(unit.data) > 60){
-    
-    unit.sales <- subset(unit.data, transType == 'sale')
-    unit.rents <- subset(unit.data, transType == 'rent')
-    
-    # Unit Sales
-    if(nrow(unit.sales) > 60){
-      
-      us.model <- lm(unit.eq, data=unit.sales)
-      us.index <- apmIndexEngine(us.model$coef, time.field=time.field)
-      us.raw <- ((us.index / 100) * 
-                   median(unit.sales$transValue[unit.sales[, time.field] == 1]))
-    } else {
-      
-      us.index <- 'NA'
-      us.raw <- 'NA'
-      
-    }
-    
-    # Unit Rents
-    if(nrow(unit.rents) > 60){
-      ur.model <- lm(unit.eq, data=unit.rents)
-      ur.index <- apmIndexEngine(ur.model$coef, time.field=time.field)
-      ur.raw <- ((ur.index / 100) * 
-                   median(unit.rents$transValue[unit.rents[, time.field] == 1]))
-    } else {
-      
-      ur.index <- 'NA'
-      ur.raw <- 'NA'
-      
-    }
-  } else {
-    
-    us.index <- 'NA'
-    ur.index <- 'NA'
-    us.raw <- 'NA'
-    ur.raw <- 'NA'
-    
-  }
-  
-  ## Calculate indexes  
-  #   
-  #   # Units
-  #   if(length(us.index) == req.length & length(ur.index) == req.length){
-  #     unit.yields <- (ur.index * 52) / us.index
-  #   } else {
-  #     unit.yields <- 0
-  #   }
-  #   
-  #   # Houses
-  #   if(length(hs.index) == req.length & length(hr.index) == req.length){
-  #     house.yields <- (hr.index * 52) / hs.index
-  #   } else {
-  #     house.yields <- 0
-  #   }
-  #   
-  #   # All
-  #   if(house.yields[1] != 0 & unit.yields[1] != 0){
-  #     all.yields <- (unit.yields + house.yields) / 2
-  #   } else {
-  #     all.yields <- 0
-  #   }
+  us.values <- indexModeler(unit.sales, use.type='unit')
+  ur.values <- indexModeler(unit.rents, use.type='unit')
   
   ## Return values
   
-  return(list(house.sale=hs.index,
-              house.rent=hr.index,
-              unit.sale=us.index,
-              unit.rent=ur.index,
-              raw=list(house.sale=hs.raw,
-                       house.rent=hr.raw,
-                       unit.sale=us.raw,
-                       unit.rent=ur.raw)))
+  return(list(house.sale=hs.values$index,
+              house.rent=hr.values$index,
+              unit.sale=us.values$index,
+              unit.rent=ur.values$index,
+              raw=list(house.sale=hs.values$raw,
+                       house.rent=hr.values$raw,
+                       unit.sale=us.values$raw,
+                       unit.rent=ur.values$raw)))
 }
+
 
 ### Geo Level Wrapper to calc h, u, s and r indexs for all areas in a geo level ----------
 
-apmGeoIndLevelWrap <- function(geo.field,
-                               trans.data, 
-                               time.field='transQtr',
-                               verbose=FALSE
-)
+indexGeoWrap <- function(geo.field,
+                         x.data,
+                         verbose=FALSE)
 {
   
   # ARGUMENTS
   #
   # geo.field = geogrphic field for which to calculate all of the indexes
-  # trans.data = transaction data
+  # x.data = transaction data
   # time.field = field containing the time period analyzed
   
   ## Get the list of geographies to use
   
   if(verbose) cat('Getting list of geographic areas\n')
-  geo.list <- levels(as.factor(trans.data[, geo.field]))
   
+  if(geo.field != 'Global'){
+    geo.list <- levels(as.factor(x.data[, geo.field]))
+  } else {
+    geo.list <- 'Global'
+  }
   ## Apply geo index method across all
   
   if(verbose) cat('Calculating Indexes across all geographies\n')
-  ind.list <- lapply(geo.list, FUN=apmGeoIndUnitWrap, trans.data=trans.data,
-                     geo.field=geo.field, verbose=FALSE)
+  
+  ind.list <- lapply(geo.list, FUN=indexModelWrap, x.data=x.data,
+                     geo.field=geo.field, verbose=verbose)
   
   ## name list items
   
@@ -245,182 +190,18 @@ apmGeoIndLevelWrap <- function(geo.field,
   
 }    
 
-
-### Area Level Wrapper to calc indexes across all different geographic levels ------------
-
-apmAreaIndLevelWrap <- function(trans.data, 
-                                geo.levels=c('Global', 'lga', 'sla1', 
-                                             'suburb', 'postCode'),
-                                verbose=FALSE
-)
-{
-  
-  # ARGUMENTS
-  #
-  # trans.data = transaction data
-  # geo.levels = various levels at which to perform the analysis
-  
-  ## Prep data and objects
-  
-  results.list <- list()
-  idL <- 1
-  
-  ## Global analysis
-  
-  if('Global' %in% geo.levels){
-    
-    if(verbose) cat('Estimating all area index method\n')
-    global.ind <- apmGeoIndUnitWrap('Global', 'Global', trans.data, verbose=FALSE)
-    results.list[[idL]] <- global.ind
-    idL <- idL + 1
-    
-  }
-  
-  ## LGA area analysis
-  
-  if('lga' %in% geo.levels){
-    
-    if(verbose) cat('Estimating lga level index method\n')
-    lga.ind <- apmGeoIndLevelWrap('lga', trans.data)
-    results.list[[idL]] <- lga.ind
-    idL <- idL + 1
-    
-  }
-  
-  ## SLA1 area analysis
-  
-  if('sla1' %in% geo.levels){
-    
-    if(verbose) cat('Estimating sla1 level index method\n')
-    sla1.ind <- apmGeoIndLevelWrap('sla1', trans.data)
-    results.list[[idL]] <- sla1.ind
-    idL <- idL + 1
-    
-  }
-  
-  ## Suburb area analysis
-  
-  if('suburb' %in% geo.levels){
-    
-    if(verbose) cat('Estimating suburb level index method\n')
-    suburb.ind <- apmGeoIndLevelWrap('suburb', trans.data)
-    results.list[[idL]] <- suburb.ind
-    idL <- idL + 1
-    
-  }
-  
-  ## Post code area analysis  
-  
-  if('postCode' %in% geo.levels){
-    
-    if(verbose) cat('Estimating postcode level index method\n')
-    postcode.ind <- apmGeoIndLevelWrap('postCode', trans.data)
-    results.list[[idL]] <- postcode.ind
-    idL <- idL + 1
-    
-  }
-  
-  ## Fix names and return values  
-  names(results.list) <- geo.levels
-  
-  return(results.list)
-  
-}  
-
 ##########################################################################################
 # Functions for turning price indexes into yield indexes                                 #
 ##########################################################################################
 
-apmIndMethodWrap <- function(index.values,
-                             geos=c('Global', 'lga', 'sla1', 'suburb', 'postCode'),
-                             verbose=FALSE){
-  
-  ## Prep data and objects
-  
-  aimw.list <- list()
-  idL <- 1
-  
-  ## All area analysis
-  
-  if('Global' %in% geos){
-    if(verbose) cat('Estimating global index method\n')
-    glob.ind <- apmGeoIndex(index.values$Global)
-    aimw.list[[idL]] <- glob.ind
-    idL <- idL + 1
-  }
-  
-  ## LGA area analysis
-  
-  if('lga' %in% geos){
-    if(verbose) cat('Estimating lga level index method\n')
-    lga.ind <- apmIndGeoWrap(index.values$lga)
-    aimw.list[[idL]] <- lga.ind
-    idL <- idL + 1
-  }
-  
-  ## SLA1 area analysis
-  
-  if('sla1' %in% geos){
-    if(verbose) cat('Estimating sla1 level index method\n')
-    sla1.ind <- apmIndGeoWrap(index.values$sla1)
-    aimw.list[[idL]] <- sla1.ind
-    idL <- idL + 1
-  }
-  
-  ## Suburb area analysis
-  
-  if('suburb' %in% geos){
-    if(verbose) cat('Estimating suburb level index method\n')
-    suburb.ind <- apmIndGeoWrap(index.values$suburb)
-    aimw.list[[idL]] <- suburb.ind
-    idL <- idL + 1
-  }
-  
-  ## Post code area analysis  
-  
-  if('postCode' %in% geos){
-    if(verbose) cat('Estimating postcode level index method\n')
-    postcode.ind <- apmIndGeoWrap(index.values$postCode)
-    aimw.list[[idL]] <- postcode.ind
-    idL <- idL + 1
-  }
-  
-  ## Fix names and return values  
-  names(aimw.list) <- geos
-  
-  return(aimw.list)
-  
-}
+### Basic engine for turning yields into an index ----------------------------------------
 
-apmIndGeoWrap <- function(series.obj){
-  
-  ## Get the list of geographies to use
-  
-  geo.list <- names(series.obj)
-  
-  ## Apply geo index method across all
-  
-  ind.list <- lapply(geo.list, FUN=apmGeoIndex, series.obj=series.obj)
-  
-  ## name list items
-  
-  names(ind.list) <- geo.list
-  
-  ## return values
-  
-  return(ind.list)
-  
-}
-
-apmGeoIndex <- function(series.obj, series.name="Global"){
+indexToYield <- function(series.obj, 
+                         series.name="Global"){
   
   ## Fix equations 
   
-  if(series.name == 'Global'){ 
-    raw.series <- series.obj$raw
-  } else {
-    raw.series <- series.obj[[which(names(series.obj) == series.name)]]$raw
-  }
+  raw.series <- series.obj[[which(names(series.obj) == series.name)]]$raw
   
   
   if(raw.series$house.rent[1] != "NA" & raw.series$house.sale[1] != 'NA' &
@@ -447,77 +228,49 @@ apmGeoIndex <- function(series.obj, series.name="Global"){
               unit.rent=raw.series$unit.rent))
 }
 
+### Wrapper to apply index to yield across all geos in a field ---------------------------
+
+indexTYGeoWrap <- function(geo.field, 
+                           x.data, 
+                           verbose=FALSE){
+  
+  ## Get the list of geographies to use
+  
+  geo.data <- x.data[[which(names(x.data) == geo.field)]]
+  geo.list <- names(geo.data)
+  
+  ## Apply geo index method across all
+  
+  ind.list <- lapply(geo.list, FUN=indexToYield, series.obj=geo.data)
+  
+  ## name list items
+  
+  names(ind.list) <- geo.list
+  
+  ## return values
+  
+  return(ind.list)
+  
+}
+
 ##########################################################################################
 # Functions for tidying up index method data                                             #
 ##########################################################################################
 
-apmTidyIndexWrap <- function(index.results, 
-                             geo.names=c('Global', 'lga', 'sla1', 'suburb', 'postCode')){
-  
-  
-  atiw.list <- NULL
-  gnIDX <- 1
-  
-  if('Global' %in% geo.names){
-    temp.df <- apmTidyIndex(index.results, geo.name='Global')
-    temp.df$geo.level <- 'Global'
-    atiw.list[[gnIDX]] <- temp.df
-    gnIDX <- gnIDX + 1
-  }
-  
-  
-  if('lga' %in% geo.names){
-    temp.df <- apmTidyIndexGeo(index.results$lga, geo.level='lga')
-    temp.df$geo.level <- 'lga'
-    atiw.list[[gnIDX]] <- temp.df
-    gnIDX <- gnIDX + 1
-  }
-  
-  if('sla1' %in% geo.names){
-    temp.df <- apmTidyIndexGeo(index.results$sla1, geo.level='sla1')
-    temp.df$geo.level <- 'sla1'
-    atiw.list[[gnIDX]] <- temp.df
-    gnIDX <- gnIDX + 1
-  }
-  
-  if('suburb' %in% geo.names){
-    
-    temp.df <- apmTidyIndexGeo(index.results$suburb, geo.level='suburb')
-    temp.df$geo.level <- 'suburb'
-    atiw.list[[gnIDX]] <- temp.df
-    gnIDX <- gnIDX + 1
-  }
-  
-  if('postCode' %in% geo.names){
-    temp.df <- apmTidyIndexGeo(index.results$postCode, geo.level='postCode')
-    temp.df$geo.level <- 'postCode'
-    atiw.list[[gnIDX]] <- temp.df
-    gnIDX <- gnIDX + 1
-  }
-  
-  return(rbind.fill(atiw.list))
-  
-}
+### Tidying engine that converts to a data.frame -----------------------------------------
 
-
-
-apmTidyIndexGeo <- function(index.results, geo.level){
+indexTidyer <- function(x.data,
+                        geo.name='Global'){
   
-  geo.list <- as.list(names(index.results))
+ ## Set length to test for  
   
-  ind.list <- lapply(X=geo.list, FUN=apmTidyIndex, index.results=index.results)
+  len <- apmOptions$time.periods
   
-  ind.class <- which(unlist(lapply(ind.list, class)) == 'data.frame')
+ ## Limit to the specific geography  
   
-  ind.df <- rbind.fill(ind.list[ind.class])  
+  index.results <- x.data[[which(names(x.data) == geo.name)]]
   
-  return(ind.df)
-}
-
-
-apmTidyIndex <- function(index.results, geo.name='Global'){
-  
-  index.results <- index.results[[which(names(index.results) == geo.name)]]
+ ## Set null values
   
   hu <- NULL
   type <- NULL
@@ -525,23 +278,28 @@ apmTidyIndex <- function(index.results, geo.name='Global'){
   price <- NULL
   rent <- NULL
   
+ ## Extract house yield values
   
-  if(length(index.results$house.yields) == 20){
+  if(length(index.results$house.yields) == len){
     hu <- c(hu, 'H') 
-    type <- c(type, rep('house', 20))
+    type <- c(type, rep('house', len))
     yield <- c(yield, index.results$house.yields)
     price <- c(price, index.results$house.price)
     rent <- c(rent, index.results$house.rent)
     
   }
   
-  if(length(index.results$unit.yields) == 20){
+ ## Extract unit yields  
+  
+  if(length(index.results$unit.yields) == len){
     hu <- c(hu, 'U')  
-    type <- c(type, rep('unit', 20))
+    type <- c(type, rep('unit', len))
     yield <- c(yield, index.results$unit.yields)
     price <- c(price, index.results$unit.price)
     rent <- c(rent, index.results$unit.rent)
   }
+  
+ ## If nothing then give nothign  
   
   if(length(hu) == 0) {
     return('NA')
@@ -549,57 +307,77 @@ apmTidyIndex <- function(index.results, geo.name='Global'){
     
     
     
-    tidy.index <- data.frame(method=rep('Index', 20 * length(hu)),
-                             geo=rep(geo.name, 20 * length(hu)),
-                             time=rep(1:20, length(hu)),
+    index.tidy <- data.frame(method=rep('Index', len * length(hu)),
+                             geo=rep(geo.name, len * length(hu)),
+                             time=rep(1:len, length(hu)),
                              type=type,
                              yield=yield,
                              price=price,
                              rent=rent)
-    return(tidy.index)
+    return(index.tidy)
   }  
+}
+
+
+### index geo wrapper that applies over all geographices in a field ----------------------
+
+indexTidyerGeoWrap <- function(x.data, 
+                               geo.level,
+                               verbose=FALSE){
+  
+ ## Set list of geos  
+  geo.data <- x.data[[which(names(x.data) == geo.level)]]
+  geo.list <- as.list(names(geo.data))
+  
+ ## Calculate all tidy dfs  
+  
+  ind.list <- lapply(X=geo.list, FUN=indexTidyer, x.data=geo.data)
+  
+ ## Find out which ones didn't have comlete data  
+  
+  ind.class <- which(unlist(lapply(ind.list, class)) == 'data.frame')
+  
+ ## Conver to a data.frame  
+  
+  ind.df <- rbind.fill(ind.list[ind.class])  
+  
+ ## Return Values  
+  
+  return(ind.df)
 }
 
 ##########################################################################################
 # Wrappers for apply index functions across dimensions                                   #
 ##########################################################################################
 
-# 
-# indexGeoWrap <- function(index.data, geo.level, fun.wrap){
-#   
-#   if(fun.wrap=='indexYielder'){
-#     geo.list <- names(index.data)
-#   }
-#   
-#   
-#   index.list <- lapply(geo.list, FUN=fun.wrap, index.data)
-#   
-#   ## Get the list of geographies to use
-#   
-#   geo.list <- names(series.obj)
-#   
-#   ## Apply geo index method across all
-#   
-#   ind.list <- lapply(geo.list, FUN=apmGeoIndex, series.obj=series.obj)
-#   
-#   ## name list items
-#   
-#   names(ind.list) <- geo.list
-#   
-#   ## return values
-#   
-#   return(ind.list)
-#   
-#   
-#   
-#   geo.list <- as.list(names(index.results))
-#   
-#   ind.list <- lapply(X=geo.list, FUN=apmTidyIndex, index.results=index.results)
-#   
-#   ind.class <- which(unlist(lapply(ind.list, class)) == 'data.frame')
-#   
-#   ind.df <- rbind.fill(ind.list[ind.class])  
-#   
-#   return(ind.df)
-#   
-# }
+### Area Level Wrapper for various functions across all different geographic levels ------
+
+indexLevelWrap <- function(x.data, 
+                           geo.levels=apmOptions$geo.levels,
+                           wrap.function='indexGeoWrap',
+                           verbose=FALSE
+)
+{
+  
+  # ARGUMENTS
+  #
+  # trans.data = transaction data
+  # geo.levels = various levels at which to perform the analysis
+  # wrap.function = function to lapply over all geo levels
+  
+  ## Prep data and objects
+  
+  results.list <- lapply(X=as.list(geo.levels), FUN=get(wrap.function), x.data=x.data, 
+                         verbose=verbose)
+  
+  ## Fix names and return values  
+  
+  names(results.list) <- geo.levels
+  
+  # convert to data.frame if necessary
+  if(wrap.function == 'indexTidyerGeoWrap') results.list <- rbind.fill(results.list)
+  
+  return(results.list)
+  
+}  
+

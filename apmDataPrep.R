@@ -141,6 +141,10 @@ apmFixDates <- function(xDates      # Vector of dates to be fixed
   
   require(stringr)
   
+  ## Fix missingness
+  
+  xDates[xDates == ""] <- '01/01/2001'
+  
   ## Break down dates
   
   # Remove Time

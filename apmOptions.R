@@ -38,6 +38,7 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
  ## Set time information
   
   startYear <- 2011
+  endYear <- 2015
   startMonth <- 1
   time.field <- 'transQtr'
   time.periods <- 20
@@ -67,6 +68,7 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
                       naFields = naFields,
                       ssFields = ssFields,
                       startYear = startYear,
+                      endYear = endYear,
                       startMonth = startMonth,
                       time.field = time.field,
                       time.periods = time.periods,

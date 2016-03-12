@@ -49,10 +49,10 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   
  ## Set equations for impute model  
   
-  houseEquation <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+  unitEquation <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
     log(AreaSize) + Bedrooms + Baths + HasPool + HasGarage + Studio
   
-  unitEquation <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
+  houseEquation <- log(transValue) ~ as.factor(postCode) + as.factor(transQtr) + 
     Bedrooms + Baths + HasPool + HasGarage + Terrace + Townhouse + Villa + Duplex
   
  ## Add to a temporary list of options  

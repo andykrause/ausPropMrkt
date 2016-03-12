@@ -56,8 +56,7 @@ indexModeler <- function(x.data,
   
   # Remove postcode fixed effects
   model.eq <- update(model.eq, . ~ . -as.factor(postCode))
-  
-  
+
  ## If 
   
   if(nrow(x.data) > req.nbr){

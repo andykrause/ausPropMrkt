@@ -269,6 +269,12 @@ apmBuildData <- function(rawRents,              # Raw rental data
   for(naF in 1:length(naFields)){
     naX <- which(is.na(allTrans[ ,naFields[[naF]]]))
     allTrans[naX, naFields[[naF]]] <- 0
+    nFalse <- which(allTrans[ ,naFields[[naF]]] == "")
+    allTrans[nFalse, naFields[[naF]]] <- 0
+    nFalse <- which(allTrans[ ,naFields[[naF]]] == 'False')
+    allTrans[nFalse, naFields[[naF]]] <- 0
+    nTrue <- which(allTrans[ ,naFields[[naF]]] == 'True')
+    allTrans[nTrue, naFields[[naF]]] <- 1
   }
 
   ##  Check for and remove duplicates

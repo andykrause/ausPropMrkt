@@ -196,14 +196,12 @@ apmBuildData <- function(rawRents,              # Raw rental data
   
   if(verbose) cat('Building Data\n')
   
- ## Create UniqueID
-  
-  if(verbose) cat('...Assign Unique Ids\n')
-  rawSales$UID <- paste0('sale', 1:nrow(rawSales))
-  rawRents$UID <- paste0('rental', 1:nrow(rawRents))
-  
+    
  ## Create conforming fields regarding transaction times and values
 
+  rawSales <- rawSales[!is.na(rawSales$AddressID),]
+  rawRents <- rawRents[!is.na(rawRents$AddressID),]
+  
   # Fix date formats
   if(verbose) cat('...Fix Date Values\n')
   rawSales$transDate <- apmFixDates(rawSales$FinalResultEventDate)
@@ -218,6 +216,30 @@ apmBuildData <- function(rawRents,              # Raw rental data
   rawSales$transType <- 'sale'  
   rawRents$transType <- 'rent'
 
+ ## Remove duplicates
+  
+  rawSales <- rawSales[order(rawSales$EventDate, decreasing=TRUE),]
+  rawRents <- rawRents[order(rawRents$EventDate, decreasing=TRUE),]
+  
+  rawSales$dupid <- paste0(rawSales$AddressID, "..", as.numeric(as.factor(rawSales$LastAdvertisedEventDate)))
+  rawRents$dupid <- paste0(rawRents$AddressID, "..", as.numeric(as.factor(rawRents$LastAdvertisedEventDate)))
+  
+  rawSales <- rawSales[!duplicated(rawSales$dupid),]
+  rawRents <- rawRents[!duplicated(rawRents$dupid),]
+  
+  
+  
+  ## Create UniqueID
+  
+  if(verbose) cat('...Assign Unique Ids\n')
+  rawSales <- rawSales[order(rawSales$FinalResultEventDate), ]
+  rawRents <- rawRents[order(rawRents$FinalResultEventDate), ]
+  
+  rawSales$UID <- paste0('sale', 1:nrow(rawSales))
+  rawRents$UID <- paste0('rental', 1:nrow(rawRents))
+  
+  
+  
  ## Fix missing lat long
 
   if(verbose) cat('...Fix Missing Lat/Long Values\n')
@@ -275,6 +297,9 @@ apmBuildData <- function(rawRents,              # Raw rental data
     allTrans[nFalse, naFields[[naF]]] <- 0
     nTrue <- which(allTrans[ ,naFields[[naF]]] == 'True')
     allTrans[nTrue, naFields[[naF]]] <- 1
+    allTrans[, naFields[[naF]]] <- as.numeric(  allTrans[, naFields[[naF]]])
+    naX <- which(is.na(allTrans[ ,naFields[[naF]]]))
+    allTrans[naX, naFields[[naF]]] <- 0
   }
 
   ##  Check for and remove duplicates

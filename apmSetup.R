@@ -63,6 +63,8 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   require(rgeos)
   require(spdep)
   require(ggplot2)
+  require(akima)
+  require(rgdal)
   
 }
 

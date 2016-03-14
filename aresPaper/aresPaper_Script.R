@@ -112,7 +112,7 @@ methLines <- c(1, 1, 1, 1)
 
 ## Fix the data for better plotting  
 
-#all.tidy <- results$tidy.data
+all.tidy <- results$tidy.data
 
 # Rename the methods  
 all.tidy$method[all.tidy$method=='spag'] <- 'Sp Aggr'
@@ -151,3 +151,9 @@ ggplot(glob, aes(x=time, y=yield, group=method))+
                                                      .049, .002)),
                                           nsmall=1), "%")) + 
   theme_prr
+
+##############################################
+
+
+
+

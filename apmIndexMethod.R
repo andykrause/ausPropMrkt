@@ -62,7 +62,6 @@ indexModeler <- function(x.data,
   if(nrow(x.data) > req.nbr){
   
     x.model <- lm(model.eq, data=x.data)
-    qr.model <- rq(model.eq, data=x.data, tau=.5)
     x.index <- indexEngine(x.model$coef)
     x.raw <- ((x.index / 100) * 
                 median(x.data$transValue[x.data[, apmOptions$time.field] == 1]))

@@ -218,13 +218,13 @@ apmFullDataAnalysis <- function(cleanTrans,
                                 dataPath,
                                 writeout=TRUE){
   
-  if(verbose) cat('Create raw price and rent indexes at each level and geography')
+  if(verbose) cat('Create raw price and rent indexes at each level and geography\n')
   
   index.values <- indexLevelWrap(cleanTrans, wrap.function='indexGeoWrap')
   
   ## Create the impute regression values
   
-  if(verbose) cat('Creating Imputed Regression values')
+  if(verbose) cat('Creating Imputed Regression values\n')
   
   # Estimate the house model
   hedimp.house <- hedimpEngine(trans.data=subset(cleanTrans, PropertyType == 'House'),
@@ -236,13 +236,13 @@ apmFullDataAnalysis <- function(cleanTrans,
   
   
   # Add impute regression yields to the data
-  if(verbose) cat('...Assigning Yields')
+  if(verbose) cat('...Assigning Yields\n')
   cleanTrans <- hedimpAssignYields(trans.data=cleanTrans, 
                                    hedimp.house=hedimp.house, 
                                    hedimp.unit=hedimp.unit)  
   
   ## Create a set of matched data (adjusted with global time indexes)
-  if(verbose) cat('Building Matched Data')
+  if(verbose) cat('Building Matched Data\n')
   match.data <- srmMatcher(trans.data=cleanTrans, indexObj=index.values,
                            index.geo='suburb',
                            matchField='AddressID', saleField='transValue',
@@ -250,7 +250,7 @@ apmFullDataAnalysis <- function(cleanTrans,
   
   ## Add impute data to  and vice versa
   
-  if(verbose) cat('Swapping Impute and Matched Yields')
+  if(verbose) cat('Swapping Impute and Matched Yields\n')
   swappedData <- apmYieldSwap(trans.data=cleanTrans,
                               match.data=match.data)
   trans.data <- swappedData$trans.data
@@ -259,25 +259,25 @@ apmFullDataAnalysis <- function(cleanTrans,
   ### Create indices from each of the methods ----------------------------------------------
   
   ## Via the spatial aggregation Method  
-  if(verbose) cat('Spag analysis')
+  if(verbose) cat('Spag analysis\n')
   spag.results <- spagLevelWrap(cleanTrans, verbose)
   
   ## Via the Index method  
-  if(verbose) cat('Index analysis')
+  if(verbose) cat('Index analysis\n')
   index.results <- indexLevelWrap(index.values, wrap.function='indexTYGeoWrap')
   
   ## via the hedonic impute regression
-  if(verbose) cat('Hedimp analysis')
-  hedimp.results <- hedimpYieldWrap(cleanTrans, verbose)  
+  if(verbose) cat('Hedimp analysis\n')
+  hedimp.results <- hedimpYieldWrap(cleanTrans, yield.field='imp.actyield', verbose)  
   
   ## Apply match method
-  if(verbose) cat('Match analysis')
+  if(verbose) cat('Match analysis\n')
   match.results <- srmYieldWrap(match.data, verbose)
   
   ### Tidy up the data ---------------------------------------------------------------------
   
   ## Tidy each type  
-  if(verbose) cat('Tidying Data')
+  if(verbose) cat('Tidying Data\n')
   index.tidy <- indexLevelWrap(index.results, wrap.function='indexTidyerGeoWrap')
   srm.tidy <- apmGenTidyerGeoWrap(match.results, method.type='srm')
   hedimp.tidy <- apmGenTidyerGeoWrap(hedimp.results, method.type='hedimp')
@@ -288,7 +288,7 @@ apmFullDataAnalysis <- function(cleanTrans,
   all.tidy <- rbind(spag.tidy, index.tidy, hedimp.tidy, srm.tidy)  
   
   if(writeout){  
-    if(verbose) cat('Writing Data')
+    if(verbose) cat('Writing Data\n')
     save(cleanTrans, match.data, index.values, all.tidy, spag.results, 
          index.results, hedimp.results, match.results,
          file=paste0(dataPath, 'yieldResults.RData'))  

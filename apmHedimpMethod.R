@@ -117,6 +117,9 @@ hedimpAssignYields <- function(trans.data,
                                                                hedimpValues$UID)]
   trans.data$imp.rentyield <- hedimpValues$imp.rentyield[match(trans.data$UID, 
                                                                hedimpValues$UID)]
+  trans.data$imp.actyield <- ifelse(trans.data$imp.saleyield == 0, 
+                                    trans.data$imp.rentyield, 
+                                    trans.data$imp.saleyield)
   
   # Remove those with missing values
   xTrans <- subset(trans.data, !is.na(imp.yield)) 
@@ -130,7 +133,8 @@ hedimpAssignYields <- function(trans.data,
 # Functions for creating yields, price and rent index over all geos                      #
 ##########################################################################################
 
-hedimpYieldWrap <- function(cleanData,            # Clean trans data (apmDataObj)
+hedimpYieldWrap <- function(cleanData, 
+                            yield.field=imp.yield, # Clean trans data (apmDataObj)
                             verbose=FALSE
 )
 {
@@ -143,20 +147,20 @@ hedimpYieldWrap <- function(cleanData,            # Clean trans data (apmDataObj
   
   # Metro 
   hedimpMetro <- spaceTimeShard(stsData = cleanData,
-                            metric=c('imp.yield'),
+                            metric=c(yield.field),
                             spaceField='all', timeField='transQtr',
                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
                             calcs=list(median='median'))
   
   # By Use
   hedimpMetroH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                             metric=c('imp.yield'),
+                             metric=c(yield.field),
                              spaceField='all', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   hedimpMetroU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                             metric=c('imp.yield'),
+                             metric=c(yield.field),
                              spaceField='all', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
@@ -165,20 +169,20 @@ hedimpYieldWrap <- function(cleanData,            # Clean trans data (apmDataObj
   if(verbose) cat('...Analyze at LGA Level\n')
   
   hedimpLga <- spaceTimeShard(stsData = cleanData,
-                          metric=c('imp.yield'),
+                          metric=c(yield.field),
                           spaceField='lga', timeField='transQtr',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use
   hedimpLgaH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                           metric=c('imp.yield'),
+                           metric=c(yield.field),
                            spaceField='lga', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   hedimpLgaU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                           metric=c('imp.yield'),
+                           metric=c(yield.field),
                            spaceField='lga', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median')) 
@@ -188,20 +192,20 @@ hedimpYieldWrap <- function(cleanData,            # Clean trans data (apmDataObj
   if(verbose) cat('...Analyze at SLA Level\n')
   
   hedimpSla <- spaceTimeShard(stsData = cleanData,
-                          metric=c('imp.yield'),
+                          metric=c(yield.field),
                           spaceField='sla1', timeField='transQtr',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use
   hedimpSlaH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                           metric=c('imp.yield'),
+                           metric=c(yield.field),
                            spaceField='sla1', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   hedimpSlaU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                           metric=c('imp.yield'),
+                           metric=c(yield.field),
                            spaceField='sla1', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
@@ -211,20 +215,20 @@ hedimpYieldWrap <- function(cleanData,            # Clean trans data (apmDataObj
   if(verbose) cat('...Analyze at Suburb Level\n')
   
   hedimpSuburb <- spaceTimeShard(stsData = cleanData,
-                             metric=c('imp.yield'),
+                             metric=c(yield.field),
                              spaceField='suburb', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   # By Use
   hedimpSuburbH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                              metric=c('imp.yield'),
+                              metric=c(yield.field),
                               spaceField='suburb', timeField='transQtr',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
   
   hedimpSuburbU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                              metric=c('imp.yield'),
+                              metric=c(yield.field),
                               spaceField='suburb', timeField='transQtr',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
@@ -234,20 +238,20 @@ hedimpYieldWrap <- function(cleanData,            # Clean trans data (apmDataObj
   if(verbose) cat('...Analyze at Postcode Level\n')
   
   hedimpPostcode <- spaceTimeShard(stsData = cleanData,
-                               metric=c('imp.yield'),
+                               metric=c(yield.field),
                                spaceField='postCode', timeField='transQtr',
                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                calcs=list(median='median'))
   
   # By Use
   hedimpPostcodeH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                                metric=c('imp.yield'),
+                                metric=c(yield.field),
                                 spaceField='postCode', timeField='transQtr',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median'))
   
   hedimpPostcodeU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                                metric=c('imp.yield'),
+                                metric=c(yield.field),
                                 spaceField='postCode', timeField='transQtr',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median')) 

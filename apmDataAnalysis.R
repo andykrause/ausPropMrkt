@@ -209,7 +209,106 @@ apmCompareSamples <- function(trans.data)
   
 }
 
+##########################################################################################
+#  Wrapper Function that runs all data analysis                                          #
+##########################################################################################
 
+
+apmFullDataAnalysis <- function(cleanTrans,
+                                dataPath,
+                                writeout=TRUE){
+  
+  if(verbose) cat('Create raw price and rent indexes at each level and geography')
+  
+  index.values <- indexLevelWrap(cleanTrans, wrap.function='indexGeoWrap')
+  
+  ## Create the impute regression values
+  
+  if(verbose) cat('Creating Imputed Regression values')
+  
+  # Estimate the house model
+  hedimp.house <- hedimpEngine(trans.data=subset(cleanTrans, PropertyType == 'House'),
+                               reg.spec=apmOptions$houseEquation, verbose=verbose)
+  
+  # Estimate the unit model
+  hedimp.unit <- hedimpEngine(trans.data=subset(cleanTrans, PropertyType == 'Unit'),
+                              reg.spec=apmOptions$unitEquation, verbose=verbose)
+  
+  
+  # Add impute regression yields to the data
+  if(verbose) cat('...Assigning Yields')
+  cleanTrans <- hedimpAssignYields(trans.data=cleanTrans, 
+                                   hedimp.house=hedimp.house, 
+                                   hedimp.unit=hedimp.unit)  
+  
+  ## Create a set of matched data (adjusted with global time indexes)
+  if(verbose) cat('Building Matched Data')
+  match.data <- srmMatcher(trans.data=cleanTrans, indexObj=index.values,
+                           index.geo='suburb',
+                           matchField='AddressID', saleField='transValue',
+                           rentField='transValue', timeField='transQtr')
+  
+  ## Add impute data to  and vice versa
+  
+  if(verbose) cat('Swapping Impute and Matched Yields')
+  swappedData <- apmYieldSwap(trans.data=cleanTrans,
+                              match.data=match.data)
+  trans.data <- swappedData$trans.data
+  match.data <- swappedData$match.data
+  
+  ### Create indices from each of the methods ----------------------------------------------
+  
+  ## Via the spatial aggregation Method  
+  if(verbose) cat('Spag analysis')
+  spag.results <- spagLevelWrap(cleanTrans, verbose)
+  
+  ## Via the Index method  
+  if(verbose) cat('Index analysis')
+  index.results <- indexLevelWrap(index.values, wrap.function='indexTYGeoWrap')
+  
+  ## via the hedonic impute regression
+  if(verbose) cat('Hedimp analysis')
+  hedimp.results <- hedimpYieldWrap(cleanTrans, verbose)  
+  
+  ## Apply match method
+  if(verbose) cat('Match analysis')
+  match.results <- srmYieldWrap(match.data, verbose)
+  
+  ### Tidy up the data ---------------------------------------------------------------------
+  
+  ## Tidy each type  
+  if(verbose) cat('Tidying Data')
+  index.tidy <- indexLevelWrap(index.results, wrap.function='indexTidyerGeoWrap')
+  srm.tidy <- apmGenTidyerGeoWrap(match.results, method.type='srm')
+  hedimp.tidy <- apmGenTidyerGeoWrap(hedimp.results, method.type='hedimp')
+  spag.tidy <- apmGenTidyerGeoWrap(spag.results, method.type='spag')
+  
+  # Combine
+  
+  all.tidy <- rbind(spag.tidy, index.tidy, hedimp.tidy, srm.tidy)  
+  
+  if(writeout){  
+    if(verbose) cat('Writing Data')
+    save(cleanTrans, match.data, index.values, all.tidy, spag.results, 
+         index.results, hedimp.results, match.results,
+         file=paste0(dataPath, 'yieldResults.RData'))  
+    
+    write.csv(cleanTrans, paste0(dataPath, 'imputedYields.csv'))
+    write.csv(match.data, paste0(dataPath, 'matchedYields.csv'))
+  }
+  
+ ## Return data  
+  
+  return(list(tidy.data=all.tidy,
+              impute.data=cleanTrans,
+              match.data=match.data,
+              index.values=index.values,
+              results=list(spag=spag.results,
+                           index=index.results,
+                           hedimp=hedimp.results,
+                           match=match.results)))  
+  
+}
 
 
 

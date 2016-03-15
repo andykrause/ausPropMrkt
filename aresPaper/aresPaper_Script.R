@@ -98,10 +98,41 @@
   all.errors <- apmPredLevelWrap(srm.data=match.data,  yield.data=yield.results,
                                  verbose=TRUE)
   
-  glob.errors <- apmSummErrors(all.errors, 'Global')
-  sub.errors <- apmSummErrors(all.errors, 'suburb')
-  
+  errors.tidy <- rbind.fill(lapply(X=as.list(apmOptions$geo.level), 
+                                     FUN=apmSummErrors, 
+                                     all.errors=all.errors))
  
+  errors.tidy$method <- factor(errors.tidy$method, levels = c('spag', 'index', 'hedimp',
+                                                              'srm'))
+  errors.tidy$geo.level <- factor(errors.tidy$geo.level, 
+                                  levels = c('Global', 'lga', 'sla1',
+                                              'postCode', 'suburb'))
+  
+  
+  
+  ee <- errors.tidy[errors.tidy$variable == 'all.abs' ,]
+  
+  ggplot(ee, aes(x=geo.level, y=value, group=method, shape=method)) +
+    #facet_wrap(~geo.level) + 
+    geom_point(size=6)+
+    scale_shape_manual(values = 15:18)
+  
+  ee <- errors.tidy[errors.tidy$variable == 'house.abs' | 
+                      errors.tidy$variable == 'unit.abs',]
+  
+  ggplot(ee, aes(x=geo.level, y=value, group=method, shape=method)) +
+    facet_wrap(~variable) + 
+    geom_point(size=6)+
+    scale_shape_manual(values = 15:18)
+  
+
+  ggplot(ee, aes(x=geo.level, y=value, colour=method)) +
+    #facet_wrap(~method) + 
+    geom_point(size=6)
+  
+  
+  
+  
   
   
   

@@ -284,11 +284,11 @@ apmFullDataAnalysis <- function(clean.trans,
   
   # Combine
   
-  all.tidy <- rbind(spag.tidy, index.tidy, hedimp.tidy, srm.tidy)  
+  yield.results <- rbind(spag.tidy, index.tidy, hedimp.tidy, srm.tidy)  
   
   if(writeout){  
     if(verbose) cat('Writing Data\n')
-    save(clean.trans, match.data, index.values, all.tidy, spag.results, 
+    save(clean.trans, match.data, index.values, yield.results, spag.results, 
          index.results, hedimp.results, match.results,
          file=paste0(data.path, 'yieldResults.RData'))  
     

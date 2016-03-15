@@ -4,68 +4,115 @@
 #                                                                                        #
 ##########################################################################################
 
-## Set parameters and paths
+### Preliminary commands -----------------------------------------------------------------
 
-reBuildData <- FALSE
-reAnalyze <- FALSE
-offline <- FALSE
-verbose <- TRUE
+ ## Set parameters and paths
 
-dataPath <- "C:/data/research/priceRentMethComp/"
-exportPath <- dataPath
+  # Parameters
+  reBuildData <- FALSE
+  reAnalyze <- FALSE
+  offline <- FALSE
+  verbose <- TRUE
 
-salePath <- 'transData/newSales.csv'
-rentPath <- 'transData/newRentals.csv'
+  # Paths and file names
+  dataPath <- "C:/data/research/priceRentMethComp/"
+  exportPath <- dataPath
+  salePath <- 'transData/newSales.csv'
+  rentPath <- 'transData/newRentals.csv'
+  geoPath=list(suburb='shapefiles/Vic_Suburbs.shp',
+               lga='shapefiles/Vic_LGAs.shp',
+               sla1='shapefiles/Vic_SLA1.shp',
+               postcode='shapefiles/Vic_PostCodes.shp',
+               ssFile='spatialData/allSS.csv')
 
-geoPath=list(suburb='shapefiles/Vic_Suburbs.shp',
-             lga='shapefiles/Vic_LGAs.shp',
-             sla1='shapefiles/Vic_SLA1.shp',
-             postcode='shapefiles/Vic_PostCodes.shp',
-             ssFile='spatialData/allSS.csv')
+ ## Source files
 
-## Source files
+  # Source basic setup
+  if(offline){
+    source('c:/Code/research/ausPropMrkt/apmSetup.R')
+  } else {
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/apmSetup.R'))
+  } 
 
-if(offline){
-  source('c:/Code/research/ausPropMrkt/apmSetup.R')
-} else {
-  source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                'master/apmSetup.R'))
-}
+  # Source remaining functions
+  sourceAPMFunctions(offline=offline, verbose=verbose)
 
-## Source remaining functions
+ ## Set the global options
 
-sourceAPMFunctions(offline=offline, verbose=verbose)
-
-## Set options
-
-apmSetOptions()
+  apmSetOptions()
 
 ### Load Data ----------------------------------------------------------------------------  
 
-## Re build data from scratch?
+ ## Re build data from scratch?
 
-if(reBuildData | !file.exists(paste0(dataPath, 'cleanTrans.RData'))){
+ if(reBuildData | !file.exists(paste0(dataPath, 'cleanTrans.RData'))){
   
-  apmFullDataBuild(dataPath=dataPath, saleFile=salePath, rentFile=rentPath,
-                   geoFiles=geoPath, offline=offline, verbose=verbose,
-                   optionChanges=NULL)
+    apmFullDataBuild(dataPath=dataPath, saleFile=salePath, rentFile=rentPath,
+                     geoFiles=geoPath, offline=offline, verbose=verbose,
+                     optionChanges=NULL)
   
-} 
+ } 
 
-## Load prepared data
+ ## Load prepared data
 
-if(verbose) cat('Loading cleaned data\n')
-load(paste0(dataPath, 'cleanTrans.RData'))
-load(paste0(dataPath, 'studyShps.RData'))
+  if(verbose) cat('Loading cleaned data\n')
+  load(paste0(dataPath, 'cleanTrans.RData'))
+  load(paste0(dataPath, 'studyShps.RData'))
 
-## Do data analysis  
+### Analyze Raw Data ---------------------------------------------------------------------  
+  
+ ## Do data analysis  
 
-if(reAnalyze){
-  results <- apmFullDataAnalysis(cleanTrans, dataPath)
-} else  {
-  load(paste0(dataPath, 'yieldResults.RData'))
-}
+  if(reAnalyze){
+    
+    # Calculate full results
+    full.results <- apmFullDataAnalysis(clean.trans=cleanTrans,
+                                        data.path=dataPath,
+                                        writeout=TRUE)
+    
+    # Strip values out and clean up
+    yield.results <- full.results$tidy.data
+    clean.trans <- full.results$impute.data
+    match.data <- full.results$match.data
+    index.values <- full.results$index.values
+    results <- full.results$results
+    rm(full.results); gc()
+    
+  } else  {
+    
+    load(paste0(dataPath, 'yieldResults.RData'))
+    
+    # Strip values out and clean up
+    spag.results <- results$spag.results
+    hedimp.results <- results$hedimp.results
+    index.results <- results$index.results
+    srm.results <- results$srm.results
 
+  }
+
+### Calculate Predictive Errors ----------------------------------------------------------
+  
+ ## Calculate all errors
+  
+  all.errors <- apmPredLevelWrap(srm.data=match.data,  yield.data=yield.results,
+                                 verbose=TRUE)
+  
+  glob.errors <- apmSummErrors(all.errors, 'Global')
+  sub.errors <- apmSummErrors(all.errors, 'suburb')
+  
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 ### Create the necessary data objects for each method  -----------------------------------
 
 ## Compare matched data to all data
@@ -152,7 +199,7 @@ ggplot(glob, aes(x=time, y=yield, group=method))+
                                           nsmall=1), "%")) + 
   theme_prr
 
-##############################################
+
 
 
 

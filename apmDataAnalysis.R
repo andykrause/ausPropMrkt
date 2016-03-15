@@ -213,37 +213,36 @@ apmCompareSamples <- function(trans.data)
 #  Wrapper Function that runs all data analysis                                          #
 ##########################################################################################
 
-
-apmFullDataAnalysis <- function(cleanTrans,
-                                dataPath,
+apmFullDataAnalysis <- function(clean.trans,
+                                data.path,
                                 writeout=TRUE){
   
   if(verbose) cat('Create raw price and rent indexes at each level and geography\n')
   
-  index.values <- indexLevelWrap(cleanTrans, wrap.function='indexGeoWrap')
+  index.values <- indexLevelWrap(clean.trans, wrap.function='indexGeoWrap')
   
   ## Create the impute regression values
   
   if(verbose) cat('Creating Imputed Regression values\n')
   
   # Estimate the house model
-  hedimp.house <- hedimpEngine(trans.data=subset(cleanTrans, PropertyType == 'House'),
+  hedimp.house <- hedimpEngine(trans.data=subset(clean.trans, PropertyType == 'House'),
                                reg.spec=apmOptions$houseEquation, verbose=verbose)
   
   # Estimate the unit model
-  hedimp.unit <- hedimpEngine(trans.data=subset(cleanTrans, PropertyType == 'Unit'),
+  hedimp.unit <- hedimpEngine(trans.data=subset(clean.trans, PropertyType == 'Unit'),
                               reg.spec=apmOptions$unitEquation, verbose=verbose)
   
   
   # Add impute regression yields to the data
   if(verbose) cat('...Assigning Yields\n')
-  cleanTrans <- hedimpAssignYields(trans.data=cleanTrans, 
+  clean.trans <- hedimpAssignYields(trans.data=clean.trans, 
                                    hedimp.house=hedimp.house, 
                                    hedimp.unit=hedimp.unit)  
   
   ## Create a set of matched data (adjusted with global time indexes)
   if(verbose) cat('Building Matched Data\n')
-  match.data <- srmMatcher(trans.data=cleanTrans, indexObj=index.values,
+  match.data <- srmMatcher(trans.data=clean.trans, indexObj=index.values,
                            index.geo='suburb',
                            matchField='AddressID', saleField='transValue',
                            rentField='transValue', timeField='transQtr')
@@ -251,7 +250,7 @@ apmFullDataAnalysis <- function(cleanTrans,
   ## Add impute data to  and vice versa
   
   if(verbose) cat('Swapping Impute and Matched Yields\n')
-  swappedData <- apmYieldSwap(trans.data=cleanTrans,
+  swappedData <- apmYieldSwap(trans.data=clean.trans,
                               match.data=match.data)
   trans.data <- swappedData$trans.data
   match.data <- swappedData$match.data
@@ -260,7 +259,7 @@ apmFullDataAnalysis <- function(cleanTrans,
   
   ## Via the spatial aggregation Method  
   if(verbose) cat('Spag analysis\n')
-  spag.results <- spagLevelWrap(cleanTrans, verbose)
+  spag.results <- spagLevelWrap(clean.trans, verbose)
   
   ## Via the Index method  
   if(verbose) cat('Index analysis\n')
@@ -268,7 +267,7 @@ apmFullDataAnalysis <- function(cleanTrans,
   
   ## via the hedonic impute regression
   if(verbose) cat('Hedimp analysis\n')
-  hedimp.results <- hedimpYieldWrap(cleanTrans, yield.field='imp.actyield', verbose)  
+  hedimp.results <- hedimpYieldWrap(clean.trans, yield.field='imp.actyield', verbose)  
   
   ## Apply match method
   if(verbose) cat('Match analysis\n')
@@ -289,18 +288,18 @@ apmFullDataAnalysis <- function(cleanTrans,
   
   if(writeout){  
     if(verbose) cat('Writing Data\n')
-    save(cleanTrans, match.data, index.values, all.tidy, spag.results, 
+    save(clean.trans, match.data, index.values, all.tidy, spag.results, 
          index.results, hedimp.results, match.results,
-         file=paste0(dataPath, 'yieldResults.RData'))  
+         file=paste0(data.path, 'yieldResults.RData'))  
     
-    write.csv(cleanTrans, paste0(dataPath, 'imputedYields.csv'))
-    write.csv(match.data, paste0(dataPath, 'matchedYields.csv'))
+    write.csv(clean.trans, paste0(data.path, 'imputedYields.csv'))
+    write.csv(match.data, paste0(data.path, 'matchedYields.csv'))
   }
   
  ## Return data  
   
   return(list(tidy.data=all.tidy,
-              impute.data=cleanTrans,
+              impute.data=clean.trans,
               match.data=match.data,
               index.values=index.values,
               results=list(spag=spag.results,
@@ -319,77 +318,77 @@ apmFullDataAnalysis <- function(cleanTrans,
 
 
 
-
-
-
-### Function to convert data from method based to geography based --------------
-
-apmConvertToGeo <- function(mmRes, irRes, dmRes, indexList){
-  
-  ## Metro Level
-  
-  metroList <- list(mm=list(all=mmRes$metro$all, house=mmRes$metro$house,
-                            unit=mmRes$metro$unit),
-                    ir=list(all=irRes$metro$all, house=irRes$metro$house,
-                            unit=irRes$metro$unit),
-                    dm=list(all=dmRes$metro$all, house=dmRes$metro$house,
-                            unit=dmRes$metro$unit))
-  
-  metroData <- prrAggrGeoData(metroList, indexList)
-  
-  ## LGA Level
-  
-  lgaList <- list(mm=list(all=mmRes$lga$all, house=mmRes$lga$house,
-                          unit=mmRes$lga$unit),
-                  ir=list(all=irRes$lga$all, house=irRes$lga$house,
-                          unit=irRes$lga$unit),
-                  dm=list(all=dmRes$lga$all, house=dmRes$lga$house,
-                          unit=dmRes$lga$unit))
-  
-  lgaData <- prrAggrGeoData(lgaList, indexList, geoSplit=TRUE)
-  
-  ## SLA1 Level
-  
-  slaList <- list(mm=list(all=mmRes$sla$all, house=mmRes$sla$house,
-                          unit=mmRes$sla$unit),
-                  ir=list(all=irRes$sla$all, house=irRes$sla$house,
-                          unit=irRes$sla$unit),
-                  dm=list(all=dmRes$sla$all, house=dmRes$sla$house,
-                          unit=dmRes$sla$unit))
-  
-  slaData <- prrAggrGeoData(slaList, indexList, geoSplit=TRUE)
-  
-  ## suburb Level
-  
-  suburbList <- list(mm=list(all=mmRes$suburb$all, house=mmRes$suburb$house,
-                             unit=mmRes$suburb$unit),
-                     ir=list(all=irRes$suburb$all, house=irRes$suburb$house,
-                             unit=irRes$suburb$unit),
-                     dm=list(all=dmRes$suburb$all, house=dmRes$suburb$house,
-                             unit=dmRes$suburb$unit))
-  
-  suburbData <- prrAggrGeoData(suburbList, indexList, geoSplit=TRUE)
-  
-  ## postcode Level
-  
-  postcodeList <- list(mm=list(all=mmRes$postcode$all, house=mmRes$postcode$house,
-                               unit=mmRes$postcode$unit),
-                       ir=list(all=irRes$postcode$all, house=irRes$postcode$house,
-                               unit=irRes$postcode$unit),
-                       dm=list(all=dmRes$postcode$all, house=dmRes$postcode$house,
-                               unit=dmRes$postcode$unit))
-  
-  postcodeData <- prrAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
-  
-  ## Return Results
-  
-  return(list(metroData=metroData,
-              lgaData=lgaData,
-              slaData=slaData,
-              suburbData=suburbData,
-              postcodeData=postcodeData))
-  
-}
+# 
+# 
+# 
+# ### Function to convert data from method based to geography based --------------
+# 
+# apmConvertToGeo <- function(mmRes, irRes, dmRes, indexList){
+#   
+#   ## Metro Level
+#   
+#   metroList <- list(mm=list(all=mmRes$metro$all, house=mmRes$metro$house,
+#                             unit=mmRes$metro$unit),
+#                     ir=list(all=irRes$metro$all, house=irRes$metro$house,
+#                             unit=irRes$metro$unit),
+#                     dm=list(all=dmRes$metro$all, house=dmRes$metro$house,
+#                             unit=dmRes$metro$unit))
+#   
+#   metroData <- prrAggrGeoData(metroList, indexList)
+#   
+#   ## LGA Level
+#   
+#   lgaList <- list(mm=list(all=mmRes$lga$all, house=mmRes$lga$house,
+#                           unit=mmRes$lga$unit),
+#                   ir=list(all=irRes$lga$all, house=irRes$lga$house,
+#                           unit=irRes$lga$unit),
+#                   dm=list(all=dmRes$lga$all, house=dmRes$lga$house,
+#                           unit=dmRes$lga$unit))
+#   
+#   lgaData <- prrAggrGeoData(lgaList, indexList, geoSplit=TRUE)
+#   
+#   ## SLA1 Level
+#   
+#   slaList <- list(mm=list(all=mmRes$sla$all, house=mmRes$sla$house,
+#                           unit=mmRes$sla$unit),
+#                   ir=list(all=irRes$sla$all, house=irRes$sla$house,
+#                           unit=irRes$sla$unit),
+#                   dm=list(all=dmRes$sla$all, house=dmRes$sla$house,
+#                           unit=dmRes$sla$unit))
+#   
+#   slaData <- prrAggrGeoData(slaList, indexList, geoSplit=TRUE)
+#   
+#   ## suburb Level
+#   
+#   suburbList <- list(mm=list(all=mmRes$suburb$all, house=mmRes$suburb$house,
+#                              unit=mmRes$suburb$unit),
+#                      ir=list(all=irRes$suburb$all, house=irRes$suburb$house,
+#                              unit=irRes$suburb$unit),
+#                      dm=list(all=dmRes$suburb$all, house=dmRes$suburb$house,
+#                              unit=dmRes$suburb$unit))
+#   
+#   suburbData <- prrAggrGeoData(suburbList, indexList, geoSplit=TRUE)
+#   
+#   ## postcode Level
+#   
+#   postcodeList <- list(mm=list(all=mmRes$postcode$all, house=mmRes$postcode$house,
+#                                unit=mmRes$postcode$unit),
+#                        ir=list(all=irRes$postcode$all, house=irRes$postcode$house,
+#                                unit=irRes$postcode$unit),
+#                        dm=list(all=dmRes$postcode$all, house=dmRes$postcode$house,
+#                                unit=dmRes$postcode$unit))
+#   
+#   postcodeData <- prrAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
+#   
+#   ## Return Results
+#   
+#   return(list(metroData=metroData,
+#               lgaData=lgaData,
+#               slaData=slaData,
+#               suburbData=suburbData,
+#               postcodeData=postcodeData))
+#   
+# }
 
 
 ########## WORKING BELOW HERE ------------------------------------------------------------

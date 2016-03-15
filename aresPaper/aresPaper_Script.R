@@ -91,6 +91,13 @@
 
   }
 
+### Compare matched data to all data -----------------------------------------------------
+  
+  #if(verbose) cat('Swapping Impute and Matched Yields\n')
+  #comp.samp <- apmCompareSamples(trans.data)
+  
+  ## TODO: So there are differences.  How to adjust??  
+
 ### Calculate Predictive Errors ----------------------------------------------------------
   
  ## Calculate all errors
@@ -102,56 +109,108 @@
                                      FUN=apmSummErrors, 
                                      all.errors=all.errors))
  
-  errors.tidy$method <- factor(errors.tidy$method, levels = c('spag', 'index', 'hedimp',
-                                                              'srm'))
+ ## Fix the factor levels in the errors  
+  
+  # Method
+  errors.tidy$method <- as.character(errors.tidy$method)
+  errors.tidy$method[errors.tidy$method=='spag'] <- 'Sp Aggr'
+  errors.tidy$method[errors.tidy$method=='hedimp'] <- 'Impute'
+  errors.tidy$method[errors.tidy$method=='srm'] <- 'Match'
+  errors.tidy$method[errors.tidy$method=='index'] <- 'Index'
+  errors.tidy$method <- factor(errors.tidy$method, levels = c('Sp Aggr', 'Index',
+                                                              'Impute', 'Match'))
+  
+  # Geo.level
+  errors.tidy$geo.level <- as.character(errors.tidy$geo.level)
+  errors.tidy$geo.level[errors.tidy$geo.level=='Global'] <- 'Metro'
+  errors.tidy$geo.level[errors.tidy$geo.level=='lga'] <- 'LGA'
+  errors.tidy$geo.level[errors.tidy$geo.level=='sla1'] <- 'SLA1'
+  errors.tidy$geo.level[errors.tidy$geo.level=='postCode'] <- 'Postcode'
+  errors.tidy$geo.level[errors.tidy$geo.level=='suburb'] <- 'Suburb'
   errors.tidy$geo.level <- factor(errors.tidy$geo.level, 
-                                  levels = c('Global', 'lga', 'sla1',
-                                              'postCode', 'suburb'))
+                                  levels = c('Metro', 'LGA', 'SLA1',
+                                             'Postcode', 'Suburb'))
+
+### Data Visualization -------------------------------------------------------------------  
   
+ ## Set up graphics parameters 
+
+  # Set colors for plots
+  methCols <- c('navy', 'royalblue2', 'skyblue', 'gray50')
+  methSizes <- c(.5, 1, 1.5, 2)
+  methLines <- c(1, 1, 1, 1)  
   
+  # Set graphical theme
+  theme_prr <- theme_grey() +
+    theme(text = element_text(size=11),
+          panel.background = element_rect(colour='gray95', fill='gray95'),
+          panel.grid.major=element_line(colour='white', size=.5),
+          panel.grid.minor=element_line(colour='white', size=.1),
+          plot.background=element_rect(fill='white'),
+          axis.title.y=element_text(colour='black'),
+          axis.text.y=element_text(hjust=1),
+          legend.position='bottom',
+          legend.background=element_rect(fill='white'),
+          legend.key=element_rect(fill='white', color='white'),
+          legend.text=element_text(color='black'),
+          legend.title=element_blank(),
+          legend.key.width=unit(2, "cm"),
+          strip.background = element_rect(fill = "orange", 
+                                          color = "orange", size = .1),
+          strip.text.x = element_text(face = "bold"),
+          strip.text.y = element_text(face = "bold"))
   
-  ee <- errors.tidy[errors.tidy$variable == 'all.abs' ,]
+ ## All types errors by method and geography  
+
+  # Prep data
+  all.e <- errors.tidy[errors.tidy$variable == 'all.abs', ]
   
-  ggplot(ee, aes(x=geo.level, y=value, group=method, shape=method)) +
-    #facet_wrap(~geo.level) + 
-    geom_point(size=6)+
-    scale_shape_manual(values = 15:18)
+ ## Plot for all types
   
-  ee <- errors.tidy[errors.tidy$variable == 'house.abs' | 
-                      errors.tidy$variable == 'unit.abs',]
+  errorPlot <- ggplot(all.e, 
+                      aes(x=geo.level, y=value, group=method, shape=method,
+                          color=method)) +
+                      geom_point(size=6)+
+                      scale_shape_manual(values = 15:18) +
+                      scale_colour_manual(values = c('navy', 'royalblue2', 
+                                                     'skyblue', 'gray50')) +
+                      xlab("Geographic Level of Analysis\n") + 
+                      ylab("Median Absolute Prediction Error\n") +
+                      scale_y_continuous(limits=c(.08, .21),
+                                         breaks=seq(.09, .21, .03), 
+                                         labels=paste0(format(100 * (seq(.09, .21, .03)),
+                                                       nsmall=1), "%")) + 
+                      theme_prr +
+                      theme(legend.position='right')
   
-  ggplot(ee, aes(x=geo.level, y=value, group=method, shape=method)) +
-    facet_wrap(~variable) + 
-    geom_point(size=6)+
-    scale_shape_manual(values = 15:18)
+ ## Plot by use
+  
+  # Prep Data
+  type.e <- errors.tidy[errors.tidy$variable == 'house.abs' | 
+                          errors.tidy$variable == 'unit.abs', ]
+  type.e$variable <- as.character(type.e$variable)
+  type.e$variable[type.e$variable == 'house.abs'] <- "Houses"
+  type.e$variable[type.e$variable == 'unit.abs'] <- "Unit"
+  
+  use.error.plot <- ggplot(type.e, 
+                           aes(x=geo.level, y=value, group=method, shape=method,
+                               colour=method)) +
+                           facet_wrap(~variable) + 
+                           geom_point(size=6)+
+                           scale_shape_manual(values = 15:18) +
+                           scale_colour_manual(values = c('navy', 'royalblue2',
+                                                          'skyblue', 'gray50')) +
+                           xlab("Estimation Method") + 
+                           ylab("Median Absolute Prediction Error\n") +
+                           scale_y_continuous(limits=c(.08, .24),
+                                              breaks=seq(.09, .24, .03), 
+                                              labels=paste0(format(100 * (seq(.09,
+                                                                         .24, .03)),
+                                                            nsmall=1), "%")) + 
+                           theme_prr +
+                           theme(legend.position='right')
   
 
-  ggplot(ee, aes(x=geo.level, y=value, colour=method)) +
-    #facet_wrap(~method) + 
-    geom_point(size=6)
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-### Create the necessary data objects for each method  -----------------------------------
-
-## Compare matched data to all data
-
-if(verbose) cat('Swapping Impute and Matched Yields\n')
-comp.samp <- apmCompareSamples(trans.data)
-
-## So there are differences.  How to adjust??  
 
 
 
@@ -161,36 +220,10 @@ comp.samp <- apmCompareSamples(trans.data)
 
 
 
-## Set up graphics parameters 
-
-# Set theme
-theme_prr <- theme_grey() +
-  theme(text = element_text(size=11),
-        panel.background = element_rect(colour='gray95', fill='gray95'),
-        panel.grid.major=element_line(colour='white', size=.5),
-        panel.grid.minor=element_line(colour='white', size=.1),
-        plot.background=element_rect(fill='white'),
-        axis.title.y=element_text(colour='black'),
-        axis.text.y=element_text(hjust=1),
-        legend.position='bottom',
-        legend.background=element_rect(fill='white'),
-        legend.key=element_rect(fill='white', color='white'),
-        legend.text=element_text(color='black'),
-        legend.title=element_blank(),
-        legend.key.width=unit(2, "cm"),
-        strip.background = element_rect(fill = "orange", 
-                                        color = "orange", size = .1),
-        strip.text.x = element_text(face = "bold"),
-        strip.text.y = element_text(face = "bold"))
-
-# Set colors for plots
-methCols <- c('navy', 'royalblue2', 'skyblue', 'gray50')
-methSizes <- c(.5, 1, 1.5, 2)
-methLines <- c(1, 1, 1, 1)  
 
 ## Fix the data for better plotting  
 
-all.tidy <- results$tidy.data
+all.tidy <- yield.results
 
 # Rename the methods  
 all.tidy$method[all.tidy$method=='spag'] <- 'Sp Aggr'

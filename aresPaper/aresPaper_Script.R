@@ -10,7 +10,7 @@
 
   # Parameters
   reBuildData <- FALSE
-  reAnalyze <- FALSE
+  reAnalyze <- TRUE
   offline <- FALSE
   verbose <- TRUE
 
@@ -54,7 +54,10 @@
   
  } 
 
- ## Load prepared data
+
+ 
+ ## Fix the factor levels in the errors  
+   ## Load prepared data
 
   if(verbose) cat('Loading cleaned data\n')
   load(paste0(dataPath, 'cleanTrans.RData'))
@@ -108,25 +111,22 @@
   errors.tidy <- rbind.fill(lapply(X=as.list(apmOptions$geo.level), 
                                      FUN=apmSummErrors, 
                                      all.errors=all.errors))
- 
- ## Fix the factor levels in the errors  
-  
   # Method
   errors.tidy$method <- as.character(errors.tidy$method)
-  errors.tidy$method[errors.tidy$method=='spag'] <- 'Sp Aggr'
-  errors.tidy$method[errors.tidy$method=='hedimp'] <- 'Impute'
-  errors.tidy$method[errors.tidy$method=='srm'] <- 'Match'
-  errors.tidy$method[errors.tidy$method=='index'] <- 'Index'
+  errors.tidy$method[errors.tidy$method == 'spag'] <- 'Sp Aggr'
+  errors.tidy$method[errors.tidy$method == 'hedimp'] <- 'Impute'
+  errors.tidy$method[errors.tidy$method == 'srm'] <- 'Match'
+  errors.tidy$method[errors.tidy$method == 'index'] <- 'Index'
   errors.tidy$method <- factor(errors.tidy$method, levels = c('Sp Aggr', 'Index',
                                                               'Impute', 'Match'))
   
   # Geo.level
   errors.tidy$geo.level <- as.character(errors.tidy$geo.level)
-  errors.tidy$geo.level[errors.tidy$geo.level=='Global'] <- 'Metro'
-  errors.tidy$geo.level[errors.tidy$geo.level=='lga'] <- 'LGA'
-  errors.tidy$geo.level[errors.tidy$geo.level=='sla1'] <- 'SLA1'
-  errors.tidy$geo.level[errors.tidy$geo.level=='postCode'] <- 'Postcode'
-  errors.tidy$geo.level[errors.tidy$geo.level=='suburb'] <- 'Suburb'
+  errors.tidy$geo.level[errors.tidy$geo.level == 'Global'] <- 'Metro'
+  errors.tidy$geo.level[errors.tidy$geo.level == 'lga'] <- 'LGA'
+  errors.tidy$geo.level[errors.tidy$geo.level == 'sla1'] <- 'SLA1'
+  errors.tidy$geo.level[errors.tidy$geo.level == 'postCode'] <- 'Postcode'
+  errors.tidy$geo.level[errors.tidy$geo.level == 'suburb'] <- 'Suburb'
   errors.tidy$geo.level <- factor(errors.tidy$geo.level, 
                                   levels = c('Metro', 'LGA', 'SLA1',
                                              'Postcode', 'Suburb'))
@@ -210,58 +210,46 @@
                            theme_prr +
                            theme(legend.position='right')
   
+  ## Make plots by yield results
+  
+   yield.tidy <- yield.results
 
+  # Rename the methods  
+   yield.tidy$method <- as.character(yield.tidy$method)
+   yield.tidy$method[yield.tidy$method == 'spag'] <- 'Sp Aggr'
+   yield.tidy$method[yield.tidy$method == 'hedimp'] <- 'Impute'
+   yield.tidy$method[yield.tidy$method == 'srm'] <- 'Match'
+   yield.tidy$method[yield.tidy$method == 'index'] <- 'Index'
+   yield.tidy$method <- factor(yield.tidy$method, levels = c('Sp Aggr', 'Index',
+                                                               'Impute', 'Match'))
+   # Rename the property Types  
+   yield.tidy$type[yield.tidy$type == 'house'] <- 'Houses'
+   yield.tidy$type[yield.tidy$type == 'unit'] <- 'Units'
 
+  ## Make a global comparison of methods
 
+   # Isolate the global data
+   glob <- yield.tidy[yield.tidy$geo.level == 'Global', ]
 
-
-
-
-
-
-
-
-## Fix the data for better plotting  
-
-all.tidy <- yield.results
-
-# Rename the methods  
-all.tidy$method[all.tidy$method=='spag'] <- 'Sp Aggr'
-all.tidy$method[all.tidy$method=='hedimp'] <- 'Impute'
-all.tidy$method[all.tidy$method=='srm'] <- 'Match'
-
-# Rename the property Types  
-all.tidy$type[all.tidy$type=='house'] <- 'Houses'
-all.tidy$type[all.tidy$type=='unit'] <- 'Units'
-
-# Remove the index method from plots
-#plot.tidy <- all.tidy[all.tidy$method != 'Index', ]
-plot.tidy <- all.tidy
-
-# Reset the factor levels
-plot.tidy$method <- factor(plot.tidy$method, levels = c('Sp Aggr', 'Index', 'Impute', 'Match'))
-
-## Make a global comparison of methods
-
-# Isolate the global data
-glob <- plot.tidy[plot.tidy$geo.level=='Global', ]
-
-# Global Plot  
-ggplot(glob, aes(x=time, y=yield, group=method))+
-  facet_wrap(~type) +
-  geom_line(aes(colour=method, size=method, linetype=method,
-                lineend='round', linejoin='round')) +
-  scale_size_manual(values=methSizes) +
-  scale_colour_manual(values=methCols) +
-  scale_linetype_manual(values=methLines) + 
-  xlab("") + ylab("Rental Yield\n") +
-  scale_x_continuous(breaks=seq(0, 20, 4), labels=2011:2016) +
-  scale_y_continuous(limits=c(.030, .049),
-                     breaks=seq(.031, .049, .002), 
-                     labels=paste0(format(100 * (seq(.031,
-                                                     .049, .002)),
-                                          nsmall=1), "%")) + 
-  theme_prr
+   # Global Plot  
+   glob.plot <- ggplot(glob, 
+                       aes(x=time, y=yield, group=method))+
+                       facet_wrap(~type) +
+                       geom_line(aes(colour=method, size=method, linetype=method,
+                                     lineend='round', linejoin='round')) +
+                       scale_size_manual(values=methSizes) +
+                       scale_colour_manual(values=methCols) +
+                       scale_linetype_manual(values=methLines) + 
+                       xlab("") +
+                       ylab("Rental Yield\n") +
+                       scale_x_continuous(breaks=seq(0, 20, 4), 
+                                          labels=2011:2016) +
+                       scale_y_continuous(limits=c(.030, .049),
+                                          breaks=seq(.031, .049, .002), 
+                                          labels=paste0(format(100 * (seq(.031,
+                                                                          .049, .002)),
+                                                        nsmall=1), "%")) + 
+                        theme_prr
 
 
 

@@ -298,7 +298,7 @@ apmFullDataAnalysis <- function(clean.trans,
   
  ## Return data  
   
-  return(list(tidy.data=all.tidy,
+  return(list(tidy.data=yield.results,
               impute.data=clean.trans,
               match.data=match.data,
               index.values=index.values,

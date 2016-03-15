@@ -70,7 +70,8 @@ apmErrorEngine <- function(srm.data,
 apmErrorByMethod <- function(geo,
                              srm.data,        
                              yield.data,
-                             geo.level    
+                             geo.level,
+                             verbose=FALSE
 ){
   
   # ARGUMENTS
@@ -79,6 +80,8 @@ apmErrorByMethod <- function(geo,
   # srm.data = set of matched sale-rental data
   # yield.data = tidied yield data
   # geo.level = geo.level at which to calculate the errors 
+  
+  if(verbose) cat('......Calculating Errors for:', geo, '\n')
   
   if(geo!='Global') {
     srm.data <- srm.data[srm.data[,geo.level] == geo, ]
@@ -115,7 +118,8 @@ apmErrorByMethod <- function(geo,
 
 apmPredGeoWrap <- function(srm.data,
                            yield.data,
-                           geo.level='suburb'
+                           geo.level='suburb',
+                           verbose=FALSE
                            )
 {
   
@@ -124,6 +128,8 @@ apmPredGeoWrap <- function(srm.data,
   # srm.data = set of matched sale-rental data
   # yield.data = tidied yield data
   # geo.level = geo.level at which to calculate the errors 
+  
+  if(verbose) cat('...Calculating Errors at the level of:', geo.level, '\n')
   
  ## Subset house and unit data
   
@@ -143,7 +149,7 @@ apmPredGeoWrap <- function(srm.data,
   # Run through all geos
   geo.house <- lapply(X=geo.list, FUN=apmErrorByMethod, srm.data = h.data, 
                       yield.data=yield.data[yield.data$type=='house',],
-                      geo.level=geo.level)
+                      geo.level=geo.level, verbose=verbose)
   
   # Remove those with no results
   cut <- unlist(lapply(geo.house, class))
@@ -185,7 +191,9 @@ apmPredGeoWrap <- function(srm.data,
 
 apmPredLevelWrap <- function(srm.data,
                              yield.data,
-                             toDF=FALSE){
+                             toDF=FALSE,
+                             verbose=FALSE
+                             ){
   
  # ARGUMENTS
  # 
@@ -193,13 +201,16 @@ apmPredLevelWrap <- function(srm.data,
  # yield.data = tidied yield data
  # toDF = convert to a data.frame (or leave as a list?)
   
+  if(verbose) cat('Calculating Predictive Errors\n')
+  
  ## Get list of geo levels  
   
   level.list <- as.list(apmOptions$geo.levels)
   
  ## Apply over all geo levels  
   
-  level.res <- lapply(level.list, apmPredGeoWrap, dmData=srm.data, yieldData=yield.data)
+  level.res <- lapply(level.list, apmPredGeoWrap, srm.data=srm.data,
+                      yield.data=yield.data, verbose=verbose)
   names(level.res) <- level.list
   
  ## If convert to DF
@@ -211,5 +222,58 @@ apmPredLevelWrap <- function(srm.data,
   return(level.res)
   
 }
+ 
+### Summarize the errors by level --------------------------------------------------------
+
+
+apmSummErrors <- function(all.errors, 
+                          geo.level
+)
+{  
   
+  ## Extract the appropriate error level  
+  
+  level.err <- all.errors[[which(names(all.errors) == geo.level)]]
+  
+  ## Calculate median errors for combined units and houses
+  
+  a.abs<-tapply(abs(level.err$err), level.err$method, median, na.rm=TRUE)
+  a.act<-tapply(level.err$err, level.err$method, median, na.rm=TRUE)
+  
+  ## calculate errors for houses  
+  
+  hiX <- which(level.err$type=='house')
+  h.abs<-tapply(abs(level.err$err[hiX]), level.err$method[hiX], median, na.rm=TRUE)
+  h.act<-tapply(level.err$err[hiX], level.err$method[hiX], median, na.rm=TRUE)
+  
+  ## Calculate errors for units  
+  
+  uiX <- which(level.err$type=='unit')
+  u.abs<-tapply(abs(level.err$err[uiX]), level.err$method[uiX], median, na.rm=TRUE)
+  u.act<-tapply(level.err$err[uiX], level.err$method[uiX], median, na.rm=TRUE)
+  
+  ## Combine results into a table  
+  
+  res <- data.frame(geo.level = rep(geo.level, 4),
+                    method = names(a.abs),
+                    all.act = as.numeric(a.act),
+                    all.abs = as.numeric(a.abs),
+                    house.act = as.numeric(h.act),
+                    house.abs = as.numeric(h.abs),
+                    unit.act = as.numeric(u.act),
+                    unit.abs = as.numeric(u.abs))
+  
+  ## Conver to a tidy data frame
+  
+  res.tidy <- melt(res, id=c('geo.level', 'method'))
+  
+  ## Return Values
+  
+  return(res.tidy)
+  
+}  
+
+
+
+ 
  

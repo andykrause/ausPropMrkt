@@ -10,7 +10,7 @@
 
   # Parameters
   reBuildData <- FALSE
-  reAnalyze <- TRUE
+  reAnalyze <- FALSE
   offline <- FALSE
   verbose <- TRUE
 
@@ -85,12 +85,6 @@
   } else  {
     
     load(paste0(dataPath, 'yieldResults.RData'))
-    
-    # Strip values out and clean up
-    spag.results <- results$spag.results
-    hedimp.results <- results$hedimp.results
-    index.results <- results$index.results
-    srm.results <- results$srm.results
 
   }
 
@@ -325,10 +319,10 @@
                               geom_smooth(method=lm, se=FALSE, size=2) +
                               xlab("Home Price Movement in Qtr") +
                               ylab("Rental Yield Bias from Matched Results\n") +
-                              scale_x_continuous(limits=c(-.02, .03),
-                                                 breaks=seq(-.02, .03, .01), 
+                              scale_x_continuous(limits=c(-.035, .04),
+                                                 breaks=seq(-.03, .04, .01), 
                                                  labels=paste0(format(100 *
-                                                               (seq(-.02, .03, .01)),
+                                                               (seq(-.03, .04, .01)),
                                                                nsmall=1), "%")) +
                               scale_y_continuous(limits=c(0, .011),
                                                  breaks=seq(0, .01, .002), 
@@ -370,3 +364,9 @@
        unit.bias.plot.time
  
  ### Save plotting information            
+
+   rm(cleanTrans)
+   save.image(paste0(dataPath, 'aresWrkspce.RData'))
+   
+       
+       

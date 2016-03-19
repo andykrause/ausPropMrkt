@@ -233,7 +233,7 @@
                        scale_colour_manual(values=methCols) +
                        scale_linetype_manual(values=methLines) + 
                        xlab("") +
-                       ylab("Rental Yield\n") +
+                       ylab("Rent-Price Ratio\n") +
                        scale_x_continuous(breaks=seq(0, 20, 4), 
                                           labels=2011:2016) +
                        scale_y_continuous(limits=c(.030, .049),

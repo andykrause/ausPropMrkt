@@ -309,9 +309,36 @@ apmFullDataAnalysis <- function(clean.trans,
   
 }
 
+### Function to calculate bias from one method to other methods --------------------------
 
 
-
+apmCalcBias <- function(geo.level,
+                        yield.data,
+                        comp.method='Match'){
+  
+  geo.data <- yield.data[yield.data$geo.level == geo.level, ]
+  geo.data$uid <- paste0(geo.data$time, "..", geo.data$geo)
+  
+  geo.h <- geo.data[geo.data$type == 'Houses', ]
+  geo.u <- geo.data[geo.data$type == 'Units', ]
+  
+  geo.hnm <- geo.h[geo.h$method != comp.method, ]
+  geo.hm <- geo.h[geo.h$method == comp.method, ]
+  names(geo.hm)[which(names(geo.hm) == 'yield')] <- 'comp.yield'
+  
+  geo.unm <- geo.u[geo.u$method != comp.method, ]
+  geo.um <- geo.u[geo.u$method == comp.method, ]
+  names(geo.um)[which(names(geo.um) == 'yield')] <- 'comp.yield'
+  
+  geo.hh <- merge(geo.hnm, geo.hm[,c('uid', 'comp.yield')])
+  geo.hh$Bias <- geo.hh$yield - geo.hh$comp.yield
+  
+  geo.uu <- merge(geo.unm, geo.um[,c('uid', 'comp.yield')])
+  geo.uu$Bias <- geo.uu$yield - geo.uu$comp.yield
+  
+  return(rbind(geo.hh, geo.uu))
+  
+} 
 
 
 

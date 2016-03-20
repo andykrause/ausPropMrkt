@@ -295,7 +295,7 @@
    house.bias.plot <- ggplot(globHH, 
                              aes(x=App.Rate, y=Bias)) + 
                              geom_point(colour='black', size=2) + 
-                             geom_smooth(method=lm, se=FALSE, size=2) +
+                             geom_smooth(method=loess, se=TRUE, size=2) +
                              xlab("Home Price Movement in Qtr\n") +
                              ylab("Rental Yield Bias from Matched Results\n") +
                              scale_x_continuous(limits=c(-.06, .085),
@@ -316,7 +316,7 @@
      unit.bias.plot <- ggplot(globUU, 
                               aes(x=App.Rate, y=Bias)) + 
                               geom_point(colour='black', size=2) + 
-                              geom_smooth(method=lm, se=FALSE, size=2) +
+                              geom_smooth(method=loess, se=TRUE, size=2) +
                               xlab("Home Price Movement in Qtr") +
                               ylab("Rental Yield Bias from Matched Results\n") +
                               scale_x_continuous(limits=c(-.035, .04),
@@ -339,7 +339,7 @@
       house.bias.plot.time <- ggplot(globHH, 
                                      aes(x=time, y=Bias)) + 
                                      geom_point(colour='black', size=2) + 
-                                     geom_smooth(method=lm, size=2) +
+                                     geom_smooth(method=loess, size=2) +
                                      xlab("Time\n") +
                                      ylab("Rental Yield Bias from Matched Results\n") +
                                      scale_x_continuous(limits=c(0, 20),
@@ -350,10 +350,10 @@
       house.bias.plot.time
 
       # Make house plot
-       unit.bias.plot.time <- ggplot(globHH, 
+       unit.bias.plot.time <- ggplot(globUU, 
                                      aes(x=time, y=Bias)) + 
                                      geom_point(colour='black', size=2) + 
-                                     geom_smooth(method=lm, size=2) +
+                                     geom_smooth(method=loess, size=2) +
                                      xlab("Time\n") +
                                      ylab("Rental Yield Bias from Matched Results\n") +
                                      scale_x_continuous(limits=c(0, 20),
@@ -362,7 +362,63 @@
                                      facet_wrap(~method) +
                                      theme_prr
        unit.bias.plot.time
- 
+
+ ## Compare the biases over geo level
+  
+  # create data
+  
+  level.bias <- lapply(as.list(apmOptions$geo.level), 
+                       FUN=apmCalcBias, yield.data=yield.tidy)       
+  level.bias <- rbind.fill(level.bias)
+  level.bias$geo.level <- factor(level.bias$geo.level, levels = c('Global', 'lga',
+                                                            'sla1', 'postCode', 'suburb'))
+  
+  house.bias <- level.bias[level.bias$type == 'Houses',]
+  unit.bias <- level.bias[level.bias$type == 'Units',]
+  
+  # PLot house results
+  
+  house.all.diff <- ggplot(house.bias, 
+                           aes(x=time, y=Bias, group=geo.level, color=geo.level)) + 
+                    geom_point(colour='black', size=.3, alpha=.1) + 
+                    geom_smooth(method=loess, size=1, se=TRUE) +
+                    xlab("\nTime\n") +
+                    ylab("Rent-Price Ratio Difference from Match\n") +
+                    scale_x_continuous(limits=c(0, 20),
+                                       breaks=seq(0, 20, 4),
+                                       labels=2011:2016) +
+                    scale_y_continuous(limits=c(-.01, 0.005),
+                                       breaks=seq(-.01, .005, .0025),
+                                       labels=paste0(format(100 * 
+                                                              seq(-.01, .005, .0025),
+                                                            nsmall=1), "%")) +
+    
+                    facet_wrap(~method) +
+                    geom_hline(yintercept = 0) + 
+                    theme_prr
+  house.all.diff
+  
+  unit.all.diff <- ggplot(unit.bias, 
+                           aes(x=time, y=Bias, group=geo.level, color=geo.level)) + 
+    geom_point(colour='black', size=.3, alpha=.1) + 
+    geom_smooth(method=loess, size=1, se=TRUE) +
+    xlab("\nTime\n") +
+    ylab("Rent-Price Ratio Difference from Match\n") +
+    scale_x_continuous(limits=c(0, 20),
+                       breaks=seq(0, 20, 4),
+                       labels=2011:2016) +
+    scale_y_continuous(limits=c(-.01, 0.005),
+                       breaks=seq(-.01, .005, .0025),
+                       labels=paste0(format(100 * 
+                                              seq(-.01, .005, .0025),
+                                            nsmall=1), "%")) +
+    
+    facet_wrap(~method) +
+    
+    geom_hline(yintercept = 0) + 
+    theme_prr
+  unit.all.diff
+  
  ### Save plotting information            
 
    rm(cleanTrans)

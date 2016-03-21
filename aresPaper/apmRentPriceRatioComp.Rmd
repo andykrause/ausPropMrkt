@@ -1,0 +1,60 @@
+---
+title: "Rent-Price Ratio Comparison"
+author: "Andy Krause and Gideon Aschwanden"
+date: "March 21, 2016"
+output: html_document
+---
+
+This document describes the process taken to create the results of the rent-price ratio comparison working paper.  The analysis is conducted in R.  All code can be found at the project's [github page](https://github.com/andykrause/ausPropMrkt).
+
+### Preliminary commands
+
+We begin with a set of preliminary commands such as setting basic parameters, sourcing files, reading in libraries, etc.  
+
+#### Basic Control Parameters
+
+There are four basic (and binary) control parameters.  The parameter determine a number of the actions takes, the level of feedback given and the location from which to source files.  
+
+1. **reBuildData** determines whether or not to rebuild the data from the raw datasets or to load a pre-cleaned data object.
+2. **reAnalyze** determines whether or not to re-analyze and re-calculate the individual yield estimates at the geographic and property levels.  
+3. **offline** if you are offline, then this will source the necessary code files from a local directory
+4. **verbose** sets whether or not to return progress outputs from larger functions
+
+```{r, echo=TRUE}
+  reBuildData <- FALSE
+  reAnalyze <- FALSE
+  offline <- FALSE
+  verbose <- TRUE
+```
+
+It should be noted that more specific parameters, such as those consider in data cleaning and preparation exercises are set at by the *_apmSetOptions()_* which is shown below.  Options are stored in the **apmOptions** object in the global environment and can be changed with *_apmChgOptions()_*.  
+
+#### Paths to Data
+
+Next, we set the path to the various data directories and specific files.  
+
+1. **data.path** is the general path to data directory
+2. **export.path** is the path to export specific data and images to
+3. **sale.file** is the specific location and name of the sales file within the **data.path**
+4. **rent.file** is the specfic location and name of the rentals file within the **data.path**
+5. **geo.path**
+
+```{r, echo=TRUE}
+  dataPath <- "C:/data/research/priceRentMethComp/"
+  exportPath <- dataPath
+  salePath <- 'transData/newSales.csv'
+  rentPath <- 'transData/newRentals.csv'
+  geoPath=list(suburb='shapefiles/Vic_Suburbs.shp',
+               lga='shapefiles/Vic_LGAs.shp',
+               sla1='shapefiles/Vic_SLA1.shp',
+               postcode='shapefiles/Vic_PostCodes.shp',
+               ssFile='spatialData/allSS.csv')
+  
+```  
+  
+  
+  
+  
+  
+  
+  

@@ -107,11 +107,11 @@
                                    all.errors=all.errors))
   # Method
   errors.tidy$method <- as.character(errors.tidy$method)
-  errors.tidy$method[errors.tidy$method == 'spag'] <- 'Sp Aggr'
+  errors.tidy$method[errors.tidy$method == 'spag'] <- 'Sp Med'
   errors.tidy$method[errors.tidy$method == 'hedimp'] <- 'Impute'
   errors.tidy$method[errors.tidy$method == 'srm'] <- 'Match'
   errors.tidy$method[errors.tidy$method == 'index'] <- 'Index'
-  errors.tidy$method <- factor(errors.tidy$method, levels = c('Sp Aggr', 'Index',
+  errors.tidy$method <- factor(errors.tidy$method, levels = c('Sp Med', 'Index',
                                                               'Impute', 'Match'))
   
   # Geo.level
@@ -167,7 +167,7 @@
                        geom_point(size=6)+
                        scale_shape_manual(values = 15:18) +
                        scale_colour_manual(values = methCols) +
-                       xlab("Geographic Level of Analysis\n") + 
+                       xlab("\nGeographic Level of Analysis\n") + 
                        ylab("Median Absolute Prediction Error\n") +
                        scale_y_continuous(limits=c(.08, .21),
                                           breaks=seq(.09, .21, .03), 
@@ -274,8 +274,11 @@
    # Build a house and unit index
    har <- c(0, ((glob.values$raw$house.sale[2:20] - glob.values$raw$house.sale[1:19])/
                   glob.values$raw$house.sale[1:19]))
+   har <- lowess(har)$y
    uar <- c(0, ((glob.values$raw$unit.sale[2:20] - glob.values$raw$unit.sale[1:19])/
                   glob.values$raw$unit.sale[1:19]))
+   uar <- lowess(uar)$y
+   
    
    # Build data for houses
    globH <- glob[glob$type == 'Houses',]
@@ -295,15 +298,15 @@
    house.bias.plot <- ggplot(globHH, 
                              aes(x=App.Rate, y=Bias)) + 
                              geom_point(colour='black', size=2) + 
-                             geom_smooth(method=loess, se=TRUE, size=2) +
-                             xlab("Home Price Movement in Qtr\n") +
+                             geom_smooth(method=lm, se=TRUE, size=2) +
+                             xlab("\nHome Price Movement in Qtr") +
                              ylab("Rental Yield Bias from Matched Results\n") +
-                             scale_x_continuous(limits=c(-.06, .085),
-                                                breaks=seq(-.04, .08, .02), 
+                             scale_x_continuous(limits=c(-.01, .03),
+                                                breaks=seq(-.01, .03, .01), 
                                                 labels=paste0(format(100 *
-                                                              (seq(-.04, .08, .02)),
+                                                              (seq(-.01, .03, .01)),
                                                                nsmall=1), "%")) +
-                             scale_y_continuous(limits=c(0, .01),
+                             scale_y_continuous(limits=c(-.005, .01),
                                                 breaks=seq(0, .01, .002), 
                                                 labels=paste0(format(100 * 
                                                               (seq(0, .01, .002)),
@@ -316,14 +319,14 @@
      unit.bias.plot <- ggplot(globUU, 
                               aes(x=App.Rate, y=Bias)) + 
                               geom_point(colour='black', size=2) + 
-                              geom_smooth(method=loess, se=TRUE, size=2) +
-                              xlab("Home Price Movement in Qtr") +
+                              geom_smooth(method=lm, se=TRUE, size=2) +
+                              xlab("\nHome Price Movement in Qtr") +
                               ylab("Rental Yield Bias from Matched Results\n") +
-                              scale_x_continuous(limits=c(-.035, .04),
-                                                 breaks=seq(-.03, .04, .01), 
-                                                 labels=paste0(format(100 *
-                                                               (seq(-.03, .04, .01)),
-                                                               nsmall=1), "%")) +
+       scale_x_continuous(limits=c(-.01, .015),
+                          breaks=seq(-.01, .01, .01), 
+                          labels=paste0(format(100 *
+                                                 (seq(-.01, .01, .01)),
+                                               nsmall=1), "%")) +
                               scale_y_continuous(limits=c(0, .011),
                                                  breaks=seq(0, .01, .002), 
                                                  labels=paste0(format(100 * 
@@ -339,7 +342,7 @@
       house.bias.plot.time <- ggplot(globHH, 
                                      aes(x=time, y=Bias)) + 
                                      geom_point(colour='black', size=2) + 
-                                     geom_smooth(method=loess, size=2) +
+                                     geom_smooth(method=lm, size=2) +
                                      xlab("Time\n") +
                                      ylab("Rental Yield Bias from Matched Results\n") +
                                      scale_x_continuous(limits=c(0, 20),
@@ -353,7 +356,7 @@
        unit.bias.plot.time <- ggplot(globUU, 
                                      aes(x=time, y=Bias)) + 
                                      geom_point(colour='black', size=2) + 
-                                     geom_smooth(method=loess, size=2) +
+                                     geom_smooth(method=lm, size=2) +
                                      xlab("Time\n") +
                                      ylab("Rental Yield Bias from Matched Results\n") +
                                      scale_x_continuous(limits=c(0, 20),

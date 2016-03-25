@@ -11,7 +11,7 @@
   # Parameters
   reBuildData <- FALSE
   reAnalyze <- FALSE
-  offline <- FALSE
+  offline <- TRUE
   verbose <- TRUE
 
   # Paths and file names
@@ -130,7 +130,8 @@
  ## Set up graphics parameters 
 
   # Set colors for plots
-  methCols <- c('navy', 'royalblue2', 'skyblue', 'gray50')
+  unitCols <- c('forestgreen', 'green', 'lightgreen', 'gray50')
+  houseCols <- c('navy', 'royalblue2', 'skyblue', 'gray50')
   methSizes <- c(.5, 1, 1.5, 2)
   methLines <- c(1, 1, 1, 1)  
   
@@ -149,8 +150,8 @@
           legend.text=element_text(color='black'),
           legend.title=element_blank(),
           legend.key.width=unit(2, "cm"),
-          strip.background = element_rect(fill = "orange", 
-                                          color = "orange", size = .1),
+          strip.background = element_rect(fill = "gray50", 
+                                          color = "gray50", size = .1),
           strip.text.x = element_text(face = "bold"),
           strip.text.y = element_text(face = "bold"))
   
@@ -158,49 +159,49 @@
 
   # Prep data
   all.e <- errors.tidy[errors.tidy$variable == 'all.abs', ]
-  
- ## Plot for all types
-  
-  error.plot <- ggplot(all.e, 
-                       aes(x=geo.level, y=value, group=method, shape=method,
-                           color=method)) +
-                       geom_point(size=6)+
-                       scale_shape_manual(values = 15:18) +
-                       scale_colour_manual(values = methCols) +
-                       xlab("\nGeographic Level of Analysis\n") + 
-                       ylab("Median Absolute Prediction Error\n") +
-                       scale_y_continuous(limits=c(.08, .21),
-                                          breaks=seq(.09, .21, .03), 
-                                          labels=paste0(format(100 * (seq(.09, .21, .03)),
-                                                        nsmall=1), "%")) + 
-                       theme_prr +
-                       theme(legend.position='right')
-  
- ## Plot by use
-  
-  # Prep Data
   type.e <- errors.tidy[errors.tidy$variable == 'house.abs' | 
                           errors.tidy$variable == 'unit.abs', ]
   type.e$variable <- as.character(type.e$variable)
   type.e$variable[type.e$variable == 'house.abs'] <- "Houses"
   type.e$variable[type.e$variable == 'unit.abs'] <- "Unit"
   
-  use.error.plot <- ggplot(type.e, 
-                           aes(x=geo.level, y=value, group=method, shape=method,
-                               colour=method)) +
-                           facet_wrap(~variable) + 
-                           geom_point(size=6)+
-                           scale_shape_manual(values = 15:18) +
-                           scale_colour_manual(values = methCols) +
-                           xlab("Estimation Method") + 
-                           ylab("Median Absolute Prediction Error\n") +
-                           scale_y_continuous(limits=c(.08, .24),
-                                              breaks=seq(.09, .24, .03), 
-                                              labels=paste0(format(100 * (seq(.09,
-                                                                         .24, .03)),
-                                                            nsmall=1), "%")) + 
-                           theme_prr +
-                           theme(legend.position='right')
+ ## Plot for all types
+
+  house.error <- ggplot(type.e[type.e$variable == 'Houses', ], 
+                        aes(x=geo.level, y=value, group=method, shape=method,
+                            colour=method)) +
+    facet_wrap(~variable) + 
+    geom_point(size=3)+
+    scale_shape_manual(values = 15:18) +
+    scale_colour_manual(values = houseCols) +
+    xlab("\nGeographic Level of Analysis") + 
+    ylab("Median Absolute Prediction Error\n") +
+    scale_y_continuous(limits=c(.08, .24),
+                       breaks=seq(.09, .24, .03), 
+                       labels=paste0(format(100 * (seq(.09,
+                                                       .24, .03)),
+                                            nsmall=1), "%")) +
+    scale_x_discrete(labels=c('Metro','LGA', 'SLA1', 'PC', 'Sub.'))+
+    theme_prr + theme(legend.key.width=unit(.5, "cm"), legend.position='top')
+  
+  unit.error <- ggplot(type.e[type.e$variable == 'Unit', ], 
+                       aes(x=geo.level, y=value, group=method, shape=method,
+                           colour=method)) +
+    facet_wrap(~variable) + 
+    geom_point(size=3)+
+    scale_shape_manual(values = 15:18) +
+    scale_colour_manual(values = unitCols) +
+    xlab("\nGeographic Level of Analysis") + 
+    ylab("Median Absolute Prediction Error\n") +
+    scale_y_continuous(limits=c(.08, .24),
+                       breaks=seq(.09, .24, .03), 
+                       labels=paste0(format(100 * (seq(.09,
+                                                       .24, .03)),
+                                            nsmall=1), "%")) +
+    scale_x_discrete(labels=c('Metro','LGA', 'SLA1', 'PC', 'Sub.'))+
+    theme_prr + theme(legend.key.width=unit(.5, "cm"), legend.position='top')
+  
+  ggMultiPlots(house.error, unit.error, cols=2)   
   
   ## Make plots by yield results
   
@@ -208,11 +209,11 @@
 
   # Rename the methods  
    yield.tidy$method <- as.character(yield.tidy$method)
-   yield.tidy$method[yield.tidy$method == 'spag'] <- 'Sp Aggr'
+   yield.tidy$method[yield.tidy$method == 'spag'] <- 'Sp Med'
    yield.tidy$method[yield.tidy$method == 'hedimp'] <- 'Impute'
    yield.tidy$method[yield.tidy$method == 'srm'] <- 'Match'
    yield.tidy$method[yield.tidy$method == 'index'] <- 'Index'
-   yield.tidy$method <- factor(yield.tidy$method, levels = c('Sp Aggr', 'Index',
+   yield.tidy$method <- factor(yield.tidy$method, levels = c('Sp Med', 'Index',
                                                                'Impute', 'Match'))
    # Rename the property Types  
    yield.tidy$type[yield.tidy$type == 'house'] <- 'Houses'
@@ -224,47 +225,82 @@
    glob <- yield.tidy[yield.tidy$geo.level == 'Global', ]
 
    # Global Plot  
-   glob.plot <- ggplot(glob, 
+   
+   house.glob <- ggplot(glob[glob$type == 'Houses',], 
+                        aes(x=time, y=yield, group=method))+
+     geom_line(aes(colour=method, size=method, linetype=method,
+                   lineend='round', linejoin='round')) +
+     facet_wrap(~type) +
+     scale_size_manual(values=methSizes) +
+     scale_colour_manual(values=houseCols) +
+     scale_linetype_manual(values=methLines) + 
+     xlab("") +
+     ylab("Rent-Price Ratio\n") +
+     scale_x_continuous(breaks=seq(0, 20, 4), 
+                        labels=2011:2016) +
+     scale_y_continuous(limits=c(.030, .049),
+                        breaks=seq(.031, .049, .002), 
+                        labels=seq(.031, .049, .002)) + 
+     theme_prr + 
+     theme(legend.key.width=unit(.55, "cm"))
+   
+   unit.glob <- ggplot(glob[glob$type == 'Units',], 
                        aes(x=time, y=yield, group=method))+
-                       facet_wrap(~type) +
-                       geom_line(aes(colour=method, size=method, linetype=method,
-                                     lineend='round', linejoin='round')) +
-                       scale_size_manual(values=methSizes) +
-                       scale_colour_manual(values=methCols) +
-                       scale_linetype_manual(values=methLines) + 
-                       xlab("") +
-                       ylab("Rent-Price Ratio\n") +
-                       scale_x_continuous(breaks=seq(0, 20, 4), 
-                                          labels=2011:2016) +
-                       scale_y_continuous(limits=c(.030, .049),
-                                          breaks=seq(.031, .049, .002), 
-                                          labels=paste0(format(100 * (seq(.031,
-                                                                          .049, .002)),
-                                                        nsmall=1), "%")) + 
-                        theme_prr
-
- ## 
+     geom_line(aes(colour=method, size=method, linetype=method,
+                   lineend='round', linejoin='round')) +
+     scale_size_manual(values=methSizes) +
+     scale_colour_manual(values=unitCols) +
+     scale_linetype_manual(values=methLines) +
+     facet_wrap(~type) +
+     xlab("") +
+     ylab("Rent-Price Ratio\n") +
+     scale_x_continuous(breaks=seq(0, 20, 4), 
+                        labels=2011:2016) +
+     scale_y_continuous(limits=c(.030, .049),
+                        breaks=seq(.031, .049, .002), 
+                        labels=seq(.031, .049, .002)) + 
+     theme_prr + 
+     theme(legend.key.width=unit(.55, "cm"))
+   
+   ggMultiPlots(house.glob, unit.glob, cols=2) 
+   
+ ##
+   
    sub.data <- yield.tidy[yield.tidy$geo.level == 'suburb', ]
    
    # Global Plot  
-   sub.plot <- ggplot(sub.data, 
-                      aes(x=time, y=yield, group=geo))+
-                      facet_wrap(type~method, ncol=4) +
-                      geom_line(color='gray50', alpha=.3) +
-                      geom_line(data=glob, 
-                                aes(x=time, y=yield, group=method),
-                                size=1.5) +
-                      xlab("") +
-                      ylab("Rental Yield by Suburb\n") +
-                      scale_x_continuous(breaks=seq(0, 20, 4), 
-                                         labels=2011:2016) +
-                      scale_y_continuous(limits=c(.01, .1),
-                                         breaks=seq(.02, .08, .02), 
-                                         labels=paste0(format(100 * (seq(.02,
-                                                                         .08, .02)),
-                                                                        nsmall=1), "%")) +
-                      theme_prr
-   sub.plot
+   
+   sub.house2 <- ggplot(sub.data[sub.data$type=='Houses',], 
+                        aes(x=time, y=yield, group=geo))+
+     facet_wrap(~method, ncol=4) +
+     geom_line(color='blue', alpha=.05) +
+     geom_line(data=glob[glob$type=="Houses", ], 
+               aes(x=time, y=yield, group=method),
+               size=1.2, color='navy') +
+     xlab("") +
+     ylab("RPR by Suburb: Houses\n") +
+     scale_x_continuous(breaks=seq(4, 20, 8), 
+                        labels=c(2012, 2014, 2016)) +
+     scale_y_continuous(limits=c(.02, .065),
+                        breaks=seq(.02, .06, .01)) +
+     theme_prr
+   
+   sub.unit2 <- ggplot(sub.data[sub.data$type=='Units',], 
+                       aes(x=time, y=yield, group=geo))+
+     facet_wrap(~method, ncol=4) +
+     geom_line(color='forestgreen', alpha=.05) +
+     geom_line(data=glob[glob$type=="Units", ], 
+               aes(x=time, y=yield, group=method),
+               size=1.2, color='forestgreen') +
+     xlab("") +
+     ylab("RPR by Suburb: Units\n") +
+     scale_x_continuous(breaks=seq(4, 20, 8), 
+                        labels=c(2012, 2014, 2016)) +
+     scale_y_continuous(limits=c(.02, .065),
+                        breaks=seq(.02, .06, .01)) +
+     theme_prr
+   
+   ggMultiPlots(sub.house2, sub.unit2) 
    
  ## Compare bias in method vs appreciation
    
@@ -281,61 +317,57 @@
    
    
    # Build data for houses
-   globH <- glob[glob$type == 'Houses',]
+   globH <- glob[glob$type == 'Houses', ]
    globH$App.Rate <- rep(har, 4)
-   globH$Bias <- globH$yield[61:80] - globH$yield  
-   globHH <- globH[1:60,]
-   globHH <- globHH[globHH$time != 1,]
+   globH$Bias <- globH$yield - globH$yield[61:80]   
+   globHH <- globH[1:60, ]
+   globHH <- globHH[globHH$time != 1, ]
    
    # Build data for units
-   globU <- glob[glob$type == 'Units',]
+   globU <- glob[glob$type == 'Units', ]
    globU$App.Rate <- rep(uar, 4)
-   globU$Bias <- globU$yield[61:80] - globU$yield  
-   globUU <- globU[1:60,]
-   globUU <- globUU[globUU$time != 1,]
+   globU$Bias <- globU$yield - globU$yield[61:80]   
+   globUU <- globU[1:60, ]
+   globUU <- globUU[globUU$time != 1, ]
    
    # Make house plot
+   
    house.bias.plot <- ggplot(globHH, 
-                             aes(x=App.Rate, y=Bias)) + 
-                             geom_point(colour='black', size=2) + 
-                             geom_smooth(method=lm, se=TRUE, size=2) +
-                             xlab("\nHome Price Movement in Qtr") +
-                             ylab("Rental Yield Bias from Matched Results\n") +
-                             scale_x_continuous(limits=c(-.01, .03),
-                                                breaks=seq(-.01, .03, .01), 
-                                                labels=paste0(format(100 *
-                                                              (seq(-.01, .03, .01)),
-                                                               nsmall=1), "%")) +
-                             scale_y_continuous(limits=c(-.005, .01),
-                                                breaks=seq(0, .01, .002), 
-                                                labels=paste0(format(100 * 
-                                                              (seq(0, .01, .002)),
-                                                                 nsmall=1), "%")) +
-                             facet_wrap(~method) +
-                             theme_prr
-     house.bias.plot
+                             aes(x=time, y=Bias)) + 
+     geom_point(colour='blue', size=2) + 
+     geom_smooth(method=loess, se=TRUE, size=2) +
+     xlab("") +
+     ylab("RPR Difference from Match\n") +
+     scale_x_continuous(limits=c(1,20),
+                        breaks=c(4,12,20), 
+                        labels=c(2012, 2014, 2016)) +
+     scale_y_continuous(limits=c(-.01, 0.002),
+                        breaks=seq(-.01, 0, .002)) +
+     facet_wrap(~method) +
+     geom_hline(yintercept = 0) + 
+     theme_prr
+   
+   house.bias.plot
    
      # Unit plot
-     unit.bias.plot <- ggplot(globUU, 
-                              aes(x=App.Rate, y=Bias)) + 
-                              geom_point(colour='black', size=2) + 
-                              geom_smooth(method=lm, se=TRUE, size=2) +
-                              xlab("\nHome Price Movement in Qtr") +
-                              ylab("Rental Yield Bias from Matched Results\n") +
-       scale_x_continuous(limits=c(-.01, .015),
-                          breaks=seq(-.01, .01, .01), 
-                          labels=paste0(format(100 *
-                                                 (seq(-.01, .01, .01)),
-                                               nsmall=1), "%")) +
-                              scale_y_continuous(limits=c(0, .011),
-                                                 breaks=seq(0, .01, .002), 
-                                                 labels=paste0(format(100 * 
-                                                               (seq(0, .01, .002)),
-                                                                    nsmall=1), "%")) +
-                              facet_wrap(~method) +
-                              theme_prr
-      unit.bias.plot
-     
+   
+   unit.bias.plot <- ggplot(globUU, 
+                            aes(x=time, y=Bias)) + 
+     geom_point(colour='forestgreen', size=2) + 
+     geom_smooth(method=loess, se=TRUE, size=2, color='forestgreen') +
+     xlab("") +
+     ylab("RPR Difference from Match\n") +
+     scale_x_continuous(limits=c(1,20),
+                        breaks=c(4,12,20), 
+                        labels=c(2012, 2014, 2016)) +
+     scale_y_continuous(limits=c(-.01, 0.002),
+                        breaks=seq(-.01, 0, .002)) +
+     facet_wrap(~method) +
+     geom_hline(yintercept = 0) + 
+     theme_prr
+   
+   unit.bias.plot  
+   
   ## Look at it by time
       
       # Make house plot
@@ -383,48 +415,45 @@
   
   house.all.diff <- ggplot(house.bias, 
                            aes(x=time, y=Bias, group=geo.level, color=geo.level)) + 
-                    geom_point(colour='black', size=.3, alpha=.1) + 
-                    geom_smooth(method=loess, size=1, se=TRUE) +
-                    xlab("\nTime\n") +
-                    ylab("Rent-Price Ratio Difference from Match\n") +
-                    scale_x_continuous(limits=c(0, 20),
-                                       breaks=seq(0, 20, 4),
-                                       labels=2011:2016) +
-                    scale_y_continuous(limits=c(-.01, 0.005),
-                                       breaks=seq(-.01, .005, .0025),
-                                       labels=paste0(format(100 * 
-                                                              seq(-.01, .005, .0025),
-                                                            nsmall=1), "%")) +
-    
-                    facet_wrap(~method) +
-                    geom_hline(yintercept = 0) + 
-                    theme_prr
-  house.all.diff
-  
-  unit.all.diff <- ggplot(unit.bias, 
-                           aes(x=time, y=Bias, group=geo.level, color=geo.level)) + 
     geom_point(colour='black', size=.3, alpha=.1) + 
     geom_smooth(method=loess, size=1, se=TRUE) +
-    xlab("\nTime\n") +
+    xlab("\nHouses\n") +
     ylab("Rent-Price Ratio Difference from Match\n") +
+    scale_colour_manual(values=c('black', 'darkred', 'red', 'orange', 'yellow')) +
+    
     scale_x_continuous(limits=c(0, 20),
-                       breaks=seq(0, 20, 4),
-                       labels=2011:2016) +
+                       breaks=seq(4, 20, 4),
+                       labels=2012:2016) +
     scale_y_continuous(limits=c(-.01, 0.005),
-                       breaks=seq(-.01, .005, .0025),
-                       labels=paste0(format(100 * 
-                                              seq(-.01, .005, .0025),
-                                            nsmall=1), "%")) +
+                       breaks=seq(-.01, .005, .0025)) +
     
     facet_wrap(~method) +
+    geom_hline(yintercept = 0) + 
+    theme_prr
+  house.all.diff
+  
+  
+  unit.all.diff <- ggplot(unit.bias, 
+                          aes(x=time, y=Bias, group=geo.level, color=geo.level)) + 
+    geom_point(colour='black', size=.3, alpha=.1) + 
+    geom_smooth(method=loess, size=1, se=TRUE) +
+    xlab("\nUnits\n") +
+    ylab("Rent-Price Ratio Difference from Match\n") +
+    scale_colour_manual(values=c('black', 'darkred', 'red', 'orange', 'yellow')) +
     
+    scale_x_continuous(limits=c(0, 20),
+                       breaks=seq(4, 20, 4),
+                       labels=2012:2016) +
+    scale_y_continuous(limits=c(-.01, 0.005),
+                       breaks=seq(-.01, .005, .0025)) +
+    
+    facet_wrap(~method) +
     geom_hline(yintercept = 0) + 
     theme_prr
   unit.all.diff
   
  ### Save plotting information            
 
-   rm(cleanTrans)
    save.image(paste0(dataPath, 'aresWrkspce.RData'))
    
        

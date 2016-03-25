@@ -23,12 +23,11 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source('c:/Code/research/ausPropMrkt/apmSrmMethod.R')
     source('c:/Code/research/ausPropMrkt/apmHedimpMethod.R')
     source('c:/Code/research/ausPropMrkt/apmPredAccr.R')
-    
-    
+    source('c:/code/dataVizTools/ggplottools.R')
     source('c:/Code/dataMgmtTools/dataMungeTools.R')
     
     
-    source('c:/Code/research/dataAnalysisTools/stShardFunctions.R')
+    source('c:/Code/dataAnalysisTools/stShardFunctions.R')
   } else {
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/prrFunctions.R'))
@@ -52,6 +51,9 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
                   'dataAnalysisTools/master/stShardFunctions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',
                   'dataMgmtTools/master/dataMungeTools.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/',
+                  'dataVizTools/ggplottools.R'))
+    
   }
   
  ## Load Libraries
@@ -69,7 +71,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   require(ggplot2)
   require(akima)
   require(rgdal)
-  
+  require(grid)
 }
 
 

@@ -52,7 +52,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source(paste0('https://raw.githubusercontent.com/andykrause/',
                   'dataMgmtTools/master/dataMungeTools.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',
-                  'dataVizTools/ggplottools.R'))
+                  'dataVizTools/master/ggPlotTools.R'))
     
   }
   

@@ -11,7 +11,8 @@
 ### Basic engine to run the impute regression on a set of sale and rental data -----------
 
 hedimpEngine <- function(trans.data,             
-                         reg.spec,              
+                         reg.spec, 
+                         geo.level='Global',
                          verbose = FALSE        
 ){
   
@@ -28,6 +29,10 @@ hedimpEngine <- function(trans.data,
   rent.data <- subset(trans.data, transType == 'rent')
   
   ## Estimate models and make new predictions
+  
+  # Fix equation
+  
+  reg.spec <- update(reg.spec, . ~ . -as.factor(postCode))
   
   # Esimate models
   if(verbose) cat('......Estimating sale and rent models\n')
@@ -81,6 +86,80 @@ hedimpEngine <- function(trans.data,
               rent.model = rent.model.info))
   
 }
+
+
+hedimpGeoWrap <- function(geo.field,
+                          x.data,
+                          verbose=FALSE)
+{
+  
+  # ARGUMENTS
+  #
+  # geo.field = geogrphic field for which to calculate all of the indexes
+  # x.data = transaction data
+  # time.field = field containing the time period analyzed
+  
+  ## Get the list of geographies to use
+  
+  if(verbose) cat('Getting list of geographic areas\n')
+  
+  if(geo.field != 'Global'){
+    geo.list <- levels(as.factor(x.data[, geo.field]))
+  } else {
+    geo.list <- 'Global'
+  }
+  ## Apply geo index method across all
+  
+  if(verbose) cat('Calculating Indexes across all geographies\n')
+  
+  ind.list <- lapply(geo.list, FUN=hedimpModelWrap, x.data=x.data,
+                     geo.field=geo.field, verbose=verbose)
+  
+  ## name list items
+  
+  names(ind.list) <- geo.list
+  
+  ## return values
+  
+  return(ind.list)
+  
+}    
+
+hedimpModelWrap <- function(geo.value, geo.field, x.data, verbose){
+  
+  house.data <- x.data[x.data[ ,geo.field] == geo.value & 
+                         x.data$PropertyType == 'House',]
+  unit.data <- x.data[x.data[ ,geo.field] == geo.value & 
+                        x.data$PropertyType == 'Unit',]
+  
+  h.r <- which(house.data$transType == 'rent')
+  u.r <- which(unit.data$transType == 'rent')
+  h.s <- which(house.data$transType == 'sale')
+  u.s <- which(unit.data$transType == 'sale')
+  
+  if(length(table(house.data$transQtr[h.r])) == 20 &
+     length(table(house.data$transQtr[h.s])) == 20){
+    house.results <- hedimpEngine(house.data, apmOptions$houseEquation, 
+                                  geo.level=geo.field,
+                                  verbose = FALSE)
+  } else {
+    house.results <- NULL
+  }
+  
+  if(length(table(unit.data$transQtr[u.r])) == 20 &
+     length(table(unit.data$transQtr[u.s])) == 20){
+    unit.results <- hedimpEngine(unit.data, apmOptions$unitEquation, 
+                                 geo.level=geo.field,
+                                 verbose = FALSE)
+  } else{
+    unit.results <- NULL
+  }
+  return(list(house=house.results,
+              unit=unit.results))
+  
+}
+
+### Assign the yields to the trans data --------------------------------------------------
 
 hedimpAssignYields <- function(trans.data,            
                                hedimp.house,          

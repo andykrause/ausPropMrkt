@@ -154,7 +154,194 @@
                                           color = "gray50", size = .1),
           strip.text.x = element_text(face = "bold"),
           strip.text.y = element_text(face = "bold"))
+
+  ## Make a global comparison of methods
   
+  # Isolate the global data
+  glob <- yield.tidy[yield.tidy$geo.level == 'Global', ]
+  
+  # Global Plot  
+  
+  house.glob <- ggplot(glob[glob$type == 'Houses',], 
+                       aes(x=time, y=yield, group=method))+
+    geom_line(aes(colour=method, size=method, linetype=method,
+                  lineend='round', linejoin='round')) +
+    facet_wrap(~type) +
+    scale_size_manual(values=methSizes) +
+    scale_colour_manual(values=houseCols) +
+    scale_linetype_manual(values=methLines) + 
+    xlab("") +
+    ylab("Rent-Price Ratio\n") +
+    scale_x_continuous(breaks=seq(0, 20, 4), 
+                       labels=2011:2016) +
+    scale_y_continuous(limits=c(.030, .049),
+                       breaks=seq(.031, .049, .002), 
+                       labels=seq(.031, .049, .002)) + 
+    theme_prr + 
+    theme(legend.key.width=unit(.55, "cm"))
+  
+  unit.glob <- ggplot(glob[glob$type == 'Units',], 
+                      aes(x=time, y=yield, group=method))+
+    geom_line(aes(colour=method, size=method, linetype=method,
+                  lineend='round', linejoin='round')) +
+    scale_size_manual(values=methSizes) +
+    scale_colour_manual(values=unitCols) +
+    scale_linetype_manual(values=methLines) +
+    facet_wrap(~type) +
+    xlab("") +
+    ylab("Rent-Price Ratio\n") +
+    scale_x_continuous(breaks=seq(0, 20, 4), 
+                       labels=2011:2016) +
+    scale_y_continuous(limits=c(.030, .049),
+                       breaks=seq(.031, .049, .002), 
+                       labels=seq(.031, .049, .002)) + 
+    theme_prr + 
+    theme(legend.key.width=unit(.55, "cm"))
+  
+  ggMultiPlots(house.glob, unit.glob, cols=2) 
+  
+  ##
+  
+  sub.data <- yield.tidy[yield.tidy$geo.level == 'suburb', ]
+  
+  # Global Plot  
+  
+  sub.house2 <- ggplot(sub.data[sub.data$type=='Houses',], 
+                       aes(x=time, y=yield, group=geo))+
+    facet_wrap(~method, ncol=4) +
+    geom_line(color='blue', alpha=.05) +
+    geom_line(data=glob[glob$type=="Houses", ], 
+              aes(x=time, y=yield, group=method),
+              size=1.2, color='navy') +
+    xlab("") +
+    ylab("RPR by Suburb: Houses\n") +
+    scale_x_continuous(breaks=seq(4, 20, 8), 
+                       labels=c(2012, 2014, 2016)) +
+    scale_y_continuous(limits=c(.02, .065),
+                       breaks=seq(.02, .06, .01)) +
+    theme_prr
+  
+  sub.unit2 <- ggplot(sub.data[sub.data$type=='Units',], 
+                      aes(x=time, y=yield, group=geo))+
+    facet_wrap(~method, ncol=4) +
+    geom_line(color='forestgreen', alpha=.05) +
+    geom_line(data=glob[glob$type=="Units", ], 
+              aes(x=time, y=yield, group=method),
+              size=1.2, color='forestgreen') +
+    xlab("") +
+    ylab("RPR by Suburb: Units\n") +
+    scale_x_continuous(breaks=seq(4, 20, 8), 
+                       labels=c(2012, 2014, 2016)) +
+    scale_y_continuous(limits=c(.02, .065),
+                       breaks=seq(.02, .06, .01)) +
+    theme_prr
+  
+  ggMultiPlots(sub.house2, sub.unit2) 
+  
+  
+  ## Look at it by time
+
+  # Build data for houses
+  globH <- glob[glob$type == 'Houses', ]
+  globH$App.Rate <- rep(har, 4)
+  globH$Bias <- globH$yield - globH$yield[61:80]   
+  globHH <- globH[1:60, ]
+  globHH <- globHH[globHH$time != 1, ]
+  
+  # Build data for units
+  globU <- glob[glob$type == 'Units', ]
+  globU$App.Rate <- rep(uar, 4)
+  globU$Bias <- globU$yield - globU$yield[61:80]   
+  globUU <- globU[1:60, ]
+  globUU <- globUU[globUU$time != 1, ]
+  
+    
+  # Make house plot
+  house.bias.plot.time <- ggplot(globHH, 
+                                 aes(x=time, y=Bias)) + 
+    geom_point(colour='black', size=2) + 
+    geom_smooth(method=loess, size=2) +
+    xlab("Time\n") +
+    ylab("Rental Yield Bias from Matched Results\n") +
+    scale_x_continuous(limits=c(0, 20),
+                       breaks=seq(0, 20, 4),
+                       labels=2011:2016) +
+    facet_wrap(~method) +
+    theme_prr
+  house.bias.plot.time
+  
+  # Make house plot
+  unit.bias.plot.time <- ggplot(globUU, 
+                                aes(x=time, y=Bias)) + 
+    geom_point(colour='black', size=2) + 
+    geom_smooth(method=loess, size=2) +
+    xlab("Time\n") +
+    ylab("Rental Yield Bias from Matched Results\n") +
+    scale_x_continuous(limits=c(0, 20),
+                       breaks=seq(0, 20, 4),
+                       labels=2011:2016) +
+    facet_wrap(~method) +
+    theme_prr
+  unit.bias.plot.time
+  
+  gg<-split(sub.data, as.factor(sub.data$method))
+  vv <- merge(gg$Index, gg$Match[,c('UID', 'yield')], by='UID') 
+  vvH <- vv[vv$type == 'Houses', ]
+  
+  
+  lga.data <- yield.tidy[yield.tidy$geo.level == 'lga', ]
+  lga.data$UID <- paste0(lga.data$geo, "..", lga.data$time)
+  lgg<-split(lga.data, as.factor(lga.data$method))
+  lvv <- merge(lgg$Index, lgg$Match[,c('UID', 'yield')], by='UID') 
+  lvv$dif <- lvv$yield.x - lvv$yield.y
+  lvvH <- lvv[lvv$type == 'Houses', ]
+  
+  pc.data <- yield.tidy[yield.tidy$geo.level == 'postCode', ]
+  pc.data$UID <- paste0(pc.data$geo, "..", pc.data$time)
+  pgg<-split(pc.data, as.factor(pc.data$method))
+  pvv <- merge(pgg$Index, pgg$Match[,c('UID', 'yield')], by='UID') 
+  pvv$dif <- pvv$yield.x - pvv$yield.y
+  pvvH <- pvv[pvv$type == 'Houses', ]
+  
+  
+  house.bias.plot.time <- ggplot(vvH, 
+                                 aes(x=time, y=dif)) + 
+    geom_point(colour='black', size=1, alpha=.1) + 
+    geom_smooth(method=loess, size=2) +
+    geom_smooth(data=lvvH, aes(x=time, y=dif), method=loess, size=2, color='red') +
+    geom_smooth(data=pvvH, aes(x=time, y=dif), method=loess, size=2, color='green') +
+    geom_smooth(data=globHH, aes(x=time, y=Bias), method=loess, size=1, color='black') +
+    
+    xlab("Time\n") +
+    ylab("Rental Yield Bias from Matched Results\n") +
+    scale_x_continuous(limits=c(0, 20),
+                       breaks=seq(0, 20, 4),
+                       labels=2011:2016) +
+    facet_wrap(~method) +
+    theme_prr
+  house.bias.plot.time
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+    
  ## All types errors by method and geography  
 
   # Prep data
@@ -219,88 +406,6 @@
    yield.tidy$type[yield.tidy$type == 'house'] <- 'Houses'
    yield.tidy$type[yield.tidy$type == 'unit'] <- 'Units'
 
-  ## Make a global comparison of methods
-
-   # Isolate the global data
-   glob <- yield.tidy[yield.tidy$geo.level == 'Global', ]
-
-   # Global Plot  
-   
-   house.glob <- ggplot(glob[glob$type == 'Houses',], 
-                        aes(x=time, y=yield, group=method))+
-     geom_line(aes(colour=method, size=method, linetype=method,
-                   lineend='round', linejoin='round')) +
-     facet_wrap(~type) +
-     scale_size_manual(values=methSizes) +
-     scale_colour_manual(values=houseCols) +
-     scale_linetype_manual(values=methLines) + 
-     xlab("") +
-     ylab("Rent-Price Ratio\n") +
-     scale_x_continuous(breaks=seq(0, 20, 4), 
-                        labels=2011:2016) +
-     scale_y_continuous(limits=c(.030, .049),
-                        breaks=seq(.031, .049, .002), 
-                        labels=seq(.031, .049, .002)) + 
-     theme_prr + 
-     theme(legend.key.width=unit(.55, "cm"))
-   
-   unit.glob <- ggplot(glob[glob$type == 'Units',], 
-                       aes(x=time, y=yield, group=method))+
-     geom_line(aes(colour=method, size=method, linetype=method,
-                   lineend='round', linejoin='round')) +
-     scale_size_manual(values=methSizes) +
-     scale_colour_manual(values=unitCols) +
-     scale_linetype_manual(values=methLines) +
-     facet_wrap(~type) +
-     xlab("") +
-     ylab("Rent-Price Ratio\n") +
-     scale_x_continuous(breaks=seq(0, 20, 4), 
-                        labels=2011:2016) +
-     scale_y_continuous(limits=c(.030, .049),
-                        breaks=seq(.031, .049, .002), 
-                        labels=seq(.031, .049, .002)) + 
-     theme_prr + 
-     theme(legend.key.width=unit(.55, "cm"))
-   
-   ggMultiPlots(house.glob, unit.glob, cols=2) 
-   
- ##
-   
-   sub.data <- yield.tidy[yield.tidy$geo.level == 'suburb', ]
-   
-   # Global Plot  
-   
-   sub.house2 <- ggplot(sub.data[sub.data$type=='Houses',], 
-                        aes(x=time, y=yield, group=geo))+
-     facet_wrap(~method, ncol=4) +
-     geom_line(color='blue', alpha=.05) +
-     geom_line(data=glob[glob$type=="Houses", ], 
-               aes(x=time, y=yield, group=method),
-               size=1.2, color='navy') +
-     xlab("") +
-     ylab("RPR by Suburb: Houses\n") +
-     scale_x_continuous(breaks=seq(4, 20, 8), 
-                        labels=c(2012, 2014, 2016)) +
-     scale_y_continuous(limits=c(.02, .065),
-                        breaks=seq(.02, .06, .01)) +
-     theme_prr
-   
-   sub.unit2 <- ggplot(sub.data[sub.data$type=='Units',], 
-                       aes(x=time, y=yield, group=geo))+
-     facet_wrap(~method, ncol=4) +
-     geom_line(color='forestgreen', alpha=.05) +
-     geom_line(data=glob[glob$type=="Units", ], 
-               aes(x=time, y=yield, group=method),
-               size=1.2, color='forestgreen') +
-     xlab("") +
-     ylab("RPR by Suburb: Units\n") +
-     scale_x_continuous(breaks=seq(4, 20, 8), 
-                        labels=c(2012, 2014, 2016)) +
-     scale_y_continuous(limits=c(.02, .065),
-                        breaks=seq(.02, .06, .01)) +
-     theme_prr
-   
-   ggMultiPlots(sub.house2, sub.unit2) 
    
  ## Compare bias in method vs appreciation
    
@@ -316,20 +421,7 @@
    uar <- lowess(uar)$y
    
    
-   # Build data for houses
-   globH <- glob[glob$type == 'Houses', ]
-   globH$App.Rate <- rep(har, 4)
-   globH$Bias <- globH$yield - globH$yield[61:80]   
-   globHH <- globH[1:60, ]
-   globHH <- globHH[globHH$time != 1, ]
-   
-   # Build data for units
-   globU <- glob[glob$type == 'Units', ]
-   globU$App.Rate <- rep(uar, 4)
-   globU$Bias <- globU$yield - globU$yield[61:80]   
-   globUU <- globU[1:60, ]
-   globUU <- globUU[globUU$time != 1, ]
-   
+ 
    # Make house plot
    
    house.bias.plot <- ggplot(globHH, 
@@ -367,36 +459,6 @@
      theme_prr
    
    unit.bias.plot  
-   
-  ## Look at it by time
-      
-      # Make house plot
-      house.bias.plot.time <- ggplot(globHH, 
-                                     aes(x=time, y=Bias)) + 
-                                     geom_point(colour='black', size=2) + 
-                                     geom_smooth(method=lm, size=2) +
-                                     xlab("Time\n") +
-                                     ylab("Rental Yield Bias from Matched Results\n") +
-                                     scale_x_continuous(limits=c(0, 20),
-                                                        breaks=seq(0, 20, 4),
-                                                        labels=2011:2016) +
-                                     facet_wrap(~method) +
-                                     theme_prr
-      house.bias.plot.time
-
-      # Make house plot
-       unit.bias.plot.time <- ggplot(globUU, 
-                                     aes(x=time, y=Bias)) + 
-                                     geom_point(colour='black', size=2) + 
-                                     geom_smooth(method=lm, size=2) +
-                                     xlab("Time\n") +
-                                     ylab("Rental Yield Bias from Matched Results\n") +
-                                     scale_x_continuous(limits=c(0, 20),
-                                                        breaks=seq(0, 20, 4),
-                                                        labels=2011:2016) +
-                                     facet_wrap(~method) +
-                                     theme_prr
-       unit.bias.plot.time
 
  ## Compare the biases over geo level
   

@@ -46,6 +46,10 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   geoTempFieldUnit <- "QT_unit_postCode"
   geoTempFieldHouse <- "QT_house_postCode"
   
+ ## Set up index parameters
+  
+  srs.model <- TRUE
+  srs.limit <- 100
   
  ## Set equations for impute model  
   
@@ -78,7 +82,9 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
                       geoTempFieldHouse = geoTempFieldHouse,
                       geoTempFieldUnit = geoTempFieldUnit,
                       houseEquation = houseEquation,
-                      unitEquation = unitEquation)
+                      unitEquation = unitEquation,
+                      srs.model = srs.model,
+                      srs.limit = srs.limit)
  
  ## Assign the options to the global environment  
    

@@ -42,7 +42,9 @@ indexEngine <- function(ref.coefs,
 
 indexModeler <- function(x.data, 
                          use.type='house',
-                         req.nbr=60
+                         req.nbr=60,
+                         srs.model=FALSE,
+                         srs.limit=100
                          )
 {
 
@@ -57,26 +59,55 @@ indexModeler <- function(x.data,
   # Remove postcode fixed effects
   model.eq <- update(model.eq, . ~ . -as.factor(postCode))
 
- ## If 
+ ## Test to see if SRS will work  
   
-  if(nrow(x.data) > req.nbr){
-  
-    x.model <- lm(model.eq, data=x.data)
-    x.index <- indexEngine(x.model$coef)
-    x.raw <- ((x.index / 100) * 
-                median(x.data$transValue[x.data[, apmOptions$time.field] == 1]))
-  } else {
+  if(srs.model){
+     srs.data <- indexMakeRepSales(x.data, 
+                                   time.field=apmOptions$time.field, 
+                                   price.field='transValue', 
+                                   id.prop='AddressID', 
+                                   id.sale='UID')
     
-    x.index <- 'NA'
-    x.raw <- 'NA'
+     srs.good <- ifelse(nrow(srs.data) >= srs.limit, TRUE, FALSE)
+     
+     x.model <- NULL
+     x.check <- try(x.index <- indexSrsSeries(srs.data)$raw, silent=TRUE)
+     if(class(x.check) != 'try-error'){
+       x.raw <- ((x.index / 100) * 
+                 median(x.data$transValue[x.data[, apmOptions$time.field] == 1]))
+     } else {
+       srs.good <- FALSE
+     }
+  }  else {
     
-  }
+    srs.good <- FALSE
   
-  if(length(x.index) < apmOptions$time.periods){
-    x.index <- 'NA'
-    x.raw <- 'NA'
   }
+
+  ## If no srs
   
+  if(!srs.good){
+  
+  
+    if(nrow(x.data) > req.nbr){
+  
+      x.model <- lm(model.eq, data=x.data)
+      x.index <- indexEngine(x.model$coef)
+      x.raw <- ((x.index / 100) * 
+                  median(x.data$transValue[x.data[, apmOptions$time.field] == 1]))
+    } else {
+    
+      x.index <- 'NA'
+      x.raw <- 'NA'
+    
+    }
+  
+    if(length(x.index) < apmOptions$time.periods){
+      x.index <- 'NA'
+      x.raw <- 'NA'
+    }
+  }
+    
   return(list(index=x.index,
               raw=x.raw))
 }
@@ -126,16 +157,24 @@ indexModelWrap <- function(geo.value,
   house.sales <- subset(house.data, transType == 'sale')
   house.rents <- subset(house.data, transType == 'rent')
 
-  hs.values <- indexModeler(house.sales, use.type='house')
-  hr.values <- indexModeler(house.rents, use.type='house')
+  hs.values <- indexModeler(house.sales, use.type='house', 
+                            srs.model=apmOptions$srs.model,
+                            srs.limit=apmOptions$srs.limit)
+  hr.values <- indexModeler(house.rents, use.type='house', 
+                            srs.model=apmOptions$srs.model,
+                            srs.limit=apmOptions$srs.limit)
   
  ## Calculate indexes for Units  
 
   unit.sales <- subset(unit.data, transType == 'sale')
   unit.rents <- subset(unit.data, transType == 'rent')
     
-  us.values <- indexModeler(unit.sales, use.type='unit')
-  ur.values <- indexModeler(unit.rents, use.type='unit')
+  us.values <- indexModeler(unit.sales, use.type='unit', 
+                            srs.model=apmOptions$srs.model,
+                            srs.limit=apmOptions$srs.limit)
+  ur.values <- indexModeler(unit.rents, use.type='unit', 
+                            srs.model=apmOptions$srs.model,
+                            srs.limit=apmOptions$srs.limit)
   
   ## Return values
   
@@ -380,4 +419,178 @@ indexLevelWrap <- function(x.data,
   return(results.list)
   
 }  
+
+##########################################################################################
+# Function for calculating sale-resale indices                                           #
+##########################################################################################
+
+# Make the set of matches SRS sales/rentals ----------------------------------------------
+
+indexMakeRepSales <- function(trans.obj,
+                              time.field,
+                              price.field,
+                              id.prop,
+                              id.sale)
+{
+  
+  # ARGUMENTS
+  #
+  # trans.obj = cleaned trans obj from zpiCTClean()
+  # price.field = field where the price variable is located
+  # time.field = field where the time variable is located
+  # id.prop = field where the unique property id is located
+  # id.sale = field where the unique sale id is located
+  
+  ## Set up data  
+  
+  temp.data <- trans.obj[, c(id.sale, id.prop, time.field, price.field)]
+  names(temp.data) <- c('saleID', 'propID', 'time', 'price')
+  
+  # Re order
+  temp.data <- temp.data[order(temp.data$propID, temp.data$time, 
+                               temp.data$price),]
+  
+  # set up two data sets to compare
+  temp.1 <- temp.data[-nrow(temp.data), ]
+  temp.2 <- temp.data[-1, ]
+  
+  ## Find matches
+  
+  srs.id <- temp.1$propID == temp.2$propID & temp.1$time < temp.2$time
+  
+  # Time to srs
+  temp.1 <- temp.1[srs.id, ]
+  temp.2 <- temp.2[srs.id, ]
+  
+  ## Build a data frim of repeat sales
+  
+  srs.data <- data.frame(propID=temp.1$propID,
+                         sale1=temp.1$saleID,
+                         sale2=temp.2$saleID,
+                         time1=temp.1$time,
+                         time2=temp.2$time,
+                         price1=temp.1$price,
+                         price2=temp.2$price
+  )
+  
+  #   # Add location data
+  #   names(srs.data)[1] <- id.prop
+  #   srs.data <- merge(srs.data, loc.obj, by=id.prop)
+  #   
+  ## Return data
+  
+  return(srs.data)
+}
+
+### Calculate the index with SRS model ---------------------------------------------------
+
+indexSrsSeries <- function(srs.obj,
+                           base.merge=1,
+                           smooth.par=.3,
+                           semilog=FALSE,
+                           weighted=FALSE,
+                           het.corr=FALSE,
+                           save.model=FALSE
+)
+{
+  # ARGUMENTS
+  #
+  # srs.obj = merged hed data object
+  # base.merge = hedonic specification
+  # smooth = smooth the series with LOWESS?
+  # smooth.par = lowess smooth parameter
+  # semilog = is this is a semilog regression (log(price) as dependent)
+  # weighted = weight the observations by time between them (less = higher weight)
+  # het.corr = apply a heteroskedasticity correction
+  # save.model = should complete regression model be saved?
+  
+  ## Set a few parameters
+  
+  time.start <- min(srs.obj$time1)
+  time.nbr <- max(srs.obj$time2)
+  
+  ## Calculate price difference
+  
+  if(!semilog){
+    srs.obj$price.dif <- srs.obj$price2 - srs.obj$price1
+  } else {
+    srs.obj$price.dif <- log(srs.obj$price2) - log(srs.obj$price1)
+  }
+  
+  ## Set up time dummy matrix
+  
+  time.matrix <- array(0, dim = c(nrow(srs.obj), 
+                                  time.nbr - time.start - base.merge + 1))
+  
+  # Fill in time matrix
+  for (tm in seq(time.start + base.merge, time.nbr)) {
+    time.matrix[srs.obj$time1==tm, tm - base.merge] <- -1
+    time.matrix[srs.obj$time2==tm, tm - base.merge] <- 1
+  }
+  
+  # Name Time matrix
+  colnames(time.matrix) <- paste0("time.", seq(time.start + base.merge, time.nbr))
+  
+  ## Run the regression
+  
+  reg.model <- lm(srs.obj$price.dif ~ time.matrix + 0)
+  
+  # If het corr and weighted
+  
+  if(!weighted){
+    if(het.corr){
+      err <- residuals(reg.model)
+      wgts <- sqrt(1 / abs(err))
+      reg.model <- lm(srs.obj$price.dif ~ time.matrix + 0, weights=wgts)
+    } 
+  } else {
+    srs.obj$time.dif <- srs.obj$time2-srs.obj$time1
+    if(het.corr){
+      err <- residuals(reg.model)
+      err.fit <- lm(abs(err) ~ srs.obj$time.dif)
+      wgts <- 1 / (fitted(err.fit) ^ 2)
+      reg.model <- lm(srs.obj$price.dif ~ time.matrix + 0, weights=wgts)
+    } else {
+      wgts <- sqrt(sqrt(1 / srs.obj$time.dif))
+      reg.model <- lm(srs.obj$price.dif ~ time.matrix + 0, weights=wgts)
+    }
+  }
+  
+  ## Make the index
+  
+  # Extract coefficients
+  coefs <- as.data.frame(summary(reg.model)$coefficients)
+  
+  # Conver to a series 
+  if(semilog){
+    temp.series <- 1 + c(0, exp(coefs$Estimate) - 1)
+  } else {
+    base.value <- mean(srs.obj$price1[srs.obj$time1 %in% seq(1, base.merge)])
+    temp.series <- c(base.value, coefs$Estimate + base.value)
+    temp.series <- temp.series / temp.series[1]
+  }
+  
+  ## inflate to 100 andy/or smooth  
+  
+  raw.series <- 100 * temp.series
+  smooth.series <- lowess(100 * temp.series, f=smooth.par)$y
+  
+  ## Confints  
+  
+  lo.ci.raw <- c(array(0, dim = base.merge), confint(reg.model, level = .95)[, 1])
+  hi.ci.raw <- c(array(0, dim = base.merge), confint(reg.model, level = .95)[, 2])
+  lo.ci.smooth <- lowess(lo.ci.raw, f=smooth.par)$y
+  hi.ci.smooth <- lowess(hi.ci.raw, f=smooth.par)$y
+  
+  ## Return 
+  
+  return(list(raw = raw.series,
+              smooth = smooth.series,
+              model = ifelse(save.model, reg.model, 'not saved'),
+              confint = list(low = list(raw=lo.ci.raw,
+                                        smooth=lo.ci.smooth),
+                             high = list(raw=hi.ci.raw,
+                                         smooth=hi.ci.smooth))
+  ))
+}
 

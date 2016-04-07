@@ -225,20 +225,19 @@ apmFullDataAnalysis <- function(clean.trans,
   
   if(verbose) cat('Creating Imputed Regression values\n')
   
-  # Estimate the house model
-  hedimp.house <- hedimpEngine(trans.data=subset(clean.trans, PropertyType == 'House'),
-                               reg.spec=apmOptions$houseEquation, verbose=verbose)
+  ## Estimate hedonic imputation values
   
-  # Estimate the unit model
-  hedimp.unit <- hedimpEngine(trans.data=subset(clean.trans, PropertyType == 'Unit'),
-                              reg.spec=apmOptions$unitEquation, verbose=verbose)
-  
+  hedimp.data <- hedImpFullWrap(clean.trans)
   
   # Add impute regression yields to the data
   if(verbose) cat('...Assigning Yields\n')
-  clean.trans <- hedimpAssignYields(trans.data=clean.trans, 
-                                   hedimp.house=hedimp.house, 
-                                   hedimp.unit=hedimp.unit)  
+  
+  hedimp.data <- lapply(hedimp.data, hedimpAssignYields, trans.data=cleanTrans)
+  hedimp.data <- mapply(hedImpAddName, 
+                        geo.level=apmOptions$geo.levels, 
+                        x=hedimp.data, 
+                        SIMPLIFY=FALSE)
+  hedimp.data <- hedImpCompressYields(hedimp.data)
   
   ## Create a set of matched data (adjusted with global time indexes)
   if(verbose) cat('Building Matched Data\n')
@@ -250,7 +249,7 @@ apmFullDataAnalysis <- function(clean.trans,
   ## Add impute data to  and vice versa
   
   if(verbose) cat('Swapping Impute and Matched Yields\n')
-  swappedData <- apmYieldSwap(trans.data=clean.trans,
+  swappedData <- apmYieldSwap(trans.data=hedimp.data,
                               match.data=match.data)
   trans.data <- swappedData$trans.data
   match.data <- swappedData$match.data
@@ -267,7 +266,7 @@ apmFullDataAnalysis <- function(clean.trans,
   
   ## via the hedonic impute regression
   if(verbose) cat('Hedimp analysis\n')
-  hedimp.results <- hedimpYieldWrap(clean.trans, yield.field='imp.actyield', verbose)  
+  hedimp.results <- hedimpYieldWrap(hedimp.data, yield.field='imp.actyield', verbose)  
   
   ## Apply match method
   if(verbose) cat('Match analysis\n')

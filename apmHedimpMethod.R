@@ -87,8 +87,15 @@ hedimpEngine <- function(trans.data,
   
 }
 
+hedImpFullWrap <- function(x.data){
+  
+  all.levels <- as.list(apmOptions$geo.levels)
+  all.list <- lapply(all.levels, hedImpGeoWrap, x.data=x.data)
+  return(all.list)
+}
 
-hedimpGeoWrap <- function(geo.field,
+
+hedImpGeoWrap <- function(geo.field,
                           x.data,
                           verbose=FALSE)
 {
@@ -121,16 +128,24 @@ hedimpGeoWrap <- function(geo.field,
   
   ## return values
   
-  return(ind.list)
+  all.imp <- rbind.fill(lapply(ind.list, hedImpGetResults))
+  all.imp$geo.level <- geo.field
+  
+  return(all.imp)
   
 }    
 
 hedimpModelWrap <- function(geo.value, geo.field, x.data, verbose){
   
-  house.data <- x.data[x.data[ ,geo.field] == geo.value & 
-                         x.data$PropertyType == 'House',]
-  unit.data <- x.data[x.data[ ,geo.field] == geo.value & 
-                        x.data$PropertyType == 'Unit',]
+  if(geo.field == 'Global'){
+    house.data <- x.data[x.data$PropertyType == 'House', ]
+    unit.data <- x.data[x.data$PropertyType == 'Unit', ]
+  } else {
+    house.data <- x.data[x.data[ ,geo.field] == geo.value & 
+                           x.data$PropertyType == 'House',]
+    unit.data <- x.data[x.data[ ,geo.field] == geo.value & 
+                          x.data$PropertyType == 'Unit',]
+  }
   
   h.r <- which(house.data$transType == 'rent')
   u.r <- which(unit.data$transType == 'rent')
@@ -162,8 +177,7 @@ hedimpModelWrap <- function(geo.value, geo.field, x.data, verbose){
 ### Assign the yields to the trans data --------------------------------------------------
 
 hedimpAssignYields <- function(trans.data,            
-                               hedimp.house,          
-                               hedimp.unit            
+                               hedimp.data            
 )
 {
   
@@ -174,28 +188,28 @@ hedimpAssignYields <- function(trans.data,
   # hedimp.unit = imputed unit regression results
   
   # Extract values
-  hedimpValues <- rbind(hedimp.house$results, hedimp.unit$results)
+  #hedimpValues <- rbind(hedimp.house$results, hedimp.unit$results)
   
   # Calculate the ratio
-  hedimpValues$imp.yield <- (hedimpValues$hedimp.rent * 52) / hedimpValues$hedimp.price
+  hedimp.data$imp.yield <- (hedimp.data$hedimp.rent * 52) / hedimp.data$hedimp.price
   
   # Calculate the mixed ratios
-  idS <- which(hedimpValues$Rent == 0)
-  idR <- which(hedimpValues$Price == 0)
+  idS <- which(hedimp.data$Rent == 0)
+  idR <- which(hedimp.data$Price == 0)
   
-  hedimpValues$imp.saleyield <- 0
-  hedimpValues$imp.saleyield[idS] <- ((hedimpValues$hedimp.rent[idS] * 52) / 
-                                       hedimpValues$Price[idS])
-  hedimpValues$imp.rentyield <- 0
-  hedimpValues$imp.rentyield[idR] <- ((hedimpValues$Rent[idR] * 52) / 
-                                        hedimpValues$hedimp.price[idR])
+  hedimp.data$imp.saleyield <- 0
+  hedimp.data$imp.saleyield[idS] <- ((hedimp.data$hedimp.rent[idS] * 52) / 
+                                       hedimp.data$Price[idS])
+  hedimp.data$imp.rentyield <- 0
+  hedimp.data$imp.rentyield[idR] <- ((hedimp.data$Rent[idR] * 52) / 
+                                        hedimp.data$hedimp.price[idR])
   
   # Add Ratio to full dataset 
-  trans.data$imp.yield <- hedimpValues$imp.yield[match(trans.data$UID, hedimpValues$UID)]
-  trans.data$imp.saleyield <- hedimpValues$imp.saleyield[match(trans.data$UID,
-                                                               hedimpValues$UID)]
-  trans.data$imp.rentyield <- hedimpValues$imp.rentyield[match(trans.data$UID, 
-                                                               hedimpValues$UID)]
+  trans.data$imp.yield <- hedimp.data$imp.yield[match(trans.data$UID, hedimp.data$UID)]
+  trans.data$imp.saleyield <- hedimp.data$imp.saleyield[match(trans.data$UID,
+                                                               hedimp.data$UID)]
+  trans.data$imp.rentyield <- hedimp.data$imp.rentyield[match(trans.data$UID, 
+                                                               hedimp.data$UID)]
   trans.data$imp.actyield <- ifelse(trans.data$imp.saleyield == 0, 
                                     trans.data$imp.rentyield, 
                                     trans.data$imp.saleyield)
@@ -226,20 +240,20 @@ hedimpYieldWrap <- function(cleanData,
   
   # Metro 
   hedimpMetro <- spaceTimeShard(stsData = cleanData,
-                            metric=c(yield.field),
+                            metric=c(paste0('Global.', yield.field)),
                             spaceField='all', timeField='transQtr',
                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
                             calcs=list(median='median'))
   
   # By Use
   hedimpMetroH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                             metric=c(yield.field),
+                                 metric=c(paste0('Global.', yield.field)),
                              spaceField='all', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   hedimpMetroU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                             metric=c(yield.field),
+                                 metric=c(paste0('Global.', yield.field)),
                              spaceField='all', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
@@ -248,20 +262,20 @@ hedimpYieldWrap <- function(cleanData,
   if(verbose) cat('...Analyze at LGA Level\n')
   
   hedimpLga <- spaceTimeShard(stsData = cleanData,
-                          metric=c(yield.field),
+                              metric=c(paste0('lga.', yield.field)),
                           spaceField='lga', timeField='transQtr',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use
   hedimpLgaH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                           metric=c(yield.field),
+                               metric=c(paste0('lga.', yield.field)),
                            spaceField='lga', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   hedimpLgaU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                           metric=c(yield.field),
+                               metric=c(paste0('lga.', yield.field)),
                            spaceField='lga', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median')) 
@@ -271,20 +285,20 @@ hedimpYieldWrap <- function(cleanData,
   if(verbose) cat('...Analyze at SLA Level\n')
   
   hedimpSla <- spaceTimeShard(stsData = cleanData,
-                          metric=c(yield.field),
+                              metric=c(paste0('sla1.', yield.field)),
                           spaceField='sla1', timeField='transQtr',
                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
                           calcs=list(median='median'))
   
   # By Use
   hedimpSlaH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                           metric=c(yield.field),
+                               metric=c(paste0('sla1.', yield.field)),
                            spaceField='sla1', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   hedimpSlaU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                           metric=c(yield.field),
+                               metric=c(paste0('sla1.', yield.field)),
                            spaceField='sla1', timeField='transQtr',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
@@ -294,20 +308,20 @@ hedimpYieldWrap <- function(cleanData,
   if(verbose) cat('...Analyze at Suburb Level\n')
   
   hedimpSuburb <- spaceTimeShard(stsData = cleanData,
-                             metric=c(yield.field),
+                                 metric=c(paste0('suburb.', yield.field)),
                              spaceField='suburb', timeField='transQtr',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   # By Use
   hedimpSuburbH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                              metric=c(yield.field),
+                                  metric=c(paste0('suburb.', yield.field)),
                               spaceField='suburb', timeField='transQtr',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
   
   hedimpSuburbU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                              metric=c(yield.field),
+                                  metric=c(paste0('suburb.', yield.field)),
                               spaceField='suburb', timeField='transQtr',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
@@ -317,20 +331,20 @@ hedimpYieldWrap <- function(cleanData,
   if(verbose) cat('...Analyze at Postcode Level\n')
   
   hedimpPostcode <- spaceTimeShard(stsData = cleanData,
-                               metric=c(yield.field),
+                                   metric=c(paste0('postCode.', yield.field)),
                                spaceField='postCode', timeField='transQtr',
                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                calcs=list(median='median'))
   
   # By Use
   hedimpPostcodeH <- spaceTimeShard(cleanData[cleanData$PropertyType == 'House', ],
-                                metric=c(yield.field),
+                                    metric=c(paste0('postCode.', yield.field)),
                                 spaceField='postCode', timeField='transQtr',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median'))
   
   hedimpPostcodeU <- spaceTimeShard(cleanData[cleanData$PropertyType == 'Unit', ],
-                                metric=c(yield.field),
+                                    metric=c(paste0('postCode.', yield.field)),
                                 spaceField='postCode', timeField='transQtr',
                                 defDim='time', stsLimit=apmOptions$geoTempLimit, 
                                 calcs=list(median='median')) 
@@ -347,4 +361,34 @@ hedimpYieldWrap <- function(cleanData,
   
   return(hedimpResults)  
   
+}
+
+### Small function to extract imputation results from lists ------------------------------
+
+hedImpGetResults <- function (x){
+  y <- x$house$results
+  z <- x$unit$results
+  a <- rbind(y,z)
+  return(a)
+}
+
+hedImpAddName <- function(geo.level, x){
+  idx <- grep('yield', colnames(x))
+  names(x)[idx] <- paste0(geo.level, '.', names(x)[idx])
+  return(x)
+}
+
+hedImpCompressYields <- function(yield.obj){
+  
+  y.len <- length(yield.obj)
+  
+  x.data <- yield.obj[[1]]
+  idU <- which(names(x.data) == 'UID')
+  
+  for(iy in 2:y.len){
+    y.data <- yield.obj[[iy]]
+    idX <- grep('yield', colnames(y.data))
+    x.data <- merge(x.data, y.data[,c(idU, idX)], by='UID', all.x=TRUE)
+  }
+  return(x.data)
 }

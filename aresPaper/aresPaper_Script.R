@@ -162,11 +162,11 @@
   
   # Global Plot  
   
-  house.glob <- ggplot(glob[glob$type == 'Houses',], 
+  house.glob <- ggplot(glob[glob$type == 'house',], 
                        aes(x=time, y=yield, group=method))+
     geom_line(aes(colour=method, size=method, linetype=method,
                   lineend='round', linejoin='round')) +
-    facet_wrap(~type) +
+    #facet_wrap(~type) +
     scale_size_manual(values=methSizes) +
     scale_colour_manual(values=houseCols) +
     scale_linetype_manual(values=methLines) + 

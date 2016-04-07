@@ -392,3 +392,23 @@ hedImpCompressYields <- function(yield.obj){
   }
   return(x.data)
 }
+
+hedImpFullEstimation <- function(x.data,
+                                 verbose=FALSE)
+  {
+  
+  hedimp.data <- hedImpFullWrap(x.data)
+  
+  # Add impute regression yields to the data
+  if(verbose) cat('...Assigning Yields\n')
+  
+  hedimp.data <- lapply(hedimp.data, hedimpAssignYields, trans.data=x.data)
+  hedimp.data <- mapply(hedImpAddName, 
+                        geo.level=apmOptions$geo.levels, 
+                        x=hedimp.data, 
+                        SIMPLIFY=FALSE)
+  hedimp.data <- hedImpCompressYields(hedimp.data)
+  
+  return(hedimp.data)
+}
+

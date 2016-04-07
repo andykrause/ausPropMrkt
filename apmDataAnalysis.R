@@ -225,19 +225,7 @@ apmFullDataAnalysis <- function(clean.trans,
   
   if(verbose) cat('Creating Imputed Regression values\n')
   
-  ## Estimate hedonic imputation values
-  
-  hedimp.data <- hedImpFullWrap(clean.trans)
-  
-  # Add impute regression yields to the data
-  if(verbose) cat('...Assigning Yields\n')
-  
-  hedimp.data <- lapply(hedimp.data, hedimpAssignYields, trans.data=cleanTrans)
-  hedimp.data <- mapply(hedImpAddName, 
-                        geo.level=apmOptions$geo.levels, 
-                        x=hedimp.data, 
-                        SIMPLIFY=FALSE)
-  hedimp.data <- hedImpCompressYields(hedimp.data)
+  hedimp.data <- hedImpFullEstimation(clean.trans)
   
   ## Create a set of matched data (adjusted with global time indexes)
   if(verbose) cat('Building Matched Data\n')

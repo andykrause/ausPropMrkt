@@ -308,14 +308,6 @@ hedimpYieldWrap <- function(trans.data,
   
   if(verbose) cat('...Analyze at Global Level\n')
   
-  # Metro 
-  hedimpMetro <- spaceTimeShard(stsData = trans.data,
-                            metric=c(paste0('Global.', yield.field)),
-                            spaceField='all', timeField='transQtr',
-                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                            calcs=list(median='median'))
-  
-  # By Use
   hedimpMetroH <- spaceTimeShard(trans.data[trans.data$PropertyType == 'House', ],
                                  metric=c(paste0('Global.', yield.field)),
                              spaceField='all', timeField='transQtr',
@@ -331,13 +323,6 @@ hedimpYieldWrap <- function(trans.data,
   
   if(verbose) cat('...Analyze at LGA Level\n')
   
-  hedimpLga <- spaceTimeShard(stsData = trans.data,
-                              metric=c(paste0('lga.', yield.field)),
-                          spaceField='lga', timeField='transQtr',
-                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                          calcs=list(median='median'))
-  
-  # By Use
   hedimpLgaH <- spaceTimeShard(trans.data[trans.data$PropertyType == 'House', ],
                                metric=c(paste0('lga.', yield.field)),
                            spaceField='lga', timeField='transQtr',
@@ -350,39 +335,10 @@ hedimpYieldWrap <- function(trans.data,
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median')) 
   
-  ## SLA1
-  
-  if(verbose) cat('...Analyze at SLA Level\n')
-  
-  hedimpSla <- spaceTimeShard(stsData = trans.data,
-                              metric=c(paste0('sla1.', yield.field)),
-                          spaceField='sla1', timeField='transQtr',
-                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                          calcs=list(median='median'))
-  
-  # By Use
-  hedimpSlaH <- spaceTimeShard(trans.data[trans.data$PropertyType == 'House', ],
-                               metric=c(paste0('sla1.', yield.field)),
-                           spaceField='sla1', timeField='transQtr',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median'))
-  
-  hedimpSlaU <- spaceTimeShard(trans.data[trans.data$PropertyType == 'Unit', ],
-                               metric=c(paste0('sla1.', yield.field)),
-                           spaceField='sla1', timeField='transQtr',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median'))
-  
   ## Suburb
   
   if(verbose) cat('...Analyze at Suburb Level\n')
-  
-  hedimpSuburb <- spaceTimeShard(stsData = trans.data,
-                                 metric=c(paste0('suburb.', yield.field)),
-                             spaceField='suburb', timeField='transQtr',
-                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                             calcs=list(median='median'))
-  
+
   # By Use
   hedimpSuburbH <- spaceTimeShard(trans.data[trans.data$PropertyType == 'House', ],
                                   metric=c(paste0('suburb.', yield.field)),
@@ -396,36 +352,12 @@ hedimpYieldWrap <- function(trans.data,
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
   
-  ## post code
-  
-  if(verbose) cat('...Analyze at Postcode Level\n')
-  
-  hedimpPostcode <- spaceTimeShard(stsData = trans.data,
-                                   metric=c(paste0('postCode.', yield.field)),
-                               spaceField='postCode', timeField='transQtr',
-                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                               calcs=list(median='median'))
-  
-  # By Use
-  hedimpPostcodeH <- spaceTimeShard(trans.data[trans.data$PropertyType == 'House', ],
-                                    metric=c(paste0('postCode.', yield.field)),
-                                spaceField='postCode', timeField='transQtr',
-                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                                calcs=list(median='median'))
-  
-  hedimpPostcodeU <- spaceTimeShard(trans.data[trans.data$PropertyType == 'Unit', ],
-                                    metric=c(paste0('postCode.', yield.field)),
-                                spaceField='postCode', timeField='transQtr',
-                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                                calcs=list(median='median')) 
-  
+
   ## Combine Results  
   
-  hedimpResults <- list(Global=list(all=hedimpMetro, house=hedimpMetroH, unit=hedimpMetroU),
-                    lga=list(all=hedimpLga, house=hedimpLgaH, unit=hedimpLgaU),
-                    sla1=list(all=hedimpSla, house=hedimpSlaH, unit=hedimpSlaU),
-                    suburb=list(all=hedimpSuburb, house=hedimpSuburbH, unit=hedimpSuburbU),
-                    postCode=list(all=hedimpPostcode, house=hedimpPostcodeH, unit=hedimpPostcodeU))
+  hedimpResults <- list(Global=list(house=hedimpMetroH, unit=hedimpMetroU),
+                        lga=list(house=hedimpLgaH, unit=hedimpLgaU),
+                        suburb=list(house=hedimpSuburbH, unit=hedimpSuburbU))
   
   ## Return Results
   

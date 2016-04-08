@@ -216,13 +216,6 @@ srmYieldWrap <- function(match.data,             # Matched data object
   
   if(verbose) cat('...Analyze at Global Level\n')
   
-  dmMetro <- spaceTimeShard(stsData = match.data,
-                            metric=c('srm.yield'),
-                            spaceField='all', timeField='saleTime',
-                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                            calcs=list(median='median'))
-  
-  # By Use   
   dmMetroH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
                              metric=c('srm.yield'),
                              spaceField='all', timeField='saleTime',
@@ -239,13 +232,6 @@ srmYieldWrap <- function(match.data,             # Matched data object
   
   if(verbose) cat('...Analyze at LGA Level\n')
   
-  dmLga <- spaceTimeShard(stsData = match.data,
-                          metric=c('srm.yield'),
-                          spaceField='lga', timeField='saleTime',
-                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                          calcs=list(median='median'))
-  
-  # By Use   
   dmLgaH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
                            metric=c('srm.yield'),
                            spaceField='lga', timeField='saleTime',
@@ -257,41 +243,11 @@ srmYieldWrap <- function(match.data,             # Matched data object
                            spaceField='lga', timeField='saleTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
-  
-  ## SLA1 
-  
-  if(verbose) cat('...Analyze at SLA1 Level\n')
-  
-  dmSla <- spaceTimeShard(stsData = match.data,
-                          metric=c('srm.yield'),
-                          spaceField='sla1', timeField='saleTime',
-                          defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                          calcs=list(median='median'))
-  
-  # By Use   
-  dmSlaH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
-                           metric=c('srm.yield'),
-                           spaceField='sla1', timeField='saleTime',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median'))
-  
-  dmSlaU <- spaceTimeShard(match.data[match.data$PropertyType == 'Unit',],
-                           metric=c('srm.yield'),
-                           spaceField='sla1', timeField='saleTime',
-                           defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                           calcs=list(median='median')) 
-  
+
   ## Suburb
   
   if(verbose) cat('...Analyze at Suburb Level\n')
-  
-  dmSuburb <- spaceTimeShard(stsData = match.data,
-                             metric=c('srm.yield'),
-                             spaceField='suburb', timeField='saleTime',
-                             defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                             calcs=list(median='median'))
-  
-  # By Use   
+
   dmSuburbH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
                               metric=c('srm.yield'),
                               spaceField='suburb', timeField='saleTime',
@@ -304,36 +260,11 @@ srmYieldWrap <- function(match.data,             # Matched data object
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median')) 
   
-  ## PostCode 
-  
-  if(verbose) cat('...Analyze at Postcode Level\n')
-  
-  dmPostcode <- spaceTimeShard(stsData = match.data,
-                               metric=c('srm.yield'),
-                               spaceField='postCode', timeField='saleTime',
-                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                               calcs=list(median='median'))
-  
-  # By Use   
-  dmPostcodeH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
-                                metric=c('srm.yield'),
-                                spaceField='postCode', timeField='saleTime',
-                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                                calcs=list(median='median'))
-  
-  dmPostcodeU <- spaceTimeShard(match.data[match.data$PropertyType == 'Unit',],
-                                metric=c('srm.yield'),
-                                spaceField='postCode', timeField='saleTime',
-                                defDim='time', stsLimit=apmOptions$geoTempLimit, 
-                                calcs=list(median='median'))  
-  
   ## Combine Results  
   
-  dmResults <- list(Global=list(all=dmMetro, house=dmMetroH, unit=dmMetroU),
-                    lga=list(all=dmLga, house=dmLgaH, unit=dmLgaU),
-                    sla1=list(all=dmSla, house=dmSlaH, unit=dmSlaU),
-                    suburb=list(all=dmSuburb, house=dmSuburbH, unit=dmSuburbU),
-                    postCode=list(all=dmPostcode, house=dmPostcodeH, unit=dmPostcodeU))
+  dmResults <- list(Global=list(house=dmMetroH, unit=dmMetroU),
+                    lga=list(house=dmLgaH, unit=dmLgaU),
+                    suburb=list(house=dmSuburbH, unit=dmSuburbU))
   
   ## Return Results
   

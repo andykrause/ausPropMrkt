@@ -242,12 +242,8 @@ apmFullDataAnalysis <- function(clean.trans,
   trans.data <- swappedData$trans.data
   match.data <- swappedData$match.data
   
-  ### Create indices from each of the methods ----------------------------------------------
-  
-  ## Via the spatial aggregation Method  
-  if(verbose) cat('Spag analysis\n')
-  spag.results <- spagLevelWrap(clean.trans, verbose)
-  
+### Create indices from each of the methods ----------------------------------------------
+
   ## Via the Index method  
   if(verbose) cat('Index analysis\n')
   index.results <- indexLevelWrap(index.values, wrap.function='indexTYGeoWrap')
@@ -267,15 +263,14 @@ apmFullDataAnalysis <- function(clean.trans,
   index.tidy <- indexLevelWrap(index.results, wrap.function='indexTidyerGeoWrap')
   srm.tidy <- apmGenTidyerGeoWrap(match.results, method.type='srm')
   hedimp.tidy <- apmGenTidyerGeoWrap(hedimp.results, method.type='hedimp')
-  spag.tidy <- apmGenTidyerGeoWrap(spag.results, method.type='spag')
-  
+
   # Combine
   
   yield.results <- rbind(spag.tidy, index.tidy, hedimp.tidy, srm.tidy)  
   
   if(writeout){  
     if(verbose) cat('Writing Data\n')
-    save(clean.trans, match.data, index.values, yield.results, spag.results, 
+    save(clean.trans, match.data, index.values, yield.results, 
          index.results, hedimp.results, match.results,
          file=paste0(data.path, 'yieldResults.RData'))  
     
@@ -289,8 +284,7 @@ apmFullDataAnalysis <- function(clean.trans,
               impute.data=clean.trans,
               match.data=match.data,
               index.values=index.values,
-              results=list(spag=spag.results,
-                           index=index.results,
+              results=list(index=index.results,
                            hedimp=hedimp.results,
                            match=match.results)))  
   
@@ -326,200 +320,3 @@ apmCalcBias <- function(geo.level,
   return(rbind(geo.hh, geo.uu))
   
 } 
-
-
-
-
-
-
-# 
-# 
-# 
-# ### Function to convert data from method based to geography based --------------
-# 
-# apmConvertToGeo <- function(mmRes, irRes, dmRes, indexList){
-#   
-#   ## Metro Level
-#   
-#   metroList <- list(mm=list(all=mmRes$metro$all, house=mmRes$metro$house,
-#                             unit=mmRes$metro$unit),
-#                     ir=list(all=irRes$metro$all, house=irRes$metro$house,
-#                             unit=irRes$metro$unit),
-#                     dm=list(all=dmRes$metro$all, house=dmRes$metro$house,
-#                             unit=dmRes$metro$unit))
-#   
-#   metroData <- prrAggrGeoData(metroList, indexList)
-#   
-#   ## LGA Level
-#   
-#   lgaList <- list(mm=list(all=mmRes$lga$all, house=mmRes$lga$house,
-#                           unit=mmRes$lga$unit),
-#                   ir=list(all=irRes$lga$all, house=irRes$lga$house,
-#                           unit=irRes$lga$unit),
-#                   dm=list(all=dmRes$lga$all, house=dmRes$lga$house,
-#                           unit=dmRes$lga$unit))
-#   
-#   lgaData <- prrAggrGeoData(lgaList, indexList, geoSplit=TRUE)
-#   
-#   ## SLA1 Level
-#   
-#   slaList <- list(mm=list(all=mmRes$sla$all, house=mmRes$sla$house,
-#                           unit=mmRes$sla$unit),
-#                   ir=list(all=irRes$sla$all, house=irRes$sla$house,
-#                           unit=irRes$sla$unit),
-#                   dm=list(all=dmRes$sla$all, house=dmRes$sla$house,
-#                           unit=dmRes$sla$unit))
-#   
-#   slaData <- prrAggrGeoData(slaList, indexList, geoSplit=TRUE)
-#   
-#   ## suburb Level
-#   
-#   suburbList <- list(mm=list(all=mmRes$suburb$all, house=mmRes$suburb$house,
-#                              unit=mmRes$suburb$unit),
-#                      ir=list(all=irRes$suburb$all, house=irRes$suburb$house,
-#                              unit=irRes$suburb$unit),
-#                      dm=list(all=dmRes$suburb$all, house=dmRes$suburb$house,
-#                              unit=dmRes$suburb$unit))
-#   
-#   suburbData <- prrAggrGeoData(suburbList, indexList, geoSplit=TRUE)
-#   
-#   ## postcode Level
-#   
-#   postcodeList <- list(mm=list(all=mmRes$postcode$all, house=mmRes$postcode$house,
-#                                unit=mmRes$postcode$unit),
-#                        ir=list(all=irRes$postcode$all, house=irRes$postcode$house,
-#                                unit=irRes$postcode$unit),
-#                        dm=list(all=dmRes$postcode$all, house=dmRes$postcode$house,
-#                                unit=dmRes$postcode$unit))
-#   
-#   postcodeData <- prrAggrGeoData(postcodeList, indexList, geoSplit=TRUE)
-#   
-#   ## Return Results
-#   
-#   return(list(metroData=metroData,
-#               lgaData=lgaData,
-#               slaData=slaData,
-#               suburbData=suburbData,
-#               postcodeData=postcodeData))
-#   
-# }
-
-
-########## WORKING BELOW HERE ------------------------------------------------------------
-
-
-
-# 
-# 
-# apmTidyMatch <- function(match.results, method.type='median'){
-#   
-#   globH <- match.results$metro$house$stsDF
-#   globH$type <- 'house'
-#   globU <- match.results$metro$unit$stsDF
-#   globU$type <- 'unit'
-#   globH$geo.level <- globU$geo.level <- 'Global'
-#   globH$spaceName <- globU$spaceName <- 'Global'
-#   
-#   slaH <- match.results$sla$house$stsDF
-#   slaH$type <- 'house'
-#   slaU <- match.results$sla$unit$stsDF
-#   slaU$type <- 'unit'
-#   slaH$geo.level <- slaU$geo.level <- 'sla'
-#   
-#   lgaH <- match.results$lga$house$stsDF
-#   lgaH$type <- 'house'
-#   lgaU <- match.results$lga$unit$stsDF
-#   lgaU$type <- 'unit'
-#   lgaH$geo.level <- lgaU$geo.level <- 'lga'
-#   
-#   subH<- match.results$suburb$house$stsDF
-#   subH$type <- 'house'
-#   subU<- match.results$suburb$unit$stsDF
-#   subU$type <- 'unit'
-#   subH$geo.level <- subU$geo.level <- 'suburb'
-#   
-#   pcH<- match.results$postcode$house$stsDF
-#   pcH$type <- 'house'
-#   pcU<- match.results$postcode$unit$stsDF
-#   pcH$type <- 'unit'
-#   pcH$geo.level <- pcU$geo.level <- 'postCode'
-#   
-#   all.geo <- list(globH, globU, lgaH, lgaU, slaH, slaU,
-#                       subH, subU, pcH, pcU)
-#   
-#   all.match <- rbind.fill(all.geo)
-#   if(method.type == 'median'){
-#     all.match$method <- method.type
-#     names(all.match)[1:2] <- c('time', 'geo')
-#   } else {
-#     all.match$method <- method.type
-#     all.match$price <- 0
-#     all.match$rent <- 0
-#     names(all.match)[1:3] <- c('time', 'yield', 'geo')
-#   }
-#   
-#   return(all.match)  
-# }
-# 
-
-
-# apmIndMethodWrap <- function(trans.data, geos=c('All', 'lga', 'sla1', 'suburb',
-#                                                 'postcode'),
-#                              verbose=FALSE){
-#   
-#   ## Prep data and objects
-#   
-#   aimw.list <- list()
-#   idL <- 1
-#   
-#   ## All area analysis
-#   
-#   if('All' %in% geos){
-#     if(verbose) cat('Estimating all area index method\n')
-#     all.ind <- apmGeoIndex('all', 'all', trans.data)
-#     aimw.list[[idL]] <- all.ind
-#     idL <- idL + 1
-#   }
-#   
-#   ## LGA area analysis
-#   
-#   if('lga' %in% geos){
-#     if(verbose) cat('Estimating lga level index method\n')
-#     lga.ind <- apmIndGeoWrap('lga', trans.data)
-#     aimw.list[[idL]] <- lga.ind
-#     idL <- idL + 1
-#   }
-#   
-#   ## SLA1 area analysis
-#   
-#   if('sla1' %in% geos){
-#     if(verbose) cat('Estimating sla1 level index method\n')
-#     sla1.ind <- apmIndGeoWrap('sla1', trans.data)
-#     aimw.list[[idL]] <- sla1.ind
-#     idL <- idL + 1
-#   }
-#   
-#   ## Suburb area analysis
-#   
-#   if('suburb' %in% geos){
-#     if(verbose) cat('Estimating suburb level index method\n')
-#     suburb.ind <- apmIndGeoWrap('suburb', trans.data)
-#     aimw.list[[idL]] <- suburb.ind
-#     idL <- idL + 1
-#   }
-#   
-#   ## Post code area analysis  
-#   
-#   if('postcode' %in% geos){
-#     if(verbose) cat('Estimating postcode level index method\n')
-#     postcode.ind <- apmIndGeoWrap('postCode', trans.data)
-#     aimw.list[[idL]] <- postcode.ind
-#     idL <- idL + 1
-#   }
-#   
-#   ## Fix names and return values  
-#   names(aimw.list) <- geos
-#   
-#   return(aimw.list)
-#   
-# }

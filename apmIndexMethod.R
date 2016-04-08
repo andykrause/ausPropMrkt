@@ -75,6 +75,10 @@ indexModeler <- function(x.data,
      if(class(x.check) != 'try-error'){
        x.raw <- ((x.index / 100) * 
                  median(x.data$transValue[x.data[, apmOptions$time.field] == 1]))
+       if(length(x.index) != length(table(x.data[,apmOptions$time.field]))){
+         srs.good <- FALSE
+       }
+       
      } else {
        srs.good <- FALSE
      }
@@ -193,7 +197,8 @@ indexModelWrap <- function(geo.value,
 
 indexGeoWrap <- function(geo.field,
                          x.data,
-                         verbose=FALSE)
+                         verbose=FALSE
+                         )
 {
   
   # ARGUMENTS
@@ -235,7 +240,8 @@ indexGeoWrap <- function(geo.field,
 ### Basic engine for turning yields into an index ----------------------------------------
 
 indexToYield <- function(series.obj, 
-                         series.name="Global"){
+                         series.name="Global"
+                         ){
   
   ## Fix equations 
   
@@ -270,7 +276,8 @@ indexToYield <- function(series.obj,
 
 indexTYGeoWrap <- function(geo.field, 
                            x.data, 
-                           verbose=FALSE){
+                           verbose=FALSE
+                           ){
   
   ## Get the list of geographies to use
   
@@ -298,7 +305,12 @@ indexTYGeoWrap <- function(geo.field,
 ### Tidying engine that converts to a data.frame -----------------------------------------
 
 indexTidyer <- function(x.data,
-                        geo.name='Global'){
+                        geo.name='Global'
+                        ){
+  # ARGUMENTS
+  #
+  # x.data = index data to be tidyied transaction data
+  # geo.name = specific geographic name
   
  ## Set length to test for  
   
@@ -361,8 +373,14 @@ indexTidyer <- function(x.data,
 
 indexTidyerGeoWrap <- function(x.data, 
                                geo.level,
-                               verbose=FALSE){
+                               verbose=FALSE
+                               ){
   
+  # ARGUMENTS
+  #
+  # x.data = index data to be tidyied transaction data
+  # geo.level = various levels at which to perform the analysis
+
  ## Set list of geos  
   geo.data <- x.data[[which(names(x.data) == geo.level)]]
   geo.list <- as.list(names(geo.data))
@@ -430,7 +448,8 @@ indexMakeRepSales <- function(trans.obj,
                               time.field,
                               price.field,
                               id.prop,
-                              id.sale)
+                              id.sale
+                              )
 {
   
   # ARGUMENTS

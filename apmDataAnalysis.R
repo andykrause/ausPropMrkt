@@ -119,7 +119,7 @@ apmYieldSwap <- function(trans.data,       # Transaction data
 
 ## Compare the differences between the matched observations and all observations ---------
 
-apmCompareSamples <- function(trans.data)
+apmCompareSamples <- function(trans.data, match.data)
 {  
   
   ## Create a match trans showing only those observations used in the match data  
@@ -213,23 +213,24 @@ apmCompareSamples <- function(trans.data)
 #  Wrapper Function that runs all data analysis                                          #
 ##########################################################################################
 
-apmFullDataAnalysis <- function(clean.trans,
+apmFullDataAnalysis <- function(trans.data,
                                 data.path,
-                                writeout=TRUE){
+                                writeout=TRUE,
+                                return.values=TRUE){
   
   if(verbose) cat('Create raw price and rent indexes at each level and geography\n')
   
-  index.values <- indexLevelWrap(clean.trans, wrap.function='indexGeoWrap')
+  index.data <- indexLevelWrap(trans.data, wrap.function='indexGeoWrap')
   
   ## Create the impute regression values
   
   if(verbose) cat('Creating Imputed Regression values\n')
   
-  hedimp.data <- hedImpFullEstimation(clean.trans)
+  hedimp.data <- hedImpFullEstimation(trans.data)
   
   ## Create a set of matched data (adjusted with global time indexes)
   if(verbose) cat('Building Matched Data\n')
-  match.data <- srmMatcher(trans.data=clean.trans, index.obj=index.values,
+  match.data <- srmMatcher(trans.data=trans.data, index.obj=index.data,
                            index.geo='suburb',
                            match.field='AddressID', sale.field='transValue',
                            rent.field='transValue', time.field='transQtr')
@@ -246,7 +247,7 @@ apmFullDataAnalysis <- function(clean.trans,
 
   ## Via the Index method  
   if(verbose) cat('Index analysis\n')
-  index.results <- indexLevelWrap(index.values, wrap.function='indexTYGeoWrap')
+  index.results <- indexLevelWrap(index.data, wrap.function='indexTYGeoWrap')
   
   ## via the hedonic impute regression
   if(verbose) cat('Hedimp analysis\n')
@@ -266,28 +267,29 @@ apmFullDataAnalysis <- function(clean.trans,
 
   # Combine
   
-  yield.results <- rbind(spag.tidy, index.tidy, hedimp.tidy, srm.tidy)  
+  yield.data <- rbind(index.tidy, hedimp.tidy, srm.tidy)  
   
   if(writeout){  
     if(verbose) cat('Writing Data\n')
-    save(clean.trans, match.data, index.values, yield.results, 
+    save(trans.data, match.data, index.data, yield.data, 
          index.results, hedimp.results, match.results,
          file=paste0(data.path, 'yieldResults.RData'))  
     
-    write.csv(clean.trans, paste0(data.path, 'imputedYields.csv'))
+    write.csv(trans.data, paste0(data.path, 'imputedYields.csv'))
     write.csv(match.data, paste0(data.path, 'matchedYields.csv'))
   }
   
  ## Return data  
   
-  return(list(tidy.data=yield.results,
-              impute.data=clean.trans,
+  if(return.values){
+  return(list(yield.data=yield.data,
+              impute.data=trans.data,
               match.data=match.data,
-              index.values=index.values,
+              index.data=index.data,
               results=list(index=index.results,
                            hedimp=hedimp.results,
                            match=match.results)))  
-  
+  }
 }
 
 ### Function to calculate bias from one method to other methods --------------------------
@@ -392,12 +394,12 @@ calcDifWrap <- function(x.data,
  ## Calculate differences
   
   # Houses
-  h.dif <- calcDif(h.data)
+  h.dif <- calcDifEngine(h.data)
   h.dif$geo.level <- geo.level
   h.dif$appr.rate <- h.appr$app.rate[match(h.dif$time, h.appr$time)]
   
   # Units
-  u.dif <- calcDif(u.data)
+  u.dif <- calcDifEngine(u.data)
   u.dif$geo.level <- geo.level
   u.dif$appr.rate <- u.appr$app.rate[match(u.dif$time, u.appr$time)]
   

@@ -145,5 +145,35 @@ apmChangeOptions <- function(...,         # List of options to change
  if(show) return(apmOptions) 
 }
   
+### Create global plot options -----------------------------------------------------------
+
+apmPlotOptions <- function(){
   
+  # Set colors for plots
+  assign('unitCols', c('forestgreen', 'green', 'lightgreen'), envir=.GlobalEnv)
+  assign('houseCols', c('navy', 'royalblue2', 'skyblue'), envir=.GlobalEnv)
+  assign('methSizes', c(1, 1.5, 2), envir=.GlobalEnv)
+  assign('methLines', c(1, 1, 1), envir=.GlobalEnv)  
+  
+  # Set graphical theme
+  theme_prr <- theme_grey() +
+    theme(text = element_text(size=11),
+          panel.background = element_rect(colour='gray95', fill='gray95'),
+          panel.grid.major=element_line(colour='white', size=.5),
+          panel.grid.minor=element_line(colour='white', size=.1),
+          plot.background=element_rect(fill='white'),
+          axis.title.y=element_text(colour='black'),
+          axis.text.y=element_text(hjust=1),
+          legend.position='bottom',
+          legend.background=element_rect(fill='white'),
+          legend.key=element_rect(fill='white', color='white',),
+          legend.text=element_text(color='black'),
+          legend.title=element_blank(),
+          legend.key.width=unit(2, "cm"),
+          strip.background = element_rect(fill = "gray50", 
+                                          color = "gray50", size = .1),
+          strip.text.x = element_text(face = "bold"),
+          strip.text.y = element_text(face = "bold"))
+  assign('theme_prr', theme_prr, envir=.GlobalEnv)
+}
 

@@ -7,7 +7,7 @@ apmSetOptions <- function(show=FALSE    # Print options to the screen
   
  ## Set the geographic levels to use throughout the analysis
   
-  geo.levels <- c('Global', 'lga', 'sla1', 'suburb', 'postCode')
+  geo.levels <- c('Global', 'lga', 'suburb')
   
  ## Set field from which to require obsevations
   
@@ -166,7 +166,7 @@ apmPlotOptions <- function(){
           axis.text.y=element_text(hjust=1),
           legend.position='bottom',
           legend.background=element_rect(fill='white'),
-          legend.key=element_rect(fill='white', color='white',),
+          legend.key=element_rect(fill='white', color='white'),
           legend.text=element_text(color='black'),
           legend.title=element_blank(),
           legend.key.width=unit(2, "cm"),

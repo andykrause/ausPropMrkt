@@ -229,10 +229,10 @@ apmFullDataAnalysis <- function(clean.trans,
   
   ## Create a set of matched data (adjusted with global time indexes)
   if(verbose) cat('Building Matched Data\n')
-  match.data <- srmMatcher(trans.data=clean.trans, indexObj=index.values,
+  match.data <- srmMatcher(trans.data=clean.trans, index.obj=index.values,
                            index.geo='suburb',
-                           matchField='AddressID', saleField='transValue',
-                           rentField='transValue', timeField='transQtr')
+                           match.field='AddressID', sale.field='transValue',
+                           rent.field='transValue', time.field='transQtr')
   
   ## Add impute data to  and vice versa
   

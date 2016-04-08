@@ -292,7 +292,6 @@ apmFullDataAnalysis <- function(clean.trans,
 
 ### Function to calculate bias from one method to other methods --------------------------
 
-
 apmCalcBias <- function(geo.level,
                         yield.data,
                         comp.method='Match'){
@@ -320,3 +319,128 @@ apmCalcBias <- function(geo.level,
   return(rbind(geo.hh, geo.uu))
   
 } 
+
+##########################################################################################
+# Function that calculate the appr rates and differences between methods                 #
+##########################################################################################
+
+### Calculate the differences between methods --------------------------------------------
+
+calcDifEngine <- function(yield.data
+                          )
+  {
+  
+  # ARGUMENTS
+  #
+  # yield.data = yield data
+  
+ ## Prep data  
+  
+  # Create unique id
+  yield.data$UID <- paste0(yield.data$geo, "..", yield.data$time)
+  
+  # Split data by method
+  x.split <- split(yield.data, as.factor(yield.data$method))
+  
+  # Merge each pair of methods
+  x.ind_mat <- merge(x.split$Index, x.split$Match[,c('UID', 'yield')], by='UID')
+  x.ind_imp <- merge(x.split$Index, x.split$Impute[,c('UID', 'yield')], by='UID')
+  x.imp_mat <- merge(x.split$Impute, x.split$Match[,c('UID', 'yield')], by='UID')
+  
+ ## Calculate differences  
+  
+  x.ind_mat$meth.dif <- x.ind_mat$yield.x - x.ind_mat$yield.y
+  x.ind_mat$comp.method <- 'Index - Match'
+  
+  x.ind_imp$meth.dif <- x.ind_imp$yield.x - x.ind_imp$yield.y
+  x.ind_imp$comp.method <- 'Index - Impute'
+  
+  x.imp_mat$meth.dif <- x.imp_mat$yield.x - x.imp_mat$yield.y
+  x.imp_mat$comp.method <- 'Impute - Match'
+  
+ ## Return Values  
+  
+  return(rbind(x.ind_mat, x.ind_imp, x.imp_mat))
+  
+}  
+
+### Wrapper to apply difference calculate across an entire geo.level ---------------------
+
+calcDifWrap <- function(x.data, 
+                        h.appr, 
+                        u.appr, 
+                        geo.level='Global'
+                        )
+  {
+  
+  # ARGUMENTS
+  #
+  # x.data = yield data as a list
+  # h.appr = appreciation rates per time period
+  # u.appr = unit appreciation rates per time period
+  # geo.level = geographic level to analyze
+  
+ ## Select out data
+  
+  x.data <- x.data[[which(names(x.data) == geo.level)]]
+  
+ ## Split into house and unit  
+  
+  h.data <- x.data[x.data$type == 'house', ]
+  u.data <- x.data[x.data$type == 'unit', ]
+  
+ ## Calculate differences
+  
+  # Houses
+  h.dif <- calcDif(h.data)
+  h.dif$geo.level <- geo.level
+  h.dif$appr.rate <- h.appr$app.rate[match(h.dif$time, h.appr$time)]
+  
+  # Units
+  u.dif <- calcDif(u.data)
+  u.dif$geo.level <- geo.level
+  u.dif$appr.rate <- u.appr$app.rate[match(u.dif$time, u.appr$time)]
+  
+ ## Return Values  
+  
+  return(list(houses=h.dif,
+              units=u.dif))
+  
+} 
+
+### Calculate differences across all geo levels ------------------------------------------
+
+calcDifGeoWrap <- function(x.data, 
+                           h.appr, 
+                           u.appr, 
+                           geo.levels=c('Global', 'lga', 'suburb')
+                           )
+  {
+  
+  # ARGUMENTS
+  #
+  # x.data = yield data as a list
+  # h.appr = appreciation rates per time period
+  # u.appr = unit appreciation rates per time period
+  # geo.level = geographic level to analyze
+  
+ ## Apply across all geo.levels
+  
+  geo.data <- lapply(geo.levels, FUN=calcDifWrap, h.appr=h.appr, u.appr=u.appr,
+                     x.data=x.data)
+  
+ ## Extract data and combine by unit type  
+  
+  getHouse <- function(x) x$houses
+  getUnit <- function(x) x$units
+  geo.houses <- rbind.fill(lapply(geo.data, getHouse))
+  geo.units <- rbind.fill(lapply(geo.data, getUnit))
+
+ ## Return Values  
+    
+  return(list(houses=geo.houses,
+              units=geo.units))
+  
+}  
+
+

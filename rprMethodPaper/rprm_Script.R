@@ -75,10 +75,10 @@
                                         writeout=TRUE)
     
     # Strip values out and clean up
-    yield.results <- full.results$tidy.data
-    clean.trans <- full.results$impute.data
+    yield.data <- full.results$tidy.data
+    hedimp.data <- full.results$impute.data
     match.data <- full.results$match.data
-    index.values <- full.results$index.values
+    index.data <- full.results$index.values
     results <- full.results$results
     rm(full.results); gc()
     
@@ -98,43 +98,22 @@
 ### Prep Data Visualization --------------------------------------------------------------  
   
  ## Set up graphics parameters 
-
-  # Set colors for plots
-  unitCols <- c('forestgreen', 'green', 'lightgreen', 'gray50')
-  houseCols <- c('navy', 'royalblue2', 'skyblue', 'gray50')
-  methSizes <- c(.5, 1, 1.5, 2)
-  methLines <- c(1, 1, 1, 1)  
   
-  # Set graphical theme
-  theme_prr <- theme_grey() +
-    theme(text = element_text(size=11),
-          panel.background = element_rect(colour='gray95', fill='gray95'),
-          panel.grid.major=element_line(colour='white', size=.5),
-          panel.grid.minor=element_line(colour='white', size=.1),
-          plot.background=element_rect(fill='white'),
-          axis.title.y=element_text(colour='black'),
-          axis.text.y=element_text(hjust=1),
-          legend.position='bottom',
-          legend.background=element_rect(fill='white'),
-          legend.key=element_rect(fill='white', color='white'),
-          legend.text=element_text(color='black'),
-          legend.title=element_blank(),
-          legend.key.width=unit(2, "cm"),
-          strip.background = element_rect(fill = "gray50", 
-                                          color = "gray50", size = .1),
-          strip.text.x = element_text(face = "bold"),
-          strip.text.y = element_text(face = "bold"))
-
-### Comparisons of RPRs methods by unit by geo.level -------------------------------------
+  apmPlotOption()
   
- ## Isolate the data  
+ ## Isolate the necessary data
   
-  yield.tidy <- yield.tidy[yield.tidy$method != 'Sp Med', ]
-  geo.data <- split(yield.tidy, yield.tidy$geo.level)
+  yield.data <- yield.data[yield.data$method != 'spag', ]
+  yield.data$method[yield.data$method=='hedimp'] <- 'Impute'
+  yield.data$method[yield.data$method=='srm'] <- 'Match'
+  yield.data$method <- factor(yield.data$method, levels=c('Index', 'Impute', 'Match'))
+  geo.data <- split(yield.data, yield.data$geo.level)
   
-  # Global Plot  
+### Plot yield trends at global level ----------------------------------------------------
   
-  house.glob <- ggplot(geo.data$Global[geo.data$Global$type == 'Houses',], 
+ ## House yields
+  
+  house.glob <- ggplot(geo.data$Global[geo.data$Global$type == 'house',], 
                        aes(x=time, y=yield, group=method))+
     geom_line(aes(colour=method, size=method, linetype=method,
                   lineend='round', linejoin='round')) +
@@ -146,13 +125,15 @@
     ylab("Rent-Price Ratio\n") +
     scale_x_continuous(breaks=seq(0, 20, 4), 
                        labels=2011:2016) +
-    scale_y_continuous(limits=c(.030, .049),
+    scale_y_continuous(limits=c(.028, .049),
                        breaks=seq(.031, .049, .002), 
                        labels=seq(.031, .049, .002)) + 
     theme_prr + 
     theme(legend.key.width=unit(.55, "cm"))
   
-  unit.glob <- ggplot(geo.data$Global[geo.data$Global$type == 'Units', ], 
+ ## unit Yields  
+  
+  unit.glob <- ggplot(geo.data$Global[geo.data$Global$type == 'unit', ], 
                       aes(x=time, y=yield, group=method))+
     geom_line(aes(colour=method, size=method, linetype=method,
                   lineend='round', linejoin='round')) +
@@ -164,57 +145,73 @@
     ylab("Rent-Price Ratio\n") +
     scale_x_continuous(breaks=seq(0, 20, 4), 
                        labels=2011:2016) +
-    scale_y_continuous(limits=c(.030, .049),
+    scale_y_continuous(limits=c(.028, .049),
                        breaks=seq(.031, .049, .002), 
                        labels=seq(.031, .049, .002)) + 
     theme_prr + 
     theme(legend.key.width=unit(.55, "cm"))
   
+  ## Make Plot
+  
   ggMultiPlots(house.glob, unit.glob, cols=2) 
   
- ## Show variation at suburb level
-
-  # Global Plot  
+### Show variatio of trends by suburb by method ------------------------------------------  
   
-  sub.house2 <- ggplot(geo.data$suburb[geo.data$suburb$type=='Houses',], 
+ ## Houses  
+  
+  sub.house <- ggplot(geo.data$suburb[geo.data$suburb$type=='house',], 
                        aes(x=time, y=yield, group=geo))+
     facet_wrap(~method, ncol=4) +
     geom_line(color='blue', alpha=.1) +
-    geom_line(data=geo.data$Global[geo.data$Global$type=="Houses", ], 
+    geom_line(data=geo.data$Global[geo.data$Global$type=="house", ], 
               aes(x=time, y=yield, group=method),
               size=1.2, color='navy') +
     xlab("") +
     ylab("RPR by Suburb: Houses\n") +
     scale_x_continuous(breaks=seq(4, 20, 8), 
                        labels=c(2012, 2014, 2016)) +
-    scale_y_continuous(limits=c(.02, .065),
+    scale_y_continuous(limits=c(.015, .065),
                        breaks=seq(.02, .06, .01)) +
     theme_prr
   
-  sub.unit2 <- ggplot(geo.data$suburb[geo.data$suburb$type=='Units',], 
+ ## Units
+  
+  sub.unit <- ggplot(geo.data$suburb[geo.data$suburb$type=='unit',], 
                       aes(x=time, y=yield, group=geo))+
     facet_wrap(~method, ncol=4) +
     geom_line(color='forestgreen', alpha=.1) +
-    geom_line(data=geo.data$Global[geo.data$Global$type=="Units", ], 
+    geom_line(data=geo.data$Global[geo.data$Global$type=="unit", ], 
               aes(x=time, y=yield, group=method),
               size=1.2, color='forestgreen') +
     xlab("") +
     ylab("RPR by Suburb: Units\n") +
     scale_x_continuous(breaks=seq(4, 20, 8), 
                        labels=c(2012, 2014, 2016)) +
-    scale_y_continuous(limits=c(.02, .065),
+    scale_y_continuous(limits=c(.015, .065),
                        breaks=seq(.02, .06, .01)) +
     theme_prr
+
+ ## Make Plot
+    
+  ggMultiPlots(sub.house, sub.unit) 
   
-  ggMultiPlots(sub.house2, sub.unit2) 
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
 ### Comparisons of Differences in RPRs methods by unit by geo.level ----------------------
   
   ## Isolate the data  
   
   calcDifWrap <- function(x.data){
-  h.data <- x.data[x.data$type == 'Houses', ]
-  u.data <- x.data[x.data$type == 'Units', ]
+  h.data <- x.data[x.data$type == 'house', ]
+  u.data <- x.data[x.data$type == 'unit', ]
   
   h.dif <- calcDif(h.data)
   u.dif <- calcDif(u.data)
@@ -291,70 +288,6 @@
   
     
   
-    
- ## All types errors by method and geography  
-
-  # Prep data
-  all.e <- errors.tidy[errors.tidy$variable == 'all.abs', ]
-  type.e <- errors.tidy[errors.tidy$variable == 'house.abs' | 
-                          errors.tidy$variable == 'unit.abs', ]
-  type.e$variable <- as.character(type.e$variable)
-  type.e$variable[type.e$variable == 'house.abs'] <- "Houses"
-  type.e$variable[type.e$variable == 'unit.abs'] <- "Unit"
-  
- ## Plot for all types
-
-  house.error <- ggplot(type.e[type.e$variable == 'Houses', ], 
-                        aes(x=geo.level, y=value, group=method, shape=method,
-                            colour=method)) +
-    facet_wrap(~variable) + 
-    geom_point(size=3)+
-    scale_shape_manual(values = 15:18) +
-    scale_colour_manual(values = houseCols) +
-    xlab("\nGeographic Level of Analysis") + 
-    ylab("Median Absolute Prediction Error\n") +
-    scale_y_continuous(limits=c(.08, .24),
-                       breaks=seq(.09, .24, .03), 
-                       labels=paste0(format(100 * (seq(.09,
-                                                       .24, .03)),
-                                            nsmall=1), "%")) +
-    scale_x_discrete(labels=c('Metro','LGA', 'SLA1', 'PC', 'Sub.'))+
-    theme_prr + theme(legend.key.width=unit(.5, "cm"), legend.position='top')
-  
-  unit.error <- ggplot(type.e[type.e$variable == 'Unit', ], 
-                       aes(x=geo.level, y=value, group=method, shape=method,
-                           colour=method)) +
-    facet_wrap(~variable) + 
-    geom_point(size=3)+
-    scale_shape_manual(values = 15:18) +
-    scale_colour_manual(values = unitCols) +
-    xlab("\nGeographic Level of Analysis") + 
-    ylab("Median Absolute Prediction Error\n") +
-    scale_y_continuous(limits=c(.08, .24),
-                       breaks=seq(.09, .24, .03), 
-                       labels=paste0(format(100 * (seq(.09,
-                                                       .24, .03)),
-                                            nsmall=1), "%")) +
-    scale_x_discrete(labels=c('Metro','LGA', 'SLA1', 'PC', 'Sub.'))+
-    theme_prr + theme(legend.key.width=unit(.5, "cm"), legend.position='top')
-  
-  ggMultiPlots(house.error, unit.error, cols=2)   
-  
-  ## Make plots by yield results
-  
-   yield.tidy <- yield.results
-
-  # Rename the methods  
-   yield.tidy$method <- as.character(yield.tidy$method)
-   yield.tidy$method[yield.tidy$method == 'spag'] <- 'Sp Med'
-   yield.tidy$method[yield.tidy$method == 'hedimp'] <- 'Impute'
-   yield.tidy$method[yield.tidy$method == 'srm'] <- 'Match'
-   yield.tidy$method[yield.tidy$method == 'index'] <- 'Index'
-   yield.tidy$method <- factor(yield.tidy$method, levels = c('Sp Med', 'Index',
-                                                               'Impute', 'Match'))
-   # Rename the property Types  
-   yield.tidy$type[yield.tidy$type == 'house'] <- 'Houses'
-   yield.tidy$type[yield.tidy$type == 'unit'] <- 'Units'
 
    
  ## Compare bias in method vs appreciation

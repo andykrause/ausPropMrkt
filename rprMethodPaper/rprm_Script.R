@@ -77,14 +77,6 @@
   load(paste0(dataPath, 'yieldResults.RData'))
   load(paste0(dataPath, 'studyShps.RData'))
   
-### Compare matched data to all data -----------------------------------------------------
-  
-  #if(verbose) cat('Swapping Impute and Matched Yields\n')
-  comp.samp <- apmCompareSamples(trans.data)
-  
- ### Need to look within each area as current distributions do not account for fact that 
-  # more renting occurs in central city
-
 ### Prep Data Visualization --------------------------------------------------------------  
   
  ## Set up graphics parameters 
@@ -237,28 +229,59 @@
 
 ### Density plot of differences in all vs matched ----------------------------------------
   
-  ggplot(trans.data[trans.data$transType == 'sale' & 
-                          trans.data$PropertyType == 'House',], aes(x=transValue)) +
-    geom_density()+
-    geom_density(data=match.data[match.data$PropertyType == 'House',],
-                 aes(x=saleValue), color='red') + 
-    scale_x_continuous(limits=c(400000, 1400000))+
-    facet_wrap(~lga)
+ ## LETS analyze this over time to show how it changes as the market heats up   
   
-  a<-table(trans.data$lga[trans.data$transType == 'sale' & 
-                            trans.data$PropertyType == 'House'])  
-  b<-table(match.data$lga[match.data$PropertyType == 'House'])  
-  cc<-intersect(names(a),names(b))
+  abc <- function(trans.data, match.data){
+  sh.data <- trans.data[trans.data$transType == 'sale' & 
+                          trans.data$PropertyType == 'House', ]
+  su.data <- trans.data[trans.data$transType == 'sale' & 
+                          trans.data$PropertyType == 'Unit', ]
+  rh.data <- trans.data[trans.data$transType == 'rent' & 
+                          trans.data$PropertyType == 'House', ]
+  ru.data <- trans.data[trans.data$transType == 'rent' & 
+                          trans.data$PropertyType == 'Unit', ]
   
-  a <- a[names(a) %in% cc]
-  b <- b[names(b) %in% cc]
+  mrh.data <- match.data[match.data$PropertyType == 'House',]
+  mru.data <- match.data[match.data$PropertyType == 'Unit',]
   
-  d<- (b/a) / (nrow(match.data[match.data$PropertyType == 'House',]) / 
-                 nrow(trans.data[trans.data$transType == 'sale' & 
-                             trans.data$PropertyType == 'House',]))
-
-  studyShapes$lga@data$rentLQ <- d[match(studyShapes$lga@data$LGA_NAME11, names(d))]
-    
+  return(data.frame(sold=median(sh.data$transValue),
+                    rent=median(mrh.data$adjSale)))
+  }
+  
+  gg <- list()
+  for(i in 1:20){
+    gg[[i]] <- abc(trans.data[trans.data$transQtr==i,],
+                   match.data[match.data$rentTime==i,])
+  }
+  aa <- rbind.fill(gg)
+  plot(aa$sold, type='l', ylim=c(420000,650000))
+  lines(aa$rent, col=2)
+  
+  h.index=index.data$Global$Global$house.sale
+  u.index=index.data$Global$Global$unit.sale
+  
+  h.index <- data.frame(time=1:length(h.index),value=h.index)
+  
+  u.index <- data.frame(time=1:length(u.index), value=u.index)
+  
+  sh.data$adj <- (h.index$value[match(sh.data$transQtr, h.index$time)]/100)
+  su.data$adj <- (u.index$value[match(su.data$transQtr, u.index$time)]/100)
+  mrh.data$adj <- (h.index$value[match(mrh.data$saleTime, h.index$time)]/100)
+  mru.data$adj <- (u.index$value[match(mru.data$saleTime, u.index$time)]/100)
+  
+  sh.data$a.value <- sh.data$transValue / sh.data$adj
+  su.data$a.value <- su.data$transValue / su.data$adj
+  mrh.data$a.value <- mrh.data$saleValue / mrh.data$adj
+  mru.data$a.value <- mru.data$saleValue / mru.data$adj
+  
+  h.price <- try(t.test(sh.data$a.value, mrh.data$a.value), silent=TRUE)
+  u.price <- try(t.test(su.data$a.value, mru.data$a.value), silent=TRUE)
+  h.beds <- try(t.test(sh.data$Bedrooms, rh.data$Bedrooms), silent=TRUE)
+  h.baths <- try(t.test(sh.data$Baths, rh.data$Baths), silent=TRUE)
+  h.area <- try(t.test(sh.data$AreaSize, rh.data$AreaSize), silent=TRUE)
+  
+  u.beds <- try(t.test(su.data$Bedrooms, ru.data$Bedrooms), silent=TRUE)
+  u.baths <- try(t.test(su.data$Baths, ru.data$Baths), silent=TRUE)
   
 ### Save full workspace  
  

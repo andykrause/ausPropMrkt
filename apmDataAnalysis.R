@@ -322,9 +322,6 @@ apmCalcBias <- function(geo.level,
   
 } 
 
-##########################################################################################
-# Function that calculate the appr rates and differences between methods                 #
-##########################################################################################
 
 ### Calculate the differences between methods --------------------------------------------
 
@@ -446,3 +443,71 @@ calcDifGeoWrap <- function(x.data,
 }  
 
 
+##########################################################################################
+# Function that calculate the appr rates and differences between methods                 #
+##########################################################################################
+
+testSampleDif <- function(trans.data, 
+                          match.data,
+                          h.index=index.data$Global$Global$house.sale,
+                          u.index=index.data$Global$Global$unit.sale,
+                          geo.field, 
+                          geo.value=NULL){
+  
+  if(geo.field != 'Global'){
+    trans.data <- trans.data[trans.data[,geo.field] == geo.value,]
+  }
+  
+  sh.data <- trans.data[trans.data$transType == 'sale' & 
+                          trans.data$PropertyType == 'House', ]
+  su.data <- trans.data[trans.data$transType == 'sale' & 
+                          trans.data$PropertyType == 'Unit', ]
+  rh.data <- trans.data[trans.data$transType == 'rent' & 
+                          trans.data$PropertyType == 'House', ]
+  ru.data <- trans.data[trans.data$transType == 'rent' & 
+                          trans.data$PropertyType == 'Unit', ]
+  
+  mrh.data <- match.data[match.data$PropertyType == 'House',]
+  mru.data <- match.data[match.data$PropertyType == 'Unit',]
+  
+  h.beds <- try(t.test(sh.data$Bedrooms, rh.data$Bedrooms), silent=TRUE)
+  h.baths <- try(t.test(sh.data$Baths, rh.data$Baths), silent=TRUE)
+  h.area <- try(t.test(sh.data$AreaSize, rh.data$AreaSize), silent=TRUE)
+  
+  u.beds <- try(t.test(su.data$Bedrooms, ru.data$Bedrooms), silent=TRUE)
+  u.baths <- try(t.test(su.data$Baths, ru.data$Baths), silent=TRUE)
+  
+  ## prices
+  h.index <- data.frame(time=1:length(h.index),
+                        value=h.index)
+  
+  u.index <- data.frame(time=1:length(u.index),
+                        value=u.index)
+  
+  sh.data$adj <- (h.index$value[match(sh.data$transQtr, h.index$time)]/100)
+  su.data$adj <- (u.index$value[match(su.data$transQtr, u.index$time)]/100)
+  mrh.data$adj <- (h.index$value[match(mrh.data$saleTime, h.index$time)]/100)
+  mru.data$adj <- (u.index$value[match(mru.data$saleTime, u.index$time)]/100)
+  
+  sh.data$a.value <- sh.data$transValue / sh.data$adj
+  su.data$a.value <- su.data$transValue / su.data$adj
+  mrh.data$a.value <- mrh.data$saleValue / mrh.data$adj
+  mru.data$a.value <- mru.data$saleValue / mru.data$adj
+  
+  h.price <- try(t.test(sh.data$a.value, mrh.data$a.value), silent=TRUE)
+  u.price <- try(t.test(su.data$a.value, mru.data$a.value), silent=TRUE)
+  
+  return(list(h.price,u.price))
+  
+}  
+
+testSampleDifGeoWrap <- function(trans.data, match.data, geo.field){
+  
+  geo.list <- names(table(trans.data[,geo.field]))
+  geo.data <- lapply(geo.list, testSampleDif, trans.data=trans.data, match.data=match.data,
+                     geo.field=geo.field, h.index=index.data$Global$Global$house.sale,
+                     u.index=index.data$Global$Global$unit.sale)
+  
+  return(geo.data)
+  
+}

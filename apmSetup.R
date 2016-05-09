@@ -14,7 +14,6 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   if(verbose) cat('Sourcing Custom APM Functions\n')
   
   if(offline){
-    source('c:/Code/research/ausPropMrkt/prrFunctions.R')
     source('c:/Code/research/ausPropMrkt/apmOptions.R')
     source('c:/Code/research/ausPropMrkt/apmDataPrep.R')
     source('c:/Code/research/ausPropMrkt/apmDataAnalysis.R')
@@ -29,8 +28,6 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     
     source('c:/Code/dataAnalysisTools/stShardFunctions.R')
   } else {
-    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
-                  'master/prrFunctions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmOptions.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
@@ -72,6 +69,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
   require(akima)
   require(rgdal)
   require(grid)
+  require(gstat)
 }
 
 

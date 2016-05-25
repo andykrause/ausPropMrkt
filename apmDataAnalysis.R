@@ -425,7 +425,8 @@ calcDifGeoWrap <- function(x.data,
   
  ## Apply across all geo.levels
   
-  geo.data <- lapply(geo.levels, FUN=calcDifWrap, h.appr=h.appr, u.appr=u.appr,
+  geo.data <- lapply(geo.levels, 
+                     FUN=calcDifWrap, h.appr=h.appr, u.appr=u.appr,
                      x.data=x.data)
   
  ## Extract data and combine by unit type  

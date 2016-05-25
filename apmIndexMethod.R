@@ -506,9 +506,9 @@ indexMakeRepSales <- function(trans.obj,
 indexSrsSeries <- function(srs.obj,
                            base.merge=1,
                            smooth.par=.3,
-                           semilog=FALSE,
-                           weighted=FALSE,
-                           het.corr=FALSE,
+                           semilog=TRUE,
+                           weighted=TRUE,
+                           het.corr=TRUE,
                            save.model=FALSE
 )
 {
@@ -566,8 +566,8 @@ indexSrsSeries <- function(srs.obj,
     srs.obj$time.dif <- srs.obj$time2-srs.obj$time1
     if(het.corr){
       err <- residuals(reg.model)
-      err.fit <- lm(abs(err) ~ srs.obj$time.dif)
-      wgts <- 1 / (fitted(err.fit) ^ 2)
+      err.fit <- lm((err^2) ~ srs.obj$time.dif)
+      wgts <- sqrt(fitted(err.fit))
       reg.model <- lm(srs.obj$price.dif ~ time.matrix + 0, weights=wgts)
     } else {
       wgts <- sqrt(sqrt(1 / srs.obj$time.dif))

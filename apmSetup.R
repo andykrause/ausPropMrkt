@@ -22,6 +22,7 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
     source('c:/Code/research/ausPropMrkt/apmSrmMethod.R')
     source('c:/Code/research/ausPropMrkt/apmHedimpMethod.R')
     source('c:/Code/research/ausPropMrkt/apmPredAccr.R')
+    source('c:/Code/research/ausPropMrkt/apmCompBias.R')
     source('c:/code/dataVizTools/ggplottools.R')
     source('c:/Code/dataMgmtTools/dataMungeTools.R')
     
@@ -42,6 +43,8 @@ sourceAPMFunctions <- function(offline=FALSE,              # Are you offline?
                   'master/apmHedimpMethod.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmSrmMethod.R'))
+    source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
+                  'master/apmCompBias.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/ausPropMrkt/',
                   'master/apmPredAccr.R'))
     source(paste0('https://raw.githubusercontent.com/andykrause/',

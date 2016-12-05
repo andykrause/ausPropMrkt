@@ -74,12 +74,22 @@ srmMatcher <- function(trans.data,           # Transaction data
   match.trans$srm.rentyield <- (match.trans$rentValue * 52) / match.trans$adjSale
   match.trans$srm.yield <- (match.trans$srm.saleyield + match.trans$srm.rentyield) / 2
   
+  # Fix
+  
+  match.trans.comb <- rbind(match.trans, match.trans)
+  match.trans.comb$srm.yield[1:nrow(match.trans)] <- match.trans$srm.saleyield
+  match.trans.comb$srm.yield[(nrow(match.trans) + 
+                                1):nrow(match.trans.comb)] <- match.trans$srm.rentyield
+  match.trans.comb$transType <- c(rep('sale', nrow(match.trans)),
+                                  rep('rent', nrow(match.trans)))
+  match.trans.comb$transTime <- c(match.trans$saleTime, match.trans$rentTime)
+
   # Add information on time between transactions
-  match.trans$timeGap <- match.trans$rentTime - match.trans$saleTime
+  match.trans.comb$timeGap <- match.trans.comb$rentTime - match.trans.comb$saleTime
   
   ## Return Values    
   
-  return(match.trans)  
+  return(match.trans.comb)  
   
 } 
 
@@ -218,13 +228,13 @@ srmYieldWrap <- function(match.data,             # Matched data object
   
   dmMetroH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
                              metric=c('srm.yield'),
-                             spaceField='all', timeField='saleTime',
+                             spaceField='all', timeField='transTime',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
   dmMetroU <- spaceTimeShard(match.data[match.data$PropertyType == 'Unit',],
                              metric=c('srm.yield'),
-                             spaceField='all', timeField='saleTime',
+                             spaceField='all', timeField='transTime',
                              defDim='time', stsLimit=apmOptions$geoTempLimit, 
                              calcs=list(median='median'))
   
@@ -234,13 +244,13 @@ srmYieldWrap <- function(match.data,             # Matched data object
   
   dmLgaH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
                            metric=c('srm.yield'),
-                           spaceField='lga', timeField='saleTime',
+                           spaceField='lga', timeField='transTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
   
   dmLgaU <- spaceTimeShard(match.data[match.data$PropertyType == 'Unit',],
                            metric=c('srm.yield'),
-                           spaceField='lga', timeField='saleTime',
+                           spaceField='lga', timeField='transTime',
                            defDim='time', stsLimit=apmOptions$geoTempLimit, 
                            calcs=list(median='median'))
 
@@ -250,13 +260,13 @@ srmYieldWrap <- function(match.data,             # Matched data object
 
   dmSuburbH <- spaceTimeShard(match.data[match.data$PropertyType == 'House',],
                               metric=c('srm.yield'),
-                              spaceField='suburb', timeField='saleTime',
+                              spaceField='suburb', timeField='transTime',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median'))
   
   dmSuburbU <- spaceTimeShard(match.data[match.data$PropertyType == 'Unit',],
                               metric=c('srm.yield'),
-                              spaceField='suburb', timeField='saleTime',
+                              spaceField='suburb', timeField='transTime',
                               defDim='time', stsLimit=apmOptions$geoTempLimit, 
                               calcs=list(median='median')) 
   
